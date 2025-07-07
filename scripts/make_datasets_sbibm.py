@@ -9,6 +9,8 @@ import os
 # %%
 sbibm.get_available_tasks()
 
+os.makedirs("task_data", exist_ok=True)
+
 # %%
 def export_data_from_sbibm(task_name, nsamples=int(1e6)):
     fname = f"task_data/data_{task_name}.npz"
@@ -26,13 +28,17 @@ def export_data_from_sbibm(task_name, nsamples=int(1e6)):
     dim_theta = thetas.shape[1]
     num_observations = task.num_observations
 
+    observation = np.array([np.array(task.get_observation(i)) for i in range(1, num_observations + 1)])
     reference_samples = np.array([np.array(task.get_reference_posterior_samples(num_observation=i)) for i in range(1, num_observations + 1)])
+    true_parameters = np.array([np.array(task.get_true_parameters(i)) for i in range(1, num_observations + 1)])
 
 
     data_dict = {
         "xs": np.array(xs),
         "thetas": np.array(thetas),
+        "observations": observation,
         "reference_samples": reference_samples,
+        "true_parameters": true_parameters,
         "dim_data": dim_data,
         "dim_theta": dim_theta,
         "num_observations": num_observations,
@@ -44,10 +50,10 @@ def export_data_from_sbibm(task_name, nsamples=int(1e6)):
 
 # %% [markdown]
 # # gaussian_mixture
+nsamples = int(1e6) + 512
 
 # %%
 task_name = "gaussian_mixture"
-nsamples = int(1e6)
 
 # %%
 export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -57,7 +63,6 @@ export_data_from_sbibm(task_name, nsamples=nsamples)
 
 # %%
 task_name = "gaussian_linear_uniform"
-nsamples = int(1e6)
 
 # %%
 export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -67,7 +72,6 @@ export_data_from_sbibm(task_name, nsamples=nsamples)
 
 # %%
 task_name = "two_moons"
-nsamples = int(1e6)
 
 # %%
 export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -77,7 +81,6 @@ export_data_from_sbibm(task_name, nsamples=nsamples)
 
 # %%
 task_name = "bernoulli_glm"
-nsamples = int(1e6)
 
 # %%
 export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -87,7 +90,6 @@ export_data_from_sbibm(task_name, nsamples=nsamples)
 
 # %%
 task_name = "lotka_volterra"
-nsamples = int(1e6)
 
 # %%
 # export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -97,7 +99,6 @@ nsamples = int(1e6)
 
 # %%
 task_name = "sir"
-nsamples = int(1e6)
 
 # %%
 # export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -107,7 +108,6 @@ nsamples = int(1e6)
 
 # %%
 task_name = "slcp"
-nsamples = int(1e6)
 
 # %%
 export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -117,7 +117,6 @@ export_data_from_sbibm(task_name, nsamples=nsamples)
 
 # %%
 task_name = "gaussian_linear"
-nsamples = int(1e6)
 
 # %%
 export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -127,7 +126,6 @@ export_data_from_sbibm(task_name, nsamples=nsamples)
 
 # %%
 task_name = "slcp_distractors"
-nsamples = int(1e6)
 
 # %%
 export_data_from_sbibm(task_name, nsamples=nsamples)
@@ -137,7 +135,6 @@ export_data_from_sbibm(task_name, nsamples=nsamples)
 
 # %%
 task_name = "bernoulli_glm_raw"
-nsamples = int(1e6)
 
 # %%
 export_data_from_sbibm(task_name, nsamples=nsamples)
