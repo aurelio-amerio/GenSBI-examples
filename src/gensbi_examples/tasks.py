@@ -23,6 +23,7 @@ class Task:
 
         self.observations = self.data["observations"]
         self.reference_samples = self.data["reference_samples"]
+        self.true_parameters = self.data["true_parameters"]
         self.dim_data = self.data["dim_data"]
         self.dim_theta = self.data["dim_theta"]
         self.num_observations = self.data["num_observations"]
@@ -73,3 +74,13 @@ class Task:
         obs = self.observations[num_observation - 1]
         samples = self.reference_samples[num_observation - 1]
         return obs, samples
+    
+    def get_true_parameters(self, num_observation=1):
+        """
+        Returns the true parameters for a given number of observations.
+        """
+        if num_observation < 1 or num_observation > self.num_observations:
+            raise ValueError(
+                f"num_observation must be between 1 and {self.num_observations}"
+            )
+        return self.true_parameters[num_observation - 1]
