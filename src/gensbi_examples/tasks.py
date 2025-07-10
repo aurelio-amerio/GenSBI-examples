@@ -4,6 +4,7 @@ import grain
 import numpy as np
 
 from .utils import download_artifacts
+from .graph import faithfull_mask, min_faithfull_mask, moralize
 
 
 class Task:
@@ -26,6 +27,7 @@ class Task:
         self.true_parameters = self.data["true_parameters"]
         self.dim_data = self.data["dim_data"]
         self.dim_theta = self.data["dim_theta"]
+        self.dim_joint = self.dim_data + self.dim_theta
         self.num_observations = self.data["num_observations"]
 
     def get_train_dataset(self, batch_size, nsamples=1e5):
@@ -84,3 +86,125 @@ class Task:
                 f"num_observation must be between 1 and {self.num_observations}"
             )
         return self.true_parameters[num_observation - 1]
+    
+    def get_base_mask_fn(self):
+        raise NotImplementedError()
+    
+    def get_edge_mask_fn(self, name="undirected"):
+        if name.lower() == "faithfull":
+            base_mask_fn = self.get_base_mask_fn()
+            def faithfull_edge_mask(node_id, condition_mask, meta_data=None):
+                base_mask = base_mask_fn(node_id, meta_data)
+                return faithfull_mask(base_mask, condition_mask)
+
+            return faithfull_edge_mask
+        elif name.lower() == "min_faithfull":
+            base_mask_fn = self.get_base_mask_fn()        
+            def min_faithfull_edge_mask(node_id, condition_mask,meta_data=None):
+                base_mask = base_mask_fn(node_id, meta_data)
+
+                return min_faithfull_mask(base_mask, condition_mask)
+
+            return min_faithfull_edge_mask
+        elif name.lower() == "undirected":
+            base_mask_fn = self.get_base_mask_fn()        
+            def undirected_edge_mask(node_id, condition_mask, meta_data=None):
+                base_mask = base_mask_fn(node_id, meta_data)
+                return moralize(base_mask)
+            
+            return undirected_edge_mask
+        
+        elif name.lower() == "directed":
+            base_mask_fn = self.get_base_mask_fn()        
+            def directed_edge_mask(node_id, condition_mask, meta_data=None):
+                base_mask = base_mask_fn(node_id, meta_data)
+                return base_mask
+
+            return directed_edge_mask
+        elif name.lower() == "none":
+            return lambda node_id, condition_mask, *args, **kwargs: None
+        else:
+            raise NotImplementedError()
+
+class TwoMoons(Task):
+    def __init__(self, data_dir=None):
+        task_name = "two_moons"
+        super().__init__(task_name, data_dir)
+    def get_base_mask_fn(self):
+        theta_dim = self.dim_theta
+        x_dim = self.dim_data
+        thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
+        x_mask = jnp.tril(jnp.ones((theta_dim, x_dim), dtype=jnp.bool_))
+        base_mask = jnp.block([[thetas_mask, jnp.zeros((theta_dim, x_dim))], [jnp.ones((x_dim, theta_dim)), x_mask]])
+        base_mask = base_mask.astype(jnp.bool_)
+        def base_mask_fn(node_ids, node_meta_data):
+            return base_mask[node_ids, :][:, node_ids]
+        return base_mask_fn
+
+class BernoulliGLM(Task):
+    def __init__(self, data_dir=None):
+        task_name = "bernoulli_glm"
+        super().__init__(task_name, data_dir)
+    def get_base_mask_fn(self):
+        raise NotImplementedError()
+
+class GaussianLinear(Task):
+    def __init__(self, data_dir=None):
+        task_name = "gaussian_linear"
+        super().__init__(task_name, data_dir)
+    def get_base_mask_fn(self):
+        theta_dim = self.dim_theta
+        x_dim = self.dim_data
+        thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
+        x_i_mask = jnp.eye(x_dim, dtype=jnp.bool_)
+        base_mask = jnp.block([[thetas_mask, jnp.zeros((theta_dim, x_dim))], [jnp.eye((x_dim)), x_i_mask]])
+        base_mask = base_mask.astype(jnp.bool_)
+        def base_mask_fn(node_ids, node_meta_data):
+            return base_mask[node_ids, :][:, node_ids]
+        return base_mask_fn
+
+class GaussianLinearUniform(Task):
+    def __init__(self, data_dir=None):
+        task_name = "gaussian_linear_uniform"
+        super().__init__(task_name, data_dir)
+    def get_base_mask_fn(self):
+        theta_dim = self.dim_theta
+        x_dim = self.dim_data
+        thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
+        x_i_mask = jnp.eye(x_dim, dtype=jnp.bool_)
+        base_mask = jnp.block([[thetas_mask, jnp.zeros((theta_dim, x_dim))], [jnp.eye((x_dim)), x_i_mask]])
+        base_mask = base_mask.astype(jnp.bool_)
+        def base_mask_fn(node_ids, node_meta_data):
+            return base_mask[node_ids, :][:, node_ids]
+        return base_mask_fn
+
+class GaussianMixture(Task):
+    def __init__(self, data_dir=None):
+        task_name = "gaussian_mixture"
+        super().__init__(task_name, data_dir)
+    def get_base_mask_fn(self):
+        theta_dim = self.dim_theta
+        x_dim = self.dim_data
+        thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
+        x_mask = jnp.tril(jnp.ones((theta_dim, x_dim), dtype=jnp.bool_))
+        base_mask = jnp.block([[thetas_mask, jnp.zeros((theta_dim, x_dim))], [jnp.ones((x_dim, theta_dim)), x_mask]])
+        base_mask = base_mask.astype(jnp.bool_)
+        def base_mask_fn(node_ids, node_meta_data):
+            return base_mask[node_ids, :][:, node_ids]
+        return base_mask_fn
+
+class SLCP(Task):
+    def __init__(self, data_dir=None):
+        task_name = "slcp"
+        super().__init__(task_name, data_dir)
+    def get_base_mask_fn(self):
+        theta_dim = self.dim_theta
+        x_dim = self.dim_data
+        thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
+        x_i_dim = x_dim // 4
+        x_i_mask = jax.scipy.linalg.block_diag(*tuple([jnp.tril(jnp.ones((x_i_dim,x_i_dim), dtype=jnp.bool_))]*4))
+        base_mask = jnp.block([[thetas_mask, jnp.zeros((theta_dim,x_dim))], [jnp.ones((x_dim, theta_dim)), x_i_mask]])
+        base_mask = base_mask.astype(jnp.bool_)
+        def base_mask_fn(node_ids, node_meta_data):
+            return base_mask[node_ids, :][:, node_ids]
+        return base_mask_fn
