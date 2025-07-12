@@ -1,5 +1,6 @@
 from typing import Optional
 
+import jax
 from jax import numpy as jnp
 from jax import Array
 import numpy as np
@@ -34,17 +35,22 @@ def c2st(
         [1]: https://scikit-learn.org/stable/modules/cross_validation.html
     """
     if z_score:
-        X_mean = jnp.mean(X, dim=0)
-        X_std = jnp.std(X, dim=0)
+        X_mean = jnp.mean(X, axis=0)
+        X_std = jnp.std(X, axis=0)
         X = (X - X_mean) / X_std
         Y = (Y - X_mean) / X_std
 
-    if noise_scale is not None:
-        X += noise_scale * torch.randn(X.shape)
-        Y += noise_scale * torch.randn(Y.shape)
 
-    X = X.cpu().numpy()
-    Y = Y.cpu().numpy()
+    if noise_scale is not None:
+        rng = jax.random.PRNGKey(seed)
+        X += noise_scale * jax.random.normal(rng, X.shape) * noise_scale
+        Y += noise_scale * jax.random.normal(rng, Y.shape) * noise_scale
+
+
+    # Convert to numpy if not already
+
+    X = np.asarray(X)
+    Y = np.asarray(Y)
 
     ndim = X.shape[1]
 
@@ -68,17 +74,17 @@ def c2st(
     scores = cross_val_score(clf, data, target, cv=shuffle, scoring=scoring)
 
     scores = np.asarray(np.mean(scores)).astype(np.float32)
-    return torch.from_numpy(np.atleast_1d(scores))
+    return scores
 
 
 def c2st_auc(
-    X: torch.Tensor,
-    Y: torch.Tensor,
+    X: Array,
+    Y: Array,
     seed: int = 1,
     n_folds: int = 5,
     z_score: bool = True,
     noise_scale: Optional[float] = None,
-) -> torch.Tensor:
+    ) -> Array:
     """Classifier-based 2-sample test returning AUC (area under curve)
 
     Same as c2st, except that it returns ROC AUC rather than accuracy
