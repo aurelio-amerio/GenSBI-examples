@@ -3,7 +3,7 @@
 In order to run the examples, you need to install the GenSBI package. You can do this by running:
 
 ```bash
-pip install "git+https://github.com/aurelio-amerio/GenSBI.git[cuda12]"
+pip install "gensbi[cuda12]@git+https://github.com/aurelio-amerio/GenSBI.git"
 ```
 
 or if you don't have a CUDA compatible device, you can use:
