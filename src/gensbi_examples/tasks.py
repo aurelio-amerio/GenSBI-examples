@@ -208,3 +208,23 @@ class SLCP(Task):
         def base_mask_fn(node_ids, node_meta_data):
             return base_mask[node_ids, :][:, node_ids]
         return base_mask_fn
+    
+def get_task(task_name, data_dir=None):
+    """
+    Returns a Task object based on the task name.
+    """
+    task_name = task_name.lower()
+    if task_name == "two_moons":
+        return TwoMoons(data_dir)
+    elif task_name == "bernoulli_glm":
+        return BernoulliGLM(data_dir)
+    elif task_name == "gaussian_linear":
+        return GaussianLinear(data_dir)
+    elif task_name == "gaussian_linear_uniform":
+        return GaussianLinearUniform(data_dir)
+    elif task_name == "gaussian_mixture":
+        return GaussianMixture(data_dir)
+    elif task_name == "slcp":
+        return SLCP(data_dir)
+    else:
+        raise ValueError(f"Unknown task: {task_name}")
