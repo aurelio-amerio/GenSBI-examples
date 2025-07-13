@@ -15,14 +15,14 @@ optimizer:
   min_lr: 0.0
 
 model:
-  dim_value: 40
-  dim_id: 40
-  dim_condition: 10
+  dim_value: 80
+  dim_id: 80
+  dim_condition: 40
   fourier_features: 128
   num_heads: 6
-  num_layers: 8
+  num_layers: 12
   widening_factor: 3
-  qkv_features: 90
+  qkv_features: null
   num_hidden_layers: 1
 
 training:
@@ -32,6 +32,6 @@ training:
   multistep: 1
   early_stopping: true
   print_every: 100
-  experiment_id: 1
+  experiment_id: 2
   restore_model: false
   train_model: true
