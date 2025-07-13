@@ -209,3 +209,6 @@ __marimo__/
 # task data
 task_data/*
 *.npz
+
+#sub
+condor_logs/

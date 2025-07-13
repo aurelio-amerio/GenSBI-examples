@@ -1,0 +1,35 @@
+
+# Simformer Training Configuration
+
+experiment_directory: examples/sbi-benchmarks/gaussian_linear
+
+optimizer:
+  patience: 10
+  cooldown: 2
+  factor: 0.5
+  accumulation_size: 100
+  rtol: 1e-4
+  max_lr: 0.001
+  min_lr: 0.0
+
+model:
+  dim_value: 40
+  dim_id: 40
+  dim_condition: 10
+  fourier_features: 128
+  num_heads: 6
+  num_layers: 8
+  widening_factor: 3
+  qkv_features: 90
+  num_hidden_layers: 1
+
+training:
+  batch_size: 4096
+  nsteps: 10000
+  nepochs: 3
+  multistep: 1
+  early_stopping: true
+  print_every: 100
+  experiment_id: 3
+  restore_model: false
+  train_model: true
