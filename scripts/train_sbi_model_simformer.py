@@ -1,6 +1,7 @@
 import os
+
 # Set JAX backend (use 'cuda' for GPU, 'cpu' otherwise)
-os.environ['JAX_PLATFORMS'] = "cuda"
+os.environ["JAX_PLATFORMS"] = "cuda"
 
 import argparse
 import yaml
@@ -16,40 +17,46 @@ from functools import partial
 import orbax.checkpoint as ocp
 from gensbi.flow_matching.path.scheduler import CondOTScheduler
 from gensbi.flow_matching.path import AffineProbPath
-from gensbi_examples.tasks import GaussianLinear
+from gensbi_examples.tasks import get_task
 from gensbi.models import Simformer, SimformerParams, SimformerCFMLoss, SimformerWrapper
 from gensbi_examples.c2st import c2st
 
 # Argument parser for config file
 parser = argparse.ArgumentParser(description="Simformer Training Script")
-parser.add_argument('--config', type=str, default="config_simformer.yaml", help="Path to YAML config file")
+parser.add_argument(
+    "--config",
+    type=str,
+    default="config_simformer.yaml",
+    help="Path to YAML config file",
+)
 args, _ = parser.parse_known_args()
 
 # Load config
-with open(args.config, 'r') as f:
+with open(args.config, "r") as f:
     config = yaml.safe_load(f)
 
 
 # Change working directory to experiment_directory from config
-experiment_directory = config.get('experiment_directory', None)
+task_name = config.get("task_name", None)
+experiment_directory = f"examples/sbi-benchmarks/{task_name}"
+
 if experiment_directory is not None:
     os.chdir(experiment_directory)
 
 # Task and dataset setup
-task = GaussianLinear()
-task_name = task.task_name
+task = get_task(task_name)
 
 # Training parameters
-train_params = config.get('training', {})
-experiment_id = train_params.get('experiment_id', 3)
-restore_model = train_params.get('restore_model', False)
-train_model = train_params.get('train_model', True)
-batch_size = train_params.get('batch_size', 4096)
-nsteps = train_params.get('nsteps', 10000)
-nepochs = train_params.get('nepochs', 3)
-multistep = train_params.get('multistep', 1)
-early_stopping = train_params.get('early_stopping', True)
-print_every = train_params.get('print_every', 100)
+train_params = config.get("training", {})
+experiment_id = train_params.get("experiment_id", 3)
+restore_model = train_params.get("restore_model", False)
+train_model = train_params.get("train_model", True)
+batch_size = train_params.get("batch_size", 4096)
+nsteps = train_params.get("nsteps", 10000)
+nepochs = train_params.get("nepochs", 3)
+multistep = train_params.get("multistep", 1)
+early_stopping = train_params.get("early_stopping", True)
+print_every = train_params.get("print_every", 100)
 
 # Set checkpoint directory
 notebook_path = os.getcwd()
@@ -58,17 +65,17 @@ os.makedirs(checkpoint_dir, exist_ok=True)
 
 # JAX mesh setup
 devices = jax.devices()
-mesh = jax.sharding.Mesh(devices, axis_names=('data',))
+mesh = jax.sharding.Mesh(devices, axis_names=("data",))
 
 # Optimizer parameters
-opt_params = config.get('optimizer', {})
-PATIENCE = opt_params.get('patience', 10)
-COOLDOWN = opt_params.get('cooldown', 2)
-FACTOR = opt_params.get('factor', 0.5)
-ACCUMULATION_SIZE = opt_params.get('accumulation_size', 100)
-RTOL = opt_params.get('rtol', 1e-4)
-MAX_LR = opt_params.get('max_lr', 1e-3)
-MIN_LR = opt_params.get('min_lr', 0.0)
+opt_params = config.get("optimizer", {})
+PATIENCE = opt_params.get("patience", 10)
+COOLDOWN = opt_params.get("cooldown", 2)
+FACTOR = opt_params.get("factor", 0.5)
+ACCUMULATION_SIZE = opt_params.get("accumulation_size", 100)
+RTOL = opt_params.get("rtol", 1e-4)
+MAX_LR = opt_params.get("max_lr", 1e-3)
+MIN_LR = opt_params.get("min_lr", 0.0)
 MIN_SCALE = MIN_LR / MAX_LR if MAX_LR > 0 else 0.0
 
 train_dataset = task.get_train_dataset(batch_size)
@@ -79,28 +86,41 @@ val_dataset_iter = iter(val_dataset)
 # Helper functions (restored from original script)
 from functools import partial
 
+
 @partial(jax.jit, static_argnames=["nsamples"])
 def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
-    mask_joint = jnp.zeros((5*nsamples, dim_joint ), dtype=jnp.bool_)
-    mask_posterior = jnp.concatenate([jnp.zeros((nsamples, dim_theta), dtype=jnp.bool_), jnp.ones((nsamples, dim_data), dtype=jnp.bool_)], axis=-1)
+    mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
+    mask_posterior = jnp.concatenate(
+        [
+            jnp.zeros((nsamples, dim_theta), dtype=jnp.bool_),
+            jnp.ones((nsamples, dim_data), dtype=jnp.bool_),
+        ],
+        axis=-1,
+    )
     mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
     filter = ~jnp.all(mask1, axis=-1)
-    mask1 = jnp.logical_and(mask1, filter.reshape(-1,1))
+    mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
     masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
-    return  jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
+    return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
+
 
 def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array):
-    idx = jax.random.choice(rng, jnp.arange(edge_mask.shape[0]), shape=(1,), replace=False)
+    idx = jax.random.choice(
+        rng, jnp.arange(edge_mask.shape[0]), shape=(1,), replace=False
+    )
     edge_mask = edge_mask.at[idx, :].set(False)
     edge_mask = edge_mask.at[:, idx].set(False)
     edge_mask = edge_mask.at[idx, idx].set(True)
     return edge_mask
 
+
 def next_batch():
     return next(dataset_iter)
 
+
 def next_val_batch():
     return next(val_dataset_iter)
+
 
 # Model definition
 path = AffineProbPath(scheduler=CondOTScheduler())
@@ -110,56 +130,83 @@ dim_joint = task.dim_joint
 node_ids = jnp.arange(dim_joint)
 
 # Model parameters from config
-model_params = config.get('model', {})
+model_params = config.get("model", {})
 params = SimformerParams(
     rngs=nnx.Rngs(0),
-    dim_value=model_params.get('dim_value', 40),
-    dim_id=model_params.get('dim_id', 40),
-    dim_condition=model_params.get('dim_condition', 10),
+    dim_value=model_params.get("dim_value", 40),
+    dim_id=model_params.get("dim_id", 40),
+    dim_condition=model_params.get("dim_condition", 10),
     dim_joint=dim_joint,
-    fourier_features=model_params.get('fourier_features', 128),
-    num_heads=model_params.get('num_heads', 6),
-    num_layers=model_params.get('num_layers', 8),
-    widening_factor=model_params.get('widening_factor', 3),
-    qkv_features=model_params.get('qkv_features', 90),
-    num_hidden_layers=model_params.get('num_hidden_layers', 1)
+    fourier_features=model_params.get("fourier_features", 128),
+    num_heads=model_params.get("num_heads", 6),
+    num_layers=model_params.get("num_layers", 8),
+    widening_factor=model_params.get("widening_factor", 3),
+    qkv_features=model_params.get("qkv_features", 90),
+    num_hidden_layers=model_params.get("num_hidden_layers", 1),
 )
 
 loss_fn_cfm = SimformerCFMLoss(path)
 
 undirected_edge_mask = jnp.ones((dim_joint, dim_joint), dtype=jnp.bool_)
-posterior_mask = jnp.concatenate([jnp.zeros((dim_theta), dtype=jnp.bool_), jnp.ones((dim_data), dtype=jnp.bool_)], axis=-1)
-posterior_faithfull = task.get_edge_mask_fn("faithfull")(node_ids, condition_mask=posterior_mask)
+posterior_mask = jnp.concatenate(
+    [jnp.zeros((dim_theta), dtype=jnp.bool_), jnp.ones((dim_data), dtype=jnp.bool_)],
+    axis=-1,
+)
+posterior_faithfull = task.get_edge_mask_fn("faithfull")(
+    node_ids, condition_mask=posterior_mask
+)
 
 p0_dist_model = dist.Independent(
     dist.Normal(loc=jnp.zeros((dim_joint,)), scale=jnp.ones((dim_joint,))),
-    reinterpreted_batch_ndims=1
+    reinterpreted_batch_ndims=1,
 )
+
 
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey):
     batch_size = x_1.shape[0]
-    rng_x0, rng_t, rng_condition, rng_edge_mask1, rng_edge_mask2 = jax.random.split(key, 5)
+    rng_x0, rng_t, rng_condition, rng_edge_mask1, rng_edge_mask2 = jax.random.split(
+        key, 5
+    )
     x_0 = p0_dist_model.sample(rng_x0, (batch_size,))
     t = jax.random.uniform(rng_t, x_1.shape[0])
     batch = (x_0, x_1, t)
     condition_mask = get_random_condition_mask(rng_condition, batch_size)
-    undirected_edge_mask_ = jnp.repeat(undirected_edge_mask[None,...], 3*batch_size, axis=0)
-    faithfull_edge_mask_ = jnp.repeat(posterior_faithfull[None,...], 3*batch_size, axis=0)
-    marginal_mask = jax.vmap(marginalize, in_axes=(0,None))(jax.random.split(rng_edge_mask1, (batch_size,)), undirected_edge_mask)
-    edge_masks = jnp.concatenate([undirected_edge_mask_, faithfull_edge_mask_, marginal_mask], axis=0)
-    edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0)
-    loss = loss_fn_cfm(vf_model, batch, node_ids=node_ids, edge_mask=edge_masks, condition_mask=condition_mask)
+    undirected_edge_mask_ = jnp.repeat(
+        undirected_edge_mask[None, ...], 3 * batch_size, axis=0
+    )
+    faithfull_edge_mask_ = jnp.repeat(
+        posterior_faithfull[None, ...], 3 * batch_size, axis=0
+    )
+    marginal_mask = jax.vmap(marginalize, in_axes=(0, None))(
+        jax.random.split(rng_edge_mask1, (batch_size,)), undirected_edge_mask
+    )
+    edge_masks = jnp.concatenate(
+        [undirected_edge_mask_, faithfull_edge_mask_, marginal_mask], axis=0
+    )
+    edge_masks = jax.random.choice(
+        rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0
+    )
+    loss = loss_fn_cfm(
+        vf_model,
+        batch,
+        node_ids=node_ids,
+        edge_mask=edge_masks,
+        condition_mask=condition_mask,
+    )
     return loss
+
 
 @nnx.jit
 def train_loss(vf_model, key: jax.random.PRNGKey):
     x_1 = next_batch()
     return loss_fn_(vf_model, x_1, key)
 
+
 @nnx.jit
 def val_loss(vf_model, key):
     x_1 = next_val_batch()
     return loss_fn_(vf_model, x_1, key)
+
 
 @nnx.jit
 def train_step(model, optimizer, rng):
@@ -167,6 +214,7 @@ def train_step(model, optimizer, rng):
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(grads, value=loss)
     return loss
+
 
 vf_model = Simformer(params)
 
@@ -178,7 +226,7 @@ if restore_model:
     ) as read_mgr:
         restored = read_mgr.restore(
             experiment_id,
-            args=ocp.args.Composite(state=ocp.args.PyTreeRestore(item=model_state))
+            args=ocp.args.Composite(state=ocp.args.PyTreeRestore(item=model_state)),
         )
     vf_model = nnx.merge(graphdef, restored["state"])
     print("Restored model from checkpoint")
@@ -254,7 +302,8 @@ if train_model:
                 v_l = 0
     vf_model.eval()
     # Save the model
-    checkpoint_manager = ocp.CheckpointManager(checkpoint_dir,
+    checkpoint_manager = ocp.CheckpointManager(
+        checkpoint_dir,
         options=ocp.CheckpointManagerOptions(
             max_to_keep=2,
             keep_checkpoints_without_metrics=True,
@@ -276,12 +325,13 @@ from gensbi.flow_matching.solver import ODESolver
 # Wrap the trained model for conditional sampling
 vf_wrapped = SimformerWrapper(vf_model)
 
-obs_ids = jnp.arange(dim_data)  # observation ids
+obs_ids = jnp.arange(dim_theta)  # observation ids
 cond_ids = jnp.arange(dim_theta, dim_joint)  # conditional ids
 step_size = 0.01
 
+
 def get_samples(vf_wrapped, idx, nsamples=10_000, edge_mask=posterior_faithfull):
-    observation, reference_samples =  task.get_reference(idx)
+    observation, reference_samples = task.get_reference(idx)
     true_param = jnp.array(task.get_true_parameters(idx))
 
     rng = jax.random.PRNGKey(45)
@@ -291,20 +341,35 @@ def get_samples(vf_wrapped, idx, nsamples=10_000, edge_mask=posterior_faithfull)
     cond = jnp.broadcast_to(observation[..., None], (1, dim_data, 1))
 
     solver = ODESolver(velocity_model=vf_wrapped)
-    model_extras = {"cond": cond, "obs_ids": obs_ids, "cond_ids": cond_ids, "edge_mask": edge_mask}
+    model_extras = {
+        "cond": cond,
+        "obs_ids": obs_ids,
+        "cond_ids": cond_ids,
+        "edge_mask": edge_mask,
+    }
 
-    sampler_ = solver.get_sampler(method='Dopri5', step_size=step_size, return_intermediates=False, model_extras=model_extras)
+    sampler_ = solver.get_sampler(
+        method="Dopri5",
+        step_size=step_size,
+        return_intermediates=False,
+        model_extras=model_extras,
+    )
     samples = sampler_(x_init)
     return samples, true_param, reference_samples
 
-# Run C2ST 
+
+# Run C2ST
 c2st_accuracies = []
-for idx in range(1,11):
-    samples, true_param, reference_samples = get_samples(vf_wrapped, idx, nsamples=10_000)
+for idx in range(1, 11):
+    samples, true_param, reference_samples = get_samples(
+        vf_wrapped, idx, nsamples=10_000
+    )
     c2st_accuracy = c2st(reference_samples, samples)
     c2st_accuracies.append(c2st_accuracy)
 
-print(f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}")
+print(
+    f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}"
+)
 # Save C2ST results in a txt file
 c2st_results_file = f"{notebook_path}/c2st_results.txt"
 with open(c2st_results_file, "w") as f:
@@ -312,4 +377,6 @@ with open(c2st_results_file, "w") as f:
         f.write(f"C2ST accuracy for observation={idx}: {accuracy:.4f}\n")
 
     # print mean and std accuracy
-    f.write(f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}\n")
+    f.write(
+        f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}\n"
+    )
