@@ -87,26 +87,32 @@ val_dataset_iter = iter(val_dataset)
 from functools import partial
 
 
-@partial(jax.jit, static_argnames=["nsamples"])
-def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
-    mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
-    mask_posterior = jnp.concatenate(
-        [
-            jnp.zeros((nsamples, dim_theta), dtype=jnp.bool_),
-            jnp.ones((nsamples, dim_data), dtype=jnp.bool_),
-        ],
-        axis=-1,
-    )
-    mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
-    filter = ~jnp.all(mask1, axis=-1)
-    mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
-    masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
-    return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
+from gensbi_examples.mask import get_condition_mask_fn
 
 
-def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array):
+# @partial(jax.jit, static_argnames=["nsamples"])
+# def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
+#     mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
+#     mask_posterior = jnp.concatenate(
+#         [
+#             jnp.zeros((nsamples, dim_theta), dtype=jnp.bool_),
+#             jnp.ones((nsamples, dim_data), dtype=jnp.bool_),
+#         ],
+#         axis=-1,
+#     )
+#     mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
+#     filter = ~jnp.all(mask1, axis=-1)
+#     mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
+#     masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
+#     return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
+
+
+def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
+    if marginal_ids is None:
+        marginal_ids = jnp.arange(edge_mask.shape[0])
+
     idx = jax.random.choice(
-        rng, jnp.arange(edge_mask.shape[0]), shape=(1,), replace=False
+        rng, marginal_ids, shape=(1,), replace=False
     )
     edge_mask = edge_mask.at[idx, :].set(False)
     edge_mask = edge_mask.at[:, idx].set(False)
@@ -128,6 +134,8 @@ dim_theta = task.dim_theta
 dim_data = task.dim_data
 dim_joint = task.dim_joint
 node_ids = jnp.arange(dim_joint)
+obs_ids = jnp.arange(dim_theta)  # observation ids
+cond_ids = jnp.arange(dim_theta, dim_joint)  # conditional ids
 
 # Model parameters from config
 model_params = config.get("model", {})
@@ -162,6 +170,10 @@ p0_dist_model = dist.Independent(
 )
 
 
+condition_mask_fn = get_condition_mask_fn(
+    name="structured_random", theta_dim=dim_theta.item(), x_dim=dim_data.item()
+)
+
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey):
     batch_size = x_1.shape[0]
     rng_x0, rng_t, rng_condition, rng_edge_mask1, rng_edge_mask2 = jax.random.split(
@@ -170,22 +182,24 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey):
     x_0 = p0_dist_model.sample(rng_x0, (batch_size,))
     t = jax.random.uniform(rng_t, x_1.shape[0])
     batch = (x_0, x_1, t)
-    condition_mask = get_random_condition_mask(rng_condition, batch_size)
+
+    condition_mask = condition_mask_fn(key=rng_condition, num_samples=batch_size)
+
     undirected_edge_mask_ = jnp.repeat(
-        undirected_edge_mask[None, ...], 3 * batch_size, axis=0
+        undirected_edge_mask[None, ...], 4*batch_size//5, axis=0
     )
-    faithfull_edge_mask_ = jnp.repeat(
-        posterior_faithfull[None, ...], 3 * batch_size, axis=0
-    )
-    marginal_mask = jax.vmap(marginalize, in_axes=(0, None))(
-        jax.random.split(rng_edge_mask1, (batch_size,)), undirected_edge_mask
+    # faithfull_edge_mask_ = jnp.repeat(
+    #     posterior_faithfull[None, ...], 3 * batch_size, axis=0
+    # )
+    marginal_mask = jax.vmap(marginalize, in_axes=(0, None, None))(
+        jax.random.split(rng_edge_mask1, (batch_size//5,)), undirected_edge_mask, obs_ids
     )
     edge_masks = jnp.concatenate(
-        [undirected_edge_mask_, faithfull_edge_mask_, marginal_mask], axis=0
+        [undirected_edge_mask_, marginal_mask], axis=0
     )
-    edge_masks = jax.random.choice(
-        rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0
-    )
+
+    edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0) # Randomly choose between dense and marginal mask
+
     loss = loss_fn_cfm(
         vf_model,
         batch,
@@ -325,8 +339,6 @@ from gensbi.flow_matching.solver import ODESolver
 # Wrap the trained model for conditional sampling
 vf_wrapped = SimformerWrapper(vf_model)
 
-obs_ids = jnp.arange(dim_theta)  # observation ids
-cond_ids = jnp.arange(dim_theta, dim_joint)  # conditional ids
 step_size = 0.01
 
 
