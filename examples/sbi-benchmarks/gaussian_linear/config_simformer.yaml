@@ -1,6 +1,8 @@
 
 # Simformer Training Configuration
 
+# note: yaml can't resolve 1e-3 as 0.001, so write float numbers explicitly
+
 experiment_directory: examples/sbi-benchmarks/gaussian_linear
 
 optimizer:
@@ -8,7 +10,7 @@ optimizer:
   cooldown: 2
   factor: 0.5
   accumulation_size: 100
-  rtol: 1e-4
+  rtol: 0.0001
   max_lr: 0.001
   min_lr: 0.0
 
