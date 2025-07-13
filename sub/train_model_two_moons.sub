@@ -1,0 +1,20 @@
+universe = vanilla
+REQUIREMENTS = Machine != "mlwn13.ific.uv.es"
+
+request_memory = 32 GB
+request_cpus = 8
+
+
+executable = start_training.sh
+arguments = "$(config_file)"
+getenv = True
+request_gpus = 1
+
+log                     = condor_logs/logs_$(experiment_name).log
+output                  = condor_logs/outfile_$(experiment_name).out
+error                   = condor_logs/errors_$(experiment_name).err
+
+experiment_name = two_moons
+config_file = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)/config_simformer.yaml
+
+queue
