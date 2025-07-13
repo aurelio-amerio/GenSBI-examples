@@ -20,13 +20,13 @@ model:
   dim_condition: 10
   fourier_features: 128
   num_heads: 4
-  num_layers: 6
+  num_layers: 10
   widening_factor: 3
   qkv_features: 40
   num_hidden_layers: 1
 
 training:
-  batch_size: 1024
+  batch_size: 8192
   nsteps: 10000
   nepochs: 10
   multistep: 1
