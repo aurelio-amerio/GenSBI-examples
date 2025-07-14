@@ -316,7 +316,7 @@ if train_model:
     checkpoint_manager = ocp.CheckpointManager(
         checkpoint_dir,
         options=ocp.CheckpointManagerOptions(
-            max_to_keep=2,
+            max_to_keep=None,
             keep_checkpoints_without_metrics=True,
             create=True,
         ),

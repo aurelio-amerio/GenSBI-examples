@@ -32,7 +32,7 @@ training:
   multistep: 1
   early_stopping: true
   print_every: 100
-  experiment_id: 1
+  experiment_id: 7
   restore_model: false
   train_model: true
 
