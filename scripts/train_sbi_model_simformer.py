@@ -111,9 +111,7 @@ def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None
     if marginal_ids is None:
         marginal_ids = jnp.arange(edge_mask.shape[0])
 
-    idx = jax.random.choice(
-        rng, marginal_ids, shape=(1,), replace=False
-    )
+    idx = jax.random.choice(rng, marginal_ids, shape=(1,), replace=False)
     edge_mask = edge_mask.at[idx, :].set(False)
     edge_mask = edge_mask.at[:, idx].set(False)
     edge_mask = edge_mask.at[idx, idx].set(True)
@@ -178,6 +176,7 @@ condition_mask_posterior_fn = get_condition_mask_fn(
     name="posterior", theta_dim=dim_theta.item(), x_dim=dim_data.item()
 )
 
+
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     batch_size = x_1.shape[0]
     rng_x0, rng_t, rng_condition, rng_edge_mask1, rng_edge_mask2 = jax.random.split(
@@ -194,20 +193,22 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
 
     condition_mask = condition_mask_fn(key=rng_condition, num_samples=batch_size)
 
-    undirected_edge_mask_ = jnp.repeat(
-        undirected_edge_mask[None, ...], 4*batch_size//5, axis=0
-    )
-    # faithfull_edge_mask_ = jnp.repeat(
-    #     posterior_faithfull[None, ...], 3 * batch_size, axis=0
+    # undirected_edge_mask_ = jnp.repeat(
+    #     undirected_edge_mask[None, ...], 4*batch_size//5, axis=0
     # )
-    marginal_mask = jax.vmap(marginalize, in_axes=(0, None, None))(
-        jax.random.split(rng_edge_mask1, (batch_size//5,)), undirected_edge_mask, obs_ids
-    )
-    edge_masks = jnp.concatenate(
-        [undirected_edge_mask_, marginal_mask], axis=0
-    )
+    # # faithfull_edge_mask_ = jnp.repeat(
+    # #     posterior_faithfull[None, ...], 3 * batch_size, axis=0
+    # # )
+    # marginal_mask = jax.vmap(marginalize, in_axes=(0, None, None))(
+    #     jax.random.split(rng_edge_mask1, (batch_size//5,)), undirected_edge_mask, obs_ids
+    # )
+    # edge_masks = jnp.concatenate(
+    #     [undirected_edge_mask_, marginal_mask], axis=0
+    # )
 
-    edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0) # Randomly choose between dense and marginal mask
+    # edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0) # Randomly choose between dense and marginal mask
+
+    edge_masks = jnp.repeat(undirected_edge_mask[None, ...], batch_size, axis=0)
 
     loss = loss_fn_cfm(
         vf_model,

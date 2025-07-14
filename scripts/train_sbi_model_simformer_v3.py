@@ -1,7 +1,3 @@
-
-# -------------------
-# 1. Imports and Config Loading
-# -------------------
 import os
 
 # Set JAX backend (use 'cuda' for GPU, 'cpu' otherwise)
@@ -24,8 +20,6 @@ from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
 from gensbi.models import Simformer, SimformerParams, SimformerCFMLoss, SimformerWrapper
 from gensbi_examples.c2st import c2st
-from gensbi_examples.mask import get_condition_mask_fn
-
 
 # Argument parser for config file
 parser = argparse.ArgumentParser(description="Simformer Training Script")
@@ -41,54 +35,30 @@ args, _ = parser.parse_known_args()
 with open(args.config, "r") as f:
     config = yaml.safe_load(f)
 
-# -------------------
-# 2. Parameter Extraction from Config
-# -------------------
+
+# Change working directory to experiment_directory from config
 task_name = config.get("task_name", None)
 experiment_directory = f"examples/sbi-benchmarks/{task_name}"
-train_params = config.get("training", {})
-opt_params = config.get("optimizer", {})
-model_params = config.get("model", {})
+
+if experiment_directory is not None:
+    os.chdir(experiment_directory)
+
+# Task and dataset setup
+task = get_task(task_name)
 
 # Training parameters
+train_params = config.get("training", {})
 experiment_id = train_params.get("experiment_id", 3)
 restore_model = train_params.get("restore_model", False)
 train_model = train_params.get("train_model", True)
 batch_size = train_params.get("batch_size", 4096)
+nsteps = train_params.get("nsteps", 10000)
+nepochs = train_params.get("nepochs", 3)
+multistep = train_params.get("multistep", 1)
 early_stopping = train_params.get("early_stopping", True)
 print_every = train_params.get("print_every", 100)
-total_number_steps_scaling = train_params.get("total_number_steps_scaling", 3)
-max_number_steps = train_params.get("max_number_steps", 100000)
-min_number_steps = train_params.get("min_number_steps", 5000)
 
-total_number_steps = int(
-    max(
-        min(
-            1e5 * total_number_steps_scaling,
-            max_number_steps,
-        ),
-        min_number_steps,
-    )
-)
-
-# Optimizer parameters
-MAX_LR = opt_params.get("max_lr", 1e-3)
-MIN_LR = opt_params.get("min_lr", 0.0)
-
-
-# -------------------
-# 3. Dataset and Task Setup
-# -------------------
-if experiment_directory is not None:
-    os.chdir(experiment_directory)
-
-task = get_task(task_name)
-train_dataset = task.get_train_dataset(batch_size)
-val_dataset = task.get_val_dataset()
-dataset_iter = iter(train_dataset)
-val_dataset_iter = iter(val_dataset)
-
-# Set checkpoint directory and notebook path
+# Set checkpoint directory
 notebook_path = os.getcwd()
 checkpoint_dir = f"{notebook_path}/checkpoints/{task_name}_simformer"
 os.makedirs(checkpoint_dir, exist_ok=True)
@@ -97,14 +67,51 @@ os.makedirs(checkpoint_dir, exist_ok=True)
 devices = jax.devices()
 mesh = jax.sharding.Mesh(devices, axis_names=("data",))
 
+# Optimizer parameters
+opt_params = config.get("optimizer", {})
+PATIENCE = opt_params.get("patience", 10)
+COOLDOWN = opt_params.get("cooldown", 2)
+FACTOR = opt_params.get("factor", 0.5)
+ACCUMULATION_SIZE = opt_params.get("accumulation_size", 100)
+RTOL = opt_params.get("rtol", 1e-4)
+MAX_LR = opt_params.get("max_lr", 1e-3)
+MIN_LR = opt_params.get("min_lr", 0.0)
+MIN_SCALE = MIN_LR / MAX_LR if MAX_LR > 0 else 0.0
+
+train_dataset = task.get_train_dataset(batch_size)
+val_dataset = task.get_val_dataset()
+dataset_iter = iter(train_dataset)
+val_dataset_iter = iter(val_dataset)
+
+# Helper functions (restored from original script)
+from functools import partial
+
+
+from gensbi_examples.mask import get_condition_mask_fn
+
+
+# @partial(jax.jit, static_argnames=["nsamples"])
+# def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
+#     mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
+#     mask_posterior = jnp.concatenate(
+#         [
+#             jnp.zeros((nsamples, dim_theta), dtype=jnp.bool_),
+#             jnp.ones((nsamples, dim_data), dtype=jnp.bool_),
+#         ],
+#         axis=-1,
+#     )
+#     mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
+#     filter = ~jnp.all(mask1, axis=-1)
+#     mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
+#     masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
+#     return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
+
 
 def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
     if marginal_ids is None:
         marginal_ids = jnp.arange(edge_mask.shape[0])
 
-    idx = jax.random.choice(
-        rng, marginal_ids, shape=(1,), replace=False
-    )
+    idx = jax.random.choice(rng, marginal_ids, shape=(1,), replace=False)
     edge_mask = edge_mask.at[idx, :].set(False)
     edge_mask = edge_mask.at[:, idx].set(False)
     edge_mask = edge_mask.at[idx, idx].set(True)
@@ -161,13 +168,25 @@ p0_dist_model = dist.Independent(
 )
 
 
-condition_mask_random_fn = get_condition_mask_fn(
-    name="structured_random", theta_dim=dim_theta.item(), x_dim=dim_data.item()
-)
+@partial(jax.jit, static_argnames=["nsamples"])
+def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
+    mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
+    mask_posterior = jnp.concatenate(
+        [
+            jnp.zeros((nsamples, dim_theta), dtype=jnp.bool_),
+            jnp.ones((nsamples, dim_data), dtype=jnp.bool_),
+        ],
+        axis=-1,
+    )
 
-condition_mask_posterior_fn = get_condition_mask_fn(
-    name="posterior", theta_dim=dim_theta.item(), x_dim=dim_data.item()
-)
+    mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
+    filter = ~jnp.all(mask1, axis=-1)
+    mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
+
+    # masks = jnp.concatenate([mask_joint, mask1, mask_posterior, mask_likelihood], axis=0)
+    masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
+    return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
+
 
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     batch_size = x_1.shape[0]
@@ -178,27 +197,24 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     t = jax.random.uniform(rng_t, x_1.shape[0])
     batch = (x_0, x_1, t)
 
-    if mask == "structured_random":
-        condition_mask_fn = condition_mask_random_fn
-    elif mask == "posterior":
-        condition_mask_fn = condition_mask_posterior_fn
+    condition_mask = get_random_condition_mask(rng_condition, batch_size)
 
-    condition_mask = condition_mask_fn(key=rng_condition, num_samples=batch_size)
-
-    undirected_edge_mask_ = jnp.repeat(
-        undirected_edge_mask[None, ...], 4*batch_size//5, axis=0
-    )
-    # faithfull_edge_mask_ = jnp.repeat(
-    #     posterior_faithfull[None, ...], 3 * batch_size, axis=0
+    # undirected_edge_mask_ = jnp.repeat(
+    #     undirected_edge_mask[None, ...], 4*batch_size//5, axis=0
     # )
-    marginal_mask = jax.vmap(marginalize, in_axes=(0, None, None))(
-        jax.random.split(rng_edge_mask1, (batch_size//5,)), undirected_edge_mask, obs_ids
-    )
-    edge_masks = jnp.concatenate(
-        [undirected_edge_mask_, marginal_mask], axis=0
-    )
+    # # faithfull_edge_mask_ = jnp.repeat(
+    # #     posterior_faithfull[None, ...], 3 * batch_size, axis=0
+    # # )
+    # marginal_mask = jax.vmap(marginalize, in_axes=(0, None, None))(
+    #     jax.random.split(rng_edge_mask1, (batch_size//5,)), undirected_edge_mask, obs_ids
+    # )
+    # edge_masks = jnp.concatenate(
+    #     [undirected_edge_mask_, marginal_mask], axis=0
+    # )
 
-    edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0) # Randomly choose between dense and marginal mask
+    # edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0) # Randomly choose between dense and marginal mask
+
+    edge_masks = jnp.repeat(undirected_edge_mask[None, ...], batch_size, axis=0)
 
     loss = loss_fn_cfm(
         vf_model,
@@ -245,18 +261,24 @@ if restore_model:
     vf_model = nnx.merge(graphdef, restored["state"])
     print("Restored model from checkpoint")
 
-
-# optimizer setup 
-schedule = optax.linear_schedule(
-    MAX_LR,
-    MIN_LR,
-    total_number_steps // 2,
-    total_number_steps // 2,
-)
+# Optimizer setup
+nsteps = 10_000
+nepochs = 3
+multistep = 1
 opt = optax.chain(
-    optax.adaptive_grad_clip(10.0), optax.adam(schedule)
+    optax.adaptive_grad_clip(10.0),
+    optax.adamw(MAX_LR),
+    reduce_on_plateau(
+        patience=PATIENCE,
+        cooldown=COOLDOWN,
+        factor=FACTOR,
+        rtol=RTOL,
+        accumulation_size=ACCUMULATION_SIZE,
+        min_scale=MIN_SCALE,
+    ),
 )
-
+if multistep > 1:
+    opt = optax.MultiSteps(opt, multistep)
 optimizer = nnx.Optimizer(vf_model, opt)
 
 rngs = nnx.Rngs(0)
@@ -272,45 +294,45 @@ early_stopping = True
 
 if train_model:
     vf_model.train()
+    for ep in range(nepochs):
+        pbar = tqdm(range(nsteps))
+        l = 0
+        v_l = 0
+        for j in pbar:
+            if counter > cmax and early_stopping:
+                print("Early stopping")
+                graphdef, abstract_state = nnx.split(vf_model)
+                vf_model = nnx.merge(graphdef, best_state)
+                break
+            loss = train_step(vf_model, optimizer, rngs.train_step())
+            l += loss.item()
+            v_loss = val_loss(vf_model, rngs.val_step())
+            v_l += v_loss.item()
+            if j > 0 and j % 100 == 0:
+                loss_ = l / 100
+                val_ = v_l / 100
+                ratio1 = val_ / loss_
+                ratio2 = val_ / min_val
 
-    pbar = tqdm(range(total_number_steps))
-    l = 0
-    v_l = 0
-    for j in pbar:
-        if counter > cmax and early_stopping:
-            print("Early stopping")
-            graphdef, abstract_state = nnx.split(vf_model)
-            vf_model = nnx.merge(graphdef, best_state)
-            break
-        loss = train_step(vf_model, optimizer, rngs.train_step())
-        l += loss.item()
-        v_loss = val_loss(vf_model, rngs.val_step())
-        v_l += v_loss.item()
-        if j > 0 and j % 100 == 0:
-            loss_ = l / 100
-            val_ = v_l / 100
-            ratio1 = val_ / loss_
-            ratio2 = val_ / min_val
+                if ratio1 < val_error_ratio:
+                    counter = 0
+                else:
+                    counter += 1
 
-            if ratio1 < val_error_ratio:
-                counter = 0
-            else:
-                counter += 1
+                if val_ < min_val:
+                    min_val = val_
+                    best_state = nnx.state(vf_model)
 
-            if val_ < min_val:
-                min_val = val_
-                best_state = nnx.state(vf_model)
-
-            pbar.set_postfix(
-                loss=f"{loss_:.4f}",
-                ratio=f"{ratio1:.4f}",
-                counter=counter,
-                val_loss=f"{val_:.4f}",
-            )
-            loss_array.append(loss_)
-            val_loss_array.append(val_)
-            l = 0
-            v_l = 0
+                pbar.set_postfix(
+                    loss=f"{loss_:.4f}",
+                    ratio=f"{ratio1:.4f}",
+                    counter=counter,
+                    val_loss=f"{val_:.4f}",
+                )
+                loss_array.append(loss_)
+                val_loss_array.append(val_)
+                l = 0
+                v_l = 0
     vf_model.eval()
     # Save the model
     checkpoint_manager = ocp.CheckpointManager(
@@ -329,8 +351,6 @@ if train_model:
     print("Training complete and model saved.")
 
 # --------- C2ST TEST ---------
-
-print("Running C2ST test...")
 
 from gensbi.flow_matching.solver import ODESolver
 
@@ -371,7 +391,7 @@ def get_samples(vf_wrapped, idx, nsamples=10_000, edge_mask=posterior_faithfull)
 
 # Run C2ST
 c2st_accuracies = []
-for idx in tqdm(range(1, 11), desc="C2ST Test"):  # Progress bar for C2ST test
+for idx in range(1, 11):
     samples, true_param, reference_samples = get_samples(
         vf_wrapped, idx, nsamples=10_000
     )

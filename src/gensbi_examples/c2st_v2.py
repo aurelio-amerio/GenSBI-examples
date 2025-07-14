@@ -1,0 +1,147 @@
+from typing import Optional
+
+import jax
+import jax.numpy as jnp
+from jax import Array
+import numpy as np
+from sklearn.model_selection import KFold
+from flax import nnx
+import optax
+
+# Define MLP using flax.nnx
+class MLP(nnx.Module):
+    def __init__(self, in_dim, hidden_dim, *, rngs):
+        self.seq = nnx.Sequential([
+            nnx.Linear(in_dim, hidden_dim, rngs= rngs),
+            nnx.Relu(),
+            nnx.Linear(hidden_dim, hidden_dim, rngs=rngs),
+            nnx.Relu(),
+            nnx.Linear(hidden_dim, 2, rngs=rngs),
+        ])
+    def __call__(self, x):
+        return self.seq(x)
+
+
+def loss_fn(state, x, y):
+    logits = state.value(x)
+    labels = jax.nn.one_hot(y, 2)
+    loss = optax.softmax_cross_entropy(logits, labels).mean()
+    return loss
+
+def accuracy_fn(state, x, y):
+    logits = state.value(x)
+    preds = jnp.argmax(logits, axis=-1)
+    return (preds == y).mean()
+
+def c2st(
+    X: Array,
+    Y: Array,
+    seed: int = 1,
+    n_folds: int = 5,
+    z_score: bool = True,
+    noise_scale: Optional[float] = None,
+) -> Array:
+    """Classifier-based 2-sample test returning accuracy (using nnx for GPU training)
+
+    Trains classifiers with N-fold cross-validation [1]. nnx MLP is used, with 2 hidden layers of 10x dim each.
+
+    Args:
+        X: Sample 1
+        Y: Sample 2
+        seed: Seed for random number generation
+        n_folds: Number of folds
+        z_score: Z-scoring using X
+        noise_scale: If passed, will add Gaussian noise with std noise_scale to samples
+
+    References:
+        [1]: https://scikit-learn.org/stable/modules/cross_validation.html
+    """
+
+    rngs = nnx.Rngs(seed)
+    if z_score:
+        X_mean = jnp.mean(X, axis=0)
+        X_std = jnp.std(X, axis=0)
+        X = (X - X_mean) / X_std
+        Y = (Y - X_mean) / X_std
+
+    if noise_scale is not None:
+        rng = jax.random.PRNGKey(seed)
+        X = X + noise_scale * jax.random.normal(rng, X.shape)
+        Y = Y + noise_scale * jax.random.normal(rng, Y.shape)
+
+    X = jnp.asarray(X)
+    Y = jnp.asarray(Y)
+    ndim = X.shape[1]
+
+    # Prepare data and targets
+    data = jnp.concatenate([X, Y], axis=0)
+    target = jnp.concatenate([
+        jnp.zeros((X.shape[0],), dtype=jnp.int32),
+        jnp.ones((Y.shape[0],), dtype=jnp.int32)
+    ], axis=0)
+
+    kf = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
+    scores = []
+
+    for fold, (train_idx, test_idx) in enumerate(kf.split(data)):
+        x_train, y_train = data[train_idx], target[train_idx]
+        x_test, y_test = data[test_idx], target[test_idx]
+
+    for fold, (train_idx, test_idx) in enumerate(kf.split(data)):
+        # Model and optimizer
+        key = jax.random.PRNGKey(seed + fold)
+        model = MLP(ndim, 10 * ndim, rngs=rngs)
+        optimizer = nnx.Optimizer(model, optax.adam(1e-3))
+
+        @jax.jit
+        def train_step(optimizer, x, y):
+            def _loss_fn(model):
+                return loss_fn(model, x, y)
+            loss, grads = nnx.value_and_grad(_loss_fn)(optimizer.target)
+            optimizer.update(grads, value=loss)
+            return optimizer, loss
+
+        # Training loop
+        n_epochs = 100
+        batch_size = min(128, x_train.shape[0])
+        n_batches = int(jnp.ceil(x_train.shape[0] / batch_size))
+        for epoch in range(n_epochs):
+            perm = jax.random.permutation(key, x_train.shape[0])
+            x_train_shuffled = x_train[perm]
+            y_train_shuffled = y_train[perm]
+            for i in range(n_batches):
+                start = i * batch_size
+                end = min((i + 1) * batch_size, x_train.shape[0])
+                xb = x_train_shuffled[start:end]
+                yb = y_train_shuffled[start:end]
+                optimizer, _ = train_step(optimizer, xb, yb)
+        model = optimizer.target
+
+        score = float(accuracy_fn(model, x_test, y_test))
+
+        scores.append(score)
+
+    return np.asarray(np.mean(scores), dtype=np.float32)
+
+
+# def c2st_auc(
+#     X: Array,
+#     Y: Array,
+#     seed: int = 1,
+#     n_folds: int = 5,
+#     z_score: bool = True,
+#     noise_scale: Optional[float] = None,
+# ) -> Array:
+#     """Classifier-based 2-sample test returning AUC (area under curve)
+
+#     Same as c2st, except that it returns ROC AUC rather than accuracy
+#     """
+#     return c2st(
+#         X,
+#         Y,
+#         seed=seed,
+#         n_folds=n_folds,
+#         scoring="roc_auc",
+#         z_score=z_score,
+#         noise_scale=noise_scale,
+#     )
