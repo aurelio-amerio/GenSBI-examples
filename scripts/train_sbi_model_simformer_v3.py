@@ -264,7 +264,7 @@ nsteps = 10_000
 nepochs = 3
 multistep = 1
 opt = optax.chain(
-    optax.adaptive_grad_clip(10.0),
+    # optax.adaptive_grad_clip(10.0),
     optax.adamw(MAX_LR),
     reduce_on_plateau(
         patience=PATIENCE,
