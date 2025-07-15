@@ -8,7 +8,7 @@ from .graph import faithfull_mask, min_faithfull_mask, moralize
 
 
 class Task:
-    def __init__(self, task_name, data_dir=None):
+    def __init__(self, task_name, data_dir=None, dtype=jnp.float32):
         self.task_name = task_name
         self.data_dir = data_dir or "./"
         download_artifacts(task=task_name, dir=self.data_dir)
@@ -17,14 +17,24 @@ class Task:
         self.max_samples = int(1e6)
 
         self.xs = self.data["xs"][: self.max_samples]
+        self.xs = self.xs.astype(dtype)
         self.thetas = self.data["thetas"][: self.max_samples]
+        self.thetas = self.thetas.astype(dtype)
 
         self.xs_val = self.data["xs"][self.max_samples :]
+        self.xs_val = self.xs_val.astype(dtype)
         self.thetas_val = self.data["thetas"][self.max_samples :]
+        self.thetas_val = self.thetas_val.astype(dtype)
 
         self.observations = self.data["observations"]
+        self.observations = self.observations.astype(dtype)
+
         self.reference_samples = self.data["reference_samples"]
+        self.reference_samples = self.reference_samples.astype(dtype)
+
         self.true_parameters = self.data["true_parameters"]
+        self.true_parameters = self.true_parameters.astype(dtype)
+        
         self.dim_data = self.data["dim_data"]
         self.dim_theta = self.data["dim_theta"]
         self.dim_joint = self.dim_data + self.dim_theta
@@ -127,9 +137,9 @@ class Task:
             raise NotImplementedError()
 
 class TwoMoons(Task):
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None, dtype=jnp.float32):
         task_name = "two_moons"
-        super().__init__(task_name, data_dir)
+        super().__init__(task_name, data_dir, dtype=dtype)
     def get_base_mask_fn(self):
         theta_dim = self.dim_theta
         x_dim = self.dim_data
@@ -142,16 +152,16 @@ class TwoMoons(Task):
         return base_mask_fn
 
 class BernoulliGLM(Task):
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None, dtype=jnp.float32):
         task_name = "bernoulli_glm"
-        super().__init__(task_name, data_dir)
+        super().__init__(task_name, data_dir, dtype=dtype)
     def get_base_mask_fn(self):
         raise NotImplementedError()
 
 class GaussianLinear(Task):
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None, dtype=jnp.float32):
         task_name = "gaussian_linear"
-        super().__init__(task_name, data_dir)
+        super().__init__(task_name, data_dir, dtype=dtype)
     def get_base_mask_fn(self):
         theta_dim = self.dim_theta
         x_dim = self.dim_data
@@ -164,9 +174,9 @@ class GaussianLinear(Task):
         return base_mask_fn
 
 class GaussianLinearUniform(Task):
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None, dtype=jnp.float32):
         task_name = "gaussian_linear_uniform"
-        super().__init__(task_name, data_dir)
+        super().__init__(task_name, data_dir, dtype=dtype)
     def get_base_mask_fn(self):
         theta_dim = self.dim_theta
         x_dim = self.dim_data
@@ -179,9 +189,9 @@ class GaussianLinearUniform(Task):
         return base_mask_fn
 
 class GaussianMixture(Task):
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None, dtype=jnp.float32):
         task_name = "gaussian_mixture"
-        super().__init__(task_name, data_dir)
+        super().__init__(task_name, data_dir, dtype=dtype)
     def get_base_mask_fn(self):
         theta_dim = self.dim_theta
         x_dim = self.dim_data
@@ -194,9 +204,9 @@ class GaussianMixture(Task):
         return base_mask_fn
 
 class SLCP(Task):
-    def __init__(self, data_dir=None):
+    def __init__(self, data_dir=None, dtype=jnp.float32):
         task_name = "slcp"
-        super().__init__(task_name, data_dir)
+        super().__init__(task_name, data_dir, dtype=dtype)
     def get_base_mask_fn(self):
         theta_dim = self.dim_theta
         x_dim = self.dim_data
@@ -209,22 +219,22 @@ class SLCP(Task):
             return base_mask[node_ids, :][:, node_ids]
         return base_mask_fn
     
-def get_task(task_name, data_dir=None):
+def get_task(task_name, dtype=jnp.float32, data_dir=None):
     """
     Returns a Task object based on the task name.
     """
     task_name = task_name.lower()
     if task_name == "two_moons":
-        return TwoMoons(data_dir)
+        return TwoMoons(data_dir, dtype=dtype)
     elif task_name == "bernoulli_glm":
-        return BernoulliGLM(data_dir)
+        return BernoulliGLM(data_dir, dtype=dtype)
     elif task_name == "gaussian_linear":
-        return GaussianLinear(data_dir)
+        return GaussianLinear(data_dir, dtype=dtype)
     elif task_name == "gaussian_linear_uniform":
-        return GaussianLinearUniform(data_dir)
+        return GaussianLinearUniform(data_dir, dtype=dtype)
     elif task_name == "gaussian_mixture":
-        return GaussianMixture(data_dir)
+        return GaussianMixture(data_dir, dtype=dtype)
     elif task_name == "slcp":
-        return SLCP(data_dir)
+        return SLCP(data_dir, dtype=dtype)
     else:
         raise ValueError(f"Unknown task: {task_name}")
