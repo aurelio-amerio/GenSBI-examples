@@ -180,7 +180,7 @@ if restore_model:
 
 # Optimizer setup
 opt = optax.chain(
-    optax.adaptive_grad_clip(10.0),
+    # optax.adaptive_grad_clip(10.0),
     optax.adamw(MAX_LR),
     reduce_on_plateau(
         patience=PATIENCE,
