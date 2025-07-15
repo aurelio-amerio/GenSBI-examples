@@ -203,12 +203,13 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     undirected_edge_mask_ = jnp.repeat(undirected_edge_mask[None,...], 3*batch_size, axis=0) # Dense default mask
     
     # faithfull posterior mask
-    faithfull_edge_mask_ = jnp.repeat(posterior_faithfull[None,...], 3*batch_size, axis=0) # Dense default mask
+    # faithfull_edge_mask_ = jnp.repeat(posterior_faithfull[None,...], 3*batch_size, axis=0) # Dense default mask
     
     # Include marginal consistency by generating edge masks that marginalize out random nodes.
     # This allows the model to learn arbitrary marginal distributions.
     marginal_mask = jax.vmap(marginalize, in_axes=(0,None))(jax.random.split(rng_edge_mask1, (batch_size,)), undirected_edge_mask)
-    edge_masks = jnp.concatenate([undirected_edge_mask_, faithfull_edge_mask_, marginal_mask], axis=0)
+    # edge_masks = jnp.concatenate([undirected_edge_mask_, faithfull_edge_mask_, marginal_mask], axis=0)
+    edge_masks = jnp.concatenate([undirected_edge_mask_, marginal_mask], axis=0)
     # Randomly choose between dense, posterior, and marginal edge masks for each batch element.
     edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0) # Randomly choose between dense and marginal mask
 

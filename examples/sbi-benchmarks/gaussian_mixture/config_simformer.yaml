@@ -10,23 +10,23 @@ optimizer:
   cooldown: 2
   factor: 0.5
   accumulation_size: 100
-  rtol: 0.0001
+  rtol: 1.0e-3
   max_lr: 0.001
   min_lr: 0.0
 
 model:
   dim_value: 40
   dim_id: 40
-  dim_condition: 10
+  dim_condition: 12
   fourier_features: 128
   num_heads: 4
-  num_layers: 6
+  num_layers: 8
   widening_factor: 3
-  qkv_features: 40
+  qkv_features: null
   num_hidden_layers: 1
 
 training:
-  batch_size: 8192
+  batch_size: 4000
   nsteps: 10000
   nepochs: 3
   multistep: 1

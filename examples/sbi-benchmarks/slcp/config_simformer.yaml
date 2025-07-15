@@ -11,7 +11,7 @@ optimizer:
   cooldown: 2
   factor: 0.5
   accumulation_size: 100
-  rtol: 1.0e-4
+  rtol: 1.3e-4
   max_lr: 1.0e-3
   min_lr: 1.0e-7
 
@@ -23,19 +23,19 @@ model:
   num_heads: 4
   num_layers: 8
   widening_factor: 3
-  qkv_features: 40
+  qkv_features: null
   num_hidden_layers: 1
 
 training:
-  batch_size: 1000
+  batch_size: 4000
   nsteps: 10000
   nepochs: 10
   multistep: 1
   early_stopping: true
   print_every: 100
-  experiment_id: 5
-  restore_model: true
-  train_model: false
+  experiment_id: 1
+  restore_model: false
+  train_model: true
 
   total_number_steps_scaling: 3
   max_number_steps: 100000
