@@ -241,7 +241,7 @@ def val_loss(vf_model, key):
 def train_step(model, optimizer, rng):
     loss_fn = lambda model: train_loss(model, rng)
     loss, grads = nnx.value_and_grad(loss_fn)(model)
-    optimizer.update(grads, value=loss)
+    optimizer.update(model, grads, value=loss)
     return loss
 
 
@@ -261,9 +261,6 @@ if restore_model:
     print("Restored model from checkpoint")
 
 # Optimizer setup
-nsteps = 10_000
-nepochs = 3
-multistep = 1
 opt = optax.chain(
     # optax.adaptive_grad_clip(10.0),
     optax.adamw(MAX_LR),
@@ -278,7 +275,7 @@ opt = optax.chain(
 )
 if multistep > 1:
     opt = optax.MultiSteps(opt, multistep)
-optimizer = nnx.Optimizer(vf_model, opt)
+optimizer = nnx.Optimizer(vf_model, opt, wrt=nnx.Param)
 
 rngs = nnx.Rngs(0)
 best_state = nnx.state(vf_model)
@@ -286,10 +283,8 @@ min_val = val_loss(vf_model, jax.random.PRNGKey(0))
 val_error_ratio = 1.1
 counter = 0
 cmax = 10
-print_every = 100
 loss_array = []
 val_loss_array = []
-early_stopping = True
 
 if train_model:
     vf_model.train()
