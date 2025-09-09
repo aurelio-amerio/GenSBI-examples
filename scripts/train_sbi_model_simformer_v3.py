@@ -396,7 +396,7 @@ print(
     f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}"
 )
 # Save C2ST results in a txt file
-c2st_results_file = f"{notebook_path}/c2st_results.txt"
+c2st_results_file = f"{notebook_path}/c2st_results_{experiment_id}.txt"
 with open(c2st_results_file, "w") as f:
     for idx, accuracy in enumerate(c2st_accuracies, start=1):
         f.write(f"C2ST accuracy for observation={idx}: {accuracy:.4f}\n")
