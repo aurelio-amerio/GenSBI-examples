@@ -356,33 +356,6 @@ if multistep > 1:
     opt = optax.MultiSteps(opt, multistep)
 optimizer = nnx.Optimizer(vf_model, opt, wrt=nnx.Param)
 
-# max_number_steps= 100000
-# min_number_steps= 5000
-# total_number_steps_scaling= 3
-
-
-# total_number_steps = int(
-#     max(
-#         min(
-#             1e5 * total_number_steps_scaling,
-#             max_number_steps,
-#         ),
-#         min_number_steps,
-#     )
-# )
-
-# schedule = optax.linear_schedule(
-#     MAX_LR,
-#     MIN_LR,
-#     total_number_steps // 2,
-#     total_number_steps // 2,
-# )
-# opt = optax.chain(
-#     optax.adaptive_grad_clip(10.0), optax.adamw(schedule)
-# )
-
-# optimizer = nnx.Optimizer(vf_model, opt, wrt=nnx.Param)
-
 rngs = nnx.Rngs(0)
 best_state = nnx.state(vf_model)
 min_val = val_loss(vf_model, jax.random.PRNGKey(0))
@@ -390,16 +363,14 @@ val_error_ratio = 1.1
 counter = 0
 cmax = 10
 loss_array = []
-# val_loss_array = []
+val_loss_array = []
 
 if train_model:
     vf_model.train()
     for ep in range(nepochs):
-        pbar = tqdm(range(nsteps)) # todo fixme
-        # pbar = tqdm(range(total_number_steps))
-        l_train = None
-        l_val = None
-
+        pbar = tqdm(range(nsteps))
+        l = 0
+        v_l = 0
         for j in pbar:
             if counter > cmax and early_stopping:
                 print("Early stopping")
@@ -407,66 +378,34 @@ if train_model:
                 vf_model = nnx.merge(graphdef, best_state)
                 break
             loss = train_step(vf_model, optimizer, rngs.train_step())
+            l += loss.item()
             v_loss = val_loss(vf_model, rngs.val_step())
+            v_l += v_loss.item()
+            if j > 0 and j % 100 == 0:
+                loss_ = l / 100
+                val_ = v_l / 100
+                ratio1 = val_ / loss_
+                ratio2 = val_ / min_val
 
-            if j == 0:
-                l_train = loss
-                l_val = v_loss
-            else:
-                l_train = 0.9 * l_train + 0.1 * loss
-                l_val += v_loss
-
-            if j > 50 and j % print_every == 0:
-                l_val /= print_every
-                ratio = l_val / l_train
-                if ratio > val_error_ratio:
-                    counter += 1
-                else:
+                if ratio1 < val_error_ratio:
                     counter = 0
+                else:
+                    counter += 1
+
+                if val_ < min_val:
+                    min_val = val_
+                    best_state = nnx.state(vf_model)
 
                 pbar.set_postfix(
-                    loss=f"{l_train:.4f}",
-                    ratio=f"{ratio:.4f}",
+                    loss=f"{loss_:.4f}",
+                    ratio=f"{ratio1:.4f}",
                     counter=counter,
-                    val_loss=f"{l_val:.4f}",
+                    val_loss=f"{val_:.4f}",
                 )
-                loss_array.append(l_train)
-                # val_loss_array.append(l_val)
-
-                if l_val < min_val:
-                    min_val = l_val
-                    best_state = nnx.state(vf_model)
-                
-                l_val = 0
-
-
-            # l += loss.item()
-            # v_l += v_loss.item()
-            # if j > 0 and j % 100 == 0:
-            #     loss_ = l / 100
-            #     val_ = v_l / 100
-            #     ratio1 = val_ / loss_
-            #     ratio2 = val_ / min_val
-
-            #     if ratio1 < val_error_ratio:
-            #         counter = 0
-            #     else:
-            #         counter += 1
-
-            #     if val_ < min_val:
-            #         min_val = val_
-            #         best_state = nnx.state(vf_model)
-
-            #     pbar.set_postfix(
-            #         loss=f"{loss_:.4f}",
-            #         ratio=f"{ratio1:.4f}",
-            #         counter=counter,
-            #         val_loss=f"{val_:.4f}",
-            #     )
-            #     loss_array.append(loss_)
-            #     val_loss_array.append(val_)
-            #     l = 0
-            #     v_l = 0
+                loss_array.append(loss_)
+                val_loss_array.append(val_)
+                l = 0
+                v_l = 0
     vf_model.eval()
     # Save the model
     checkpoint_manager = ocp.CheckpointManager(

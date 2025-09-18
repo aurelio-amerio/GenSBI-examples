@@ -18,24 +18,20 @@ model:
   dim_value: 40
   dim_id: 40
   dim_condition: 10
-  fourier_features: 128
-  num_heads: 4
-  num_layers: 6
+  fourier_features: 256
+  num_heads: 6
+  num_layers: 12
   widening_factor: 3
-  qkv_features: 40
+  qkv_features: 60
   num_hidden_layers: 1
 
 training:
   batch_size: 4096
-  nsteps: 10000
-  nepochs: 3
+  nsteps: 30000
+  nepochs: 1
   multistep: 1
   early_stopping: true
   print_every: 100
-  experiment_id: 1
+  experiment_id: 3
   restore_model: false
   train_model: true
-
-  total_number_steps_scaling: 3
-  max_number_steps: 100000
-  min_number_steps: 5000
