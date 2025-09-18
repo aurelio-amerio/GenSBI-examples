@@ -15,6 +15,6 @@ output                  = condor_logs/outfile_$(experiment_name).out
 error                   = condor_logs/errors_$(experiment_name).err
 
 experiment_name = two_moons
-config_file = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)/config_simformer.yaml
+config_file = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)/config_simformer_4.yaml
 
 queue
