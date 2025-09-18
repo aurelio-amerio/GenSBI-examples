@@ -20,7 +20,7 @@ model:
   dim_condition: 10
   fourier_features: 128
   num_heads: 4
-  num_layers: 8
+  num_layers: 6
   widening_factor: 3
   qkv_features: 40
   num_hidden_layers: 1
@@ -32,7 +32,7 @@ training:
   multistep: 1
   early_stopping: true
   print_every: 100
-  experiment_id: 7
+  experiment_id: 1
   restore_model: false
   train_model: true
 
