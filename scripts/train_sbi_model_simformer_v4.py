@@ -1,4 +1,4 @@
-# rewrite the training strategy from scratch and make it simpler
+# this model adopts an averaged loss
 
 
 import os
@@ -341,7 +341,7 @@ if restore_model:
 
 # Optimizer setup
 opt = optax.chain(
-    # optax.adaptive_grad_clip(10.0),
+    optax.adaptive_grad_clip(10.0),
     optax.adamw(MAX_LR),
     reduce_on_plateau(
         patience=PATIENCE,
@@ -356,33 +356,6 @@ if multistep > 1:
     opt = optax.MultiSteps(opt, multistep)
 optimizer = nnx.Optimizer(vf_model, opt, wrt=nnx.Param)
 
-# max_number_steps= 100000
-# min_number_steps= 5000
-# total_number_steps_scaling= 3
-
-
-# total_number_steps = int(
-#     max(
-#         min(
-#             1e5 * total_number_steps_scaling,
-#             max_number_steps,
-#         ),
-#         min_number_steps,
-#     )
-# )
-
-# schedule = optax.linear_schedule(
-#     MAX_LR,
-#     MIN_LR,
-#     total_number_steps // 2,
-#     total_number_steps // 2,
-# )
-# opt = optax.chain(
-#     optax.adaptive_grad_clip(10.0), optax.adamw(schedule)
-# )
-
-# optimizer = nnx.Optimizer(vf_model, opt, wrt=nnx.Param)
-
 rngs = nnx.Rngs(0)
 best_state = nnx.state(vf_model)
 min_val = val_loss(vf_model, jax.random.PRNGKey(0))
@@ -390,7 +363,7 @@ val_error_ratio = 1.1
 counter = 0
 cmax = 10
 loss_array = []
-# val_loss_array = []
+val_loss_array = []
 
 if train_model:
     vf_model.train()
@@ -413,10 +386,12 @@ if train_model:
                 l_train = loss
                 l_val = v_loss
             else:
-                l_train = 0.9 * l_train + 0.1 * loss
+                # l_train = 0.9 * l_train + 0.1 * loss
+                l_train += loss
                 l_val += v_loss
 
             if j > 50 and j % print_every == 0:
+                l_train /= print_every
                 l_val /= print_every
                 ratio = l_val / l_train
                 if ratio > val_error_ratio:
@@ -431,42 +406,16 @@ if train_model:
                     val_loss=f"{l_val:.4f}",
                 )
                 loss_array.append(l_train)
-                # val_loss_array.append(l_val)
+                val_loss_array.append(l_val)
 
                 if l_val < min_val:
                     min_val = l_val
                     best_state = nnx.state(vf_model)
                 
                 l_val = 0
+                l_train = 0
 
 
-            # l += loss.item()
-            # v_l += v_loss.item()
-            # if j > 0 and j % 100 == 0:
-            #     loss_ = l / 100
-            #     val_ = v_l / 100
-            #     ratio1 = val_ / loss_
-            #     ratio2 = val_ / min_val
-
-            #     if ratio1 < val_error_ratio:
-            #         counter = 0
-            #     else:
-            #         counter += 1
-
-            #     if val_ < min_val:
-            #         min_val = val_
-            #         best_state = nnx.state(vf_model)
-
-            #     pbar.set_postfix(
-            #         loss=f"{loss_:.4f}",
-            #         ratio=f"{ratio1:.4f}",
-            #         counter=counter,
-            #         val_loss=f"{val_:.4f}",
-            #     )
-            #     loss_array.append(loss_)
-            #     val_loss_array.append(val_)
-            #     l = 0
-            #     v_l = 0
     vf_model.eval()
     # Save the model
     checkpoint_manager = ocp.CheckpointManager(
@@ -524,6 +473,8 @@ def get_samples(vf_wrapped, idx, nsamples=10_000, edge_mask=None):
 
 
 # Run C2ST
+print("Running C2ST tests...")
+
 c2st_accuracies = []
 for idx in range(1, 11):
     samples, true_param, reference_samples = get_samples(
@@ -531,6 +482,7 @@ for idx in range(1, 11):
     )
     c2st_accuracy = c2st(reference_samples, samples)
     c2st_accuracies.append(c2st_accuracy)
+    print(f"C2ST accuracy for observation={idx}: {c2st_accuracy:.4f}\n")
 
 print(
     f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}"
