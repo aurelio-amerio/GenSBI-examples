@@ -1,4 +1,4 @@
-# this model adopts an averaged loss
+# this uses EMA for the model weights
 
 
 import os
@@ -23,6 +23,33 @@ from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
 from gensbi.models import Simformer, SimformerParams, SimformerCFMLoss, SimformerWrapper
 from gensbi_examples.c2st import c2st
+
+
+######## new ema code
+
+class ModelEMA(nnx.Optimizer):
+
+    def __init__(
+        self,
+        model: nnx.Module,
+        tx: optax.GradientTransformation,
+    ):
+        super().__init__(model, tx, wrt=[nnx.Param, nnx.BatchStat])
+
+
+    def update(self, model, model_orginal: nnx.Module):
+        params = nnx.state(model_orginal, self.wrt)
+        ema_params = nnx.state(model, self.wrt)
+        self.step.value += 1
+
+        ema_state = optax.EmaState(count=self.step, ema=ema_params)
+
+        _, new_ema_state = self.tx.update(params, ema_state)
+
+        nnx.update(model, new_ema_state.ema)
+
+
+########
 
 # Argument parser for config file
 parser = argparse.ArgumentParser(description="Simformer Training Script")
@@ -64,7 +91,9 @@ print_every = train_params.get("print_every", 100)
 # Set checkpoint directory
 notebook_path = os.getcwd()
 checkpoint_dir = f"{notebook_path}/checkpoints/{task_name}_simformer"
+checkpoint_dir_ema = f"{notebook_path}/checkpoints/{task_name}_simformer_ema"
 os.makedirs(checkpoint_dir, exist_ok=True)
+os.makedirs(checkpoint_dir_ema, exist_ok=True)
 
 # JAX mesh setup
 devices = jax.devices()
@@ -90,35 +119,19 @@ val_dataset_iter = iter(val_dataset)
 from functools import partial
 
 
-from gensbi_examples.mask import get_condition_mask_fn
+# from gensbi_examples.mask import get_condition_mask_fn
 
 
-# @partial(jax.jit, static_argnames=["nsamples"])
-# def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
-#     mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
-#     mask_posterior = jnp.concatenate(
-#         [
-#             jnp.zeros((nsamples, dim_theta), dtype=jnp.bool_),
-#             jnp.ones((nsamples, dim_data), dtype=jnp.bool_),
-#         ],
-#         axis=-1,
-#     )
-#     mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
-#     filter = ~jnp.all(mask1, axis=-1)
-#     mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
-#     masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
-#     return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
 
+# def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
+#     if marginal_ids is None:
+#         marginal_ids = jnp.arange(edge_mask.shape[0])
 
-def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
-    if marginal_ids is None:
-        marginal_ids = jnp.arange(edge_mask.shape[0])
-
-    idx = jax.random.choice(rng, marginal_ids, shape=(1,), replace=False)
-    edge_mask = edge_mask.at[idx, :].set(False)
-    edge_mask = edge_mask.at[:, idx].set(False)
-    edge_mask = edge_mask.at[idx, idx].set(True)
-    return edge_mask
+#     idx = jax.random.choice(rng, marginal_ids, shape=(1,), replace=False)
+#     edge_mask = edge_mask.at[idx, :].set(False)
+#     edge_mask = edge_mask.at[:, idx].set(False)
+#     edge_mask = edge_mask.at[idx, idx].set(True)
+#     return edge_mask
 
 
 def next_batch():
@@ -158,60 +171,10 @@ loss_fn_cfm = SimformerCFMLoss(path)
 
 undirected_edge_mask = jnp.ones((dim_joint, dim_joint), dtype=jnp.bool_)
 
-# posterior_mask = jnp.concatenate(
-#     [jnp.zeros((dim_theta), dtype=jnp.bool_), jnp.ones((dim_data), dtype=jnp.bool_)],
-#     axis=-1,
-# )
-# posterior_faithfull = task.get_edge_mask_fn("faithfull")(
-#     node_ids, condition_mask=posterior_mask
-# )
-
 p0_dist_model = dist.Independent(
     dist.Normal(loc=jnp.zeros((dim_joint,)), scale=jnp.ones((dim_joint,))),
     reinterpreted_batch_ndims=1,
 )
-
-
-# @partial(jax.jit(static_argnames=["num_samples", "theta_dim", "x_dim"]))
-# @partial(jax.jit, static_argnames=["num_samples", "theta_dim", "x_dim","p_joint", "p_posterior", "p_likelihood", "p_rnd1", "p_rnd2", "rnd1_prob", "rnd2_prob"])
-# def sample_strutured_conditional_mask(
-#     key,
-#     num_samples,
-#     theta_dim,
-#     x_dim,
-#     p_joint=0.2,
-#     p_posterior=0.2,
-#     p_likelihood=0.2,
-#     p_rnd1=0.2,
-#     p_rnd2=0.2,
-#     rnd1_prob=0.3,
-#     rnd2_prob=0.7,
-# ):
-#     # Joint, posterior, likelihood, random1_mask, random2_mask
-#     key1, key2, key3 = jax.random.split(key, 3)
-#     condition_mask = jax.random.choice(
-#         key1,
-#         jnp.array(
-#             [[False] * (theta_dim + x_dim)]
-#             + [[False] * theta_dim + [True] * x_dim]
-#             + [
-#                 [True] * theta_dim + [False] * x_dim,
-#                 jax.random.bernoulli(
-#                     key2, rnd1_prob, shape=(theta_dim + x_dim,)
-#                 ).astype(jnp.bool_),
-#                 jax.random.bernoulli(
-#                     key3, rnd2_prob, shape=(theta_dim + x_dim,)
-#                 ).astype(jnp.bool_),
-#             ]
-#         ),
-#         shape=(num_samples,),
-#         p=jnp.array([p_joint, p_posterior, p_likelihood, p_rnd1, p_rnd2]),
-#         axis=0,
-#     )
-#     all_ones_mask = jnp.all(condition_mask, axis=-1)
-#     # If all are ones, then set to false
-#     condition_mask = jnp.where(all_ones_mask[..., None], False, condition_mask)
-#     return condition_mask
 
 
 def sample_strutured_conditional_mask(
@@ -253,26 +216,6 @@ def sample_strutured_conditional_mask(
     # If all are ones, then set to false
     condition_mask = jnp.where(all_ones_mask[..., None], False, condition_mask)
     return condition_mask
-
-
-# @partial(jax.jit, static_argnames=["nsamples"])
-# def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
-#     mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
-#     mask_posterior = jnp.concatenate(
-#         [
-#             jnp.zeros((nsamples, dim_theta), dtype=jnp.bool_),
-#             jnp.ones((nsamples, dim_data), dtype=jnp.bool_),
-#         ],
-#         axis=-1,
-#     )
-
-#     mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
-#     filter = ~jnp.all(mask1, axis=-1)
-#     mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
-
-#     # masks = jnp.concatenate([mask_joint, mask1, mask_posterior, mask_likelihood], axis=0)
-#     masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
-#     return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
 
 
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
@@ -323,8 +266,26 @@ def train_step(model, optimizer, rng):
     optimizer.update(model, grads, value=loss)
     return loss
 
+@nnx.jit
+def ema_step(ema_model, model, ema_optimizer: nnx.Optimizer):
+    ema_optimizer.update(ema_model, model)
+
+
+# @nnx.jit
+# def update_ema_params(vf_model, ema_params, decay):
+#     params = nnx.state(vf_model, nnx.Param)
+#     ema_params = ema_update(ema_params, params, decay)
+#     return ema_params
 
 vf_model = Simformer(params)
+
+# define the ema params from the main model
+ema_model = nnx.clone(vf_model)
+
+model_ema_decay = 0.99
+ema_tx = optax.ema(model_ema_decay)
+ema_optimizer = ModelEMA(ema_model, ema_tx)
+
 
 if restore_model:
     model_state = nnx.state(vf_model)
@@ -358,41 +319,44 @@ optimizer = nnx.Optimizer(vf_model, opt, wrt=nnx.Param)
 
 rngs = nnx.Rngs(0)
 best_state = nnx.state(vf_model)
+best_state_ema = nnx.state(ema_model)
+
 min_val = val_loss(vf_model, jax.random.PRNGKey(0))
 val_error_ratio = 1.1
 counter = 0
 cmax = 10
+
 loss_array = []
 val_loss_array = []
 
 if train_model:
     vf_model.train()
+
     for ep in range(nepochs):
         pbar = tqdm(range(nsteps)) # todo fixme
         # pbar = tqdm(range(total_number_steps))
         l_train = None
-        l_val = None
 
         for j in pbar:
             if counter > cmax and early_stopping:
                 print("Early stopping")
                 graphdef, abstract_state = nnx.split(vf_model)
                 vf_model = nnx.merge(graphdef, best_state)
+                ema_params = best_state_ema
+
                 break
             loss = train_step(vf_model, optimizer, rngs.train_step())
-            v_loss = val_loss(vf_model, rngs.val_step())
+            # update the parameters ema
+            ema_step(ema_model, vf_model, ema_optimizer)  # Update the EMA model.
+
 
             if j == 0:
                 l_train = loss
-                l_val = v_loss
             else:
-                # l_train = 0.9 * l_train + 0.1 * loss
-                l_train += loss
-                l_val += v_loss
+                l_train = 0.9 * l_train + 0.1 * loss
 
             if j > 50 and j % print_every == 0:
-                l_train /= print_every
-                l_val /= print_every
+                l_val = val_loss(vf_model, rngs.val_step())
                 ratio = l_val / l_train
                 if ratio > val_error_ratio:
                     counter += 1
@@ -411,6 +375,7 @@ if train_model:
                 if l_val < min_val:
                     min_val = l_val
                     best_state = nnx.state(vf_model)
+                    best_state_ema = nnx.state(ema_model)
                 
                 l_val = 0
                 l_train = 0
@@ -431,15 +396,35 @@ if train_model:
         experiment_id, args=ocp.args.Composite(state=ocp.args.PyTreeSave(model_state))
     )
     checkpoint_manager.close()
+
+    # now we create the ema model and save it 
+    ema_state = nnx.state(ema_model)
+
+    #save the ema model
+    checkpoint_manager_ema = ocp.CheckpointManager(
+        checkpoint_dir_ema,
+        options=ocp.CheckpointManagerOptions(
+            max_to_keep=None,
+            keep_checkpoints_without_metrics=True,      
+            create=True,
+        ),
+    )
+
+    checkpoint_manager_ema.save(
+        experiment_id, args=ocp.args.Composite(state=ocp.args.PyTreeSave(ema_state))
+    )
+    checkpoint_manager_ema.close()  
     print("Training complete and model saved.")
 
 # --------- C2ST TEST ---------
 
 from gensbi.flow_matching.solver import ODESolver
 
+ema_model.eval()
 
 # Wrap the trained model for conditional sampling
 vf_wrapped = SimformerWrapper(vf_model)
+vf_wrapped_ema = SimformerWrapper(ema_model)
 
 step_size = 0.01
 
@@ -497,3 +482,27 @@ with open(c2st_results_file, "w") as f:
     f.write(
         f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}\n"
     )
+
+# repeat for the ema model
+c2st_accuracies_ema = []
+for idx in range(1, 11):
+    samples, true_param, reference_samples = get_samples(
+        vf_wrapped_ema, idx, nsamples=10_000
+    )
+    c2st_accuracy = c2st(reference_samples, samples)
+    c2st_accuracies_ema.append(c2st_accuracy)
+    print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")    
+print(
+    f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}"
+)
+# Save C2ST results in a txt file   
+c2st_results_file_ema = f"{notebook_path}/c2st_results_ema_{experiment_id}.txt"
+with open(c2st_results_file_ema, "w") as f: 
+    for idx, accuracy in enumerate(c2st_accuracies_ema, start=1):
+        f.write(f"C2ST accuracy EMA for observation={idx}: {accuracy:.4f}\n")
+
+    # print mean and std accuracy
+    f.write(
+        f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}\n"
+    )
+print("C2ST tests complete.")

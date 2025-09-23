@@ -12,7 +12,7 @@ optimizer:
   accumulation_size: 100
   rtol: 1.0e-4
   max_lr: 1.0e-3
-  min_lr: 1.0e-7
+  min_lr: 1.0e-6
 
 model:
   dim_value: 40

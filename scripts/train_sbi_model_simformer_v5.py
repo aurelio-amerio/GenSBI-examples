@@ -1,4 +1,4 @@
-# this model adopts an averaged loss
+# this model adopts an exponentially averaged loss
 
 
 import os
@@ -362,6 +362,7 @@ min_val = val_loss(vf_model, jax.random.PRNGKey(0))
 val_error_ratio = 1.1
 counter = 0
 cmax = 10
+
 loss_array = []
 val_loss_array = []
 
@@ -371,7 +372,6 @@ if train_model:
         pbar = tqdm(range(nsteps)) # todo fixme
         # pbar = tqdm(range(total_number_steps))
         l_train = None
-        l_val = None
 
         for j in pbar:
             if counter > cmax and early_stopping:
@@ -380,19 +380,14 @@ if train_model:
                 vf_model = nnx.merge(graphdef, best_state)
                 break
             loss = train_step(vf_model, optimizer, rngs.train_step())
-            v_loss = val_loss(vf_model, rngs.val_step())
 
             if j == 0:
                 l_train = loss
-                l_val = v_loss
             else:
-                # l_train = 0.9 * l_train + 0.1 * loss
-                l_train += loss
-                l_val += v_loss
+                l_train = 0.9 * l_train + 0.1 * loss
 
             if j > 50 and j % print_every == 0:
-                l_train /= print_every
-                l_val /= print_every
+                l_val = val_loss(vf_model, rngs.val_step())
                 ratio = l_val / l_train
                 if ratio > val_error_ratio:
                     counter += 1
