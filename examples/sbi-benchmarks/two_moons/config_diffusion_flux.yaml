@@ -5,25 +5,34 @@
 
 task_name: two_moons
 
+strategy:
+  method: "diffusion"
+  model: "flux"
+
 optimizer:
   patience: 10
   cooldown: 2
   factor: 0.5
-  accumulation_size: 200
+  accumulation_size: 100
   rtol: 1.0e-4
   max_lr: 1.0e-3
   min_lr: 1.0e-8
 
 model:
-  dim_value: 40
-  dim_id: 40
-  dim_condition: 10
-  fourier_features: 256
+  in_channels: 1
+  vec_in_dim: null
+  context_in_dim: 1
+  mlp_ratio: 4
+  qkv_multiplier: 1
   num_heads: 4
-  num_layers: 6
-  widening_factor: 3
-  qkv_features: 40
-  num_hidden_layers: 1
+  depth: 8
+  depth_single_blocks: 16
+  axes_dim: [10]
+  use_rope: true
+  qkv_bias: true
+  theta: 40
+  params_dtype: "float32"
+
 
 training:
   batch_size: 4096
@@ -32,6 +41,6 @@ training:
   multistep: 1
   early_stopping: true
   val_every: 100
-  experiment_id: 7
+  experiment_id: 1
   restore_model: false
   train_model: true

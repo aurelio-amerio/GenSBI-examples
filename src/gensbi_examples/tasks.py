@@ -44,10 +44,10 @@ class Task:
         assert (
             nsamples < self.max_samples
         ), f"nsamples must be less than {self.max_samples}"
-        xs = self.xs[: int(nsamples)]
-        thetas = self.thetas[: int(nsamples)]
+        xs = self.xs[: int(nsamples)][...,None]
+        thetas = self.thetas[: int(nsamples)][...,None]
 
-        train_data = jnp.concatenate((thetas, xs), axis=-1)
+        train_data = jnp.concatenate((thetas, xs), axis=1)
 
         dataset_grain = (
             grain.MapDataset.source(np.array(train_data))
@@ -61,10 +61,10 @@ class Task:
         return dataset_grain
 
     def get_val_dataset(self):
-        xs_val = self.xs_val
-        thetas_val = self.thetas_val
+        xs_val = self.xs_val[...,None]
+        thetas_val = self.thetas_val[...,None]
 
-        val_data = jnp.concatenate((thetas_val, xs_val), axis=-1)
+        val_data = jnp.concatenate((thetas_val, xs_val), axis=1)
 
         val_dataset_grain = (
             grain.MapDataset.source(np.array(val_data))

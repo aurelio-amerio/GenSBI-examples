@@ -5,6 +5,10 @@
 
 task_name: two_moons
 
+strategy:
+  method: "flow"
+  model: "flux"
+
 optimizer:
   patience: 10
   cooldown: 2
@@ -15,28 +19,27 @@ optimizer:
   min_lr: 1.0e-8
 
 model:
-  dim_value: 40
-  dim_id: 40
-  dim_condition: 10
-  fourier_features: 128
-  num_heads: 6
-  num_layers: 8
-  widening_factor: 3
-  qkv_features: 60
-  num_hidden_layers: 1
+  in_channels: 1
+  vec_in_dim: null
+  context_in_dim: 1
+  mlp_ratio: 4
+  qkv_multiplier: 1
+  num_heads: 4
+  depth: 8
+  depth_single_blocks: 16
+  axes_dim: [10]
+  use_rope: true
+  qkv_bias: true
+  theta: 40
+  params_dtype: "float32"
 
 training:
   batch_size: 4096
-  nsteps: 30000
-  nepochs: 1
+  nsteps: 50000
+  ema_decay: 0.99
   multistep: 1
   early_stopping: true
-  print_every: 100
   val_every: 100
-  experiment_id: 6
+  experiment_id: 1
   restore_model: false
   train_model: true
-
-  total_number_steps_scaling: 3
-  max_number_steps: 100000
-  min_number_steps: 5000
