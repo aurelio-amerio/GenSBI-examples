@@ -13,7 +13,7 @@ optimizer:
   patience: 10
   cooldown: 2
   factor: 0.5
-  accumulation_size: 100
+  accumulation_size: 200
   rtol: 1.0e-4
   max_lr: 1.0e-3
   min_lr: 1.0e-8
@@ -24,7 +24,7 @@ model:
   dim_condition: 10
   fourier_features: 256
   num_heads: 4
-  num_layers: 6
+  num_layers: 8
   widening_factor: 3
   qkv_features: 40
   num_hidden_layers: 1
