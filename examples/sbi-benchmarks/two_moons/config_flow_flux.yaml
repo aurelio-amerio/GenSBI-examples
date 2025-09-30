@@ -28,7 +28,6 @@ model:
   depth: 8
   depth_single_blocks: 16
   axes_dim: [10]
-  use_rope: true
   qkv_bias: true
   theta: 40
   params_dtype: "float32"

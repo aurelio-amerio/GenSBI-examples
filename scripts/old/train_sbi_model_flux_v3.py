@@ -115,7 +115,6 @@ params = FluxParams(
     depth=model_params.get("depth", 8),
     depth_single_blocks=model_params.get("depth_single_blocks", 16),
     axes_dim=model_params.get("axes_dim", [6]),
-    use_rope=model_params.get("use_rope", False),
     qkv_bias=model_params.get("qkv_bias", True),
     obs_dim=dim_theta,
     cond_dim=dim_data,
