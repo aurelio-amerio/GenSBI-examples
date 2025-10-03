@@ -33,10 +33,6 @@ training:
   early_stopping: true
   print_every: 100
   val_every: 100
-  experiment_id: 6
+  experiment_id: 2
   restore_model: false
   train_model: true
-
-  total_number_steps_scaling: 3
-  max_number_steps: 100000
-  min_number_steps: 5000
