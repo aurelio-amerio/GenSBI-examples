@@ -1,10 +1,10 @@
 # this uses EMA for the model weights
-
+# %%
 
 import os
 
 # Set JAX backend (use 'cuda' for GPU, 'cpu' otherwise)
-os.environ["JAX_PLATFORMS"] = "cuda"
+os.environ["JAX_PLATFORMS"] = "cpu"
 
 import argparse
 import yaml
@@ -24,8 +24,18 @@ from gensbi_examples.tasks import get_task
 from gensbi.models import Simformer, SimformerParams, SimformerCFMLoss, SimformerWrapper
 from gensbi_examples.c2st import c2st
 
+from gensbi.models import SimformerParams
+from gensbi.recipes import SimformerFlowPipeline
+
+
+from functools import partial
+
+from time import time
+
+# %%
 
 ######## new ema code
+
 
 class ModelEMA(nnx.Optimizer):
 
@@ -35,7 +45,6 @@ class ModelEMA(nnx.Optimizer):
         tx: optax.GradientTransformation,
     ):
         super().__init__(model, tx, wrt=[nnx.Param, nnx.BatchStat])
-
 
     def update(self, model, model_orginal: nnx.Module):
         params = nnx.state(model_orginal, self.wrt)
@@ -50,25 +59,19 @@ class ModelEMA(nnx.Optimizer):
 
 
 ########
-
+# %%
 # Argument parser for config file
-parser = argparse.ArgumentParser(description="Simformer Training Script")
-parser.add_argument(
-    "--config",
-    type=str,
-    default="config_simformer.yaml",
-    help="Path to YAML config file",
-)
-args, _ = parser.parse_known_args()
+
+config = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/two_moons/config_simformer_6.yaml"
 
 # Load config
-with open(args.config, "r") as f:
+with open(config, "r") as f:
     config = yaml.safe_load(f)
 
 
 # Change working directory to experiment_directory from config
 task_name = config.get("task_name", None)
-experiment_directory = f"examples/sbi-benchmarks/{task_name}"
+experiment_directory = f"/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/two_moons"
 
 if experiment_directory is not None:
     os.chdir(experiment_directory)
@@ -90,8 +93,8 @@ print_every = train_params.get("print_every", 100)
 
 # Set checkpoint directory
 notebook_path = os.getcwd()
-checkpoint_dir = f"{notebook_path}/checkpoints/{task_name}_simformer"
-checkpoint_dir_ema = f"{notebook_path}/checkpoints/{task_name}_simformer_ema"
+checkpoint_dir = f"{notebook_path}/checkpoints/{task_name}_simformer_v6"
+checkpoint_dir_ema = f"{notebook_path}/checkpoints/{task_name}_simformer_ema_v6"
 os.makedirs(checkpoint_dir, exist_ok=True)
 os.makedirs(checkpoint_dir_ema, exist_ok=True)
 
@@ -115,24 +118,6 @@ val_dataset = task.get_val_dataset()
 dataset_iter = iter(train_dataset)
 val_dataset_iter = iter(val_dataset)
 
-# Helper functions (restored from original script)
-from functools import partial
-
-
-# from gensbi_examples.mask import get_condition_mask_fn
-
-
-
-# def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
-#     if marginal_ids is None:
-#         marginal_ids = jnp.arange(edge_mask.shape[0])
-
-#     idx = jax.random.choice(rng, marginal_ids, shape=(1,), replace=False)
-#     edge_mask = edge_mask.at[idx, :].set(False)
-#     edge_mask = edge_mask.at[:, idx].set(False)
-#     edge_mask = edge_mask.at[idx, idx].set(True)
-#     return edge_mask
-
 
 def next_batch():
     return next(dataset_iter)
@@ -140,6 +125,9 @@ def next_batch():
 
 def next_val_batch():
     return next(val_dataset_iter)
+
+
+# %% define all model parameters and training settings
 
 
 # Model definition
@@ -172,9 +160,12 @@ loss_fn_cfm = SimformerCFMLoss(path)
 undirected_edge_mask = jnp.ones((dim_joint, dim_joint), dtype=jnp.bool_)
 
 p0_dist_model = dist.Independent(
-    dist.Normal(loc=jnp.zeros((dim_joint,)), scale=jnp.ones((dim_joint,))),
+    dist.Normal(loc=jnp.zeros((dim_joint, 1)), scale=jnp.ones((dim_joint, 1))),
     reinterpreted_batch_ndims=1,
 )
+
+# define the pipeline
+pipeline = SimformerFlowPipeline(train_dataset, val_dataset, 2, 2, params=params)
 
 
 def sample_strutured_conditional_mask(
@@ -218,6 +209,7 @@ def sample_strutured_conditional_mask(
     return condition_mask
 
 
+"""
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     batch_size = x_1.shape[0]
     rng_x0, rng_t, rng_condition, rng_edge_mask1, rng_edge_mask2 = jax.random.split(
@@ -245,18 +237,21 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
         condition_mask=condition_mask,
     )
     return loss
+"""
+
+loss_fn_ = pipeline.get_loss_fn()
 
 
 @nnx.jit
 def train_loss(vf_model, key: jax.random.PRNGKey):
     x_1 = next_batch()
-    return loss_fn_(vf_model, x_1, key, "posterior")
+    return loss_fn_(vf_model, x_1, key)
 
 
 @nnx.jit
 def val_loss(vf_model, key):
     x_1 = next_val_batch()
-    return loss_fn_(vf_model, x_1, key, "posterior")
+    return loss_fn_(vf_model, x_1, key)
 
 
 @nnx.jit
@@ -266,20 +261,14 @@ def train_step(model, optimizer, rng):
     optimizer.update(model, grads, value=loss)
     return loss
 
+
 @nnx.jit
 def ema_step(ema_model, model, ema_optimizer: nnx.Optimizer):
     ema_optimizer.update(ema_model, model)
 
 
-# @nnx.jit
-# def update_ema_params(vf_model, ema_params, decay):
-#     params = nnx.state(vf_model, nnx.Param)
-#     ema_params = ema_update(ema_params, params, decay)
-#     return ema_params
-
-vf_model = Simformer(params)
-
 # define the ema params from the main model
+vf_model = Simformer(params)
 ema_model = nnx.clone(vf_model)
 
 model_ema_decay = 0.99
@@ -329,11 +318,47 @@ cmax = 10
 loss_array = []
 val_loss_array = []
 
+# %%
+# %% now we compare every function from the pipeline and this code. We need to find which one is the bottleneck
+rngs = nnx.Rngs(0)
+train_step(vf_model, optimizer, rngs.train_step())
+t0 = time()
+for i in range(30):
+    train_step(vf_model, optimizer, rngs.train_step())
+print("Time taken:", time() - t0)
+
+# %%
+loss_fn_pipeline = pipeline.get_loss_fn()
+_next_batch = pipeline.get_train_batch_fn()
+train_step_fn = pipeline.get_train_step_fn(loss_fn_pipeline, _next_batch)
+# %%
+# %%
+rngs = nnx.Rngs(0)
+train_step_fn(vf_model, optimizer, rngs.train_step())
+t0 = time()
+for i in range(30):
+    train_step_fn(vf_model, optimizer, rngs.train_step())
+print("Time taken pipeline:", time() - t0)
+# %%
+
+# %%
+# %timeit next_batch()
+# %timeit _next_batch()
+# %%
+t0 = time()
+pipeline
+
+# ---------------------
+
+# %%
+
+
+# %% ---------------------
 if train_model:
     vf_model.train()
 
     for ep in range(nepochs):
-        pbar = tqdm(range(nsteps)) # todo fixme
+        pbar = tqdm(range(nsteps))  # todo fixme
         # pbar = tqdm(range(total_number_steps))
         l_train = None
 
@@ -348,7 +373,6 @@ if train_model:
             loss = train_step(vf_model, optimizer, rngs.train_step())
             # update the parameters ema
             ema_step(ema_model, vf_model, ema_optimizer)  # Update the EMA model.
-
 
             if j == 0:
                 l_train = loss
@@ -376,10 +400,9 @@ if train_model:
                     min_val = l_val
                     best_state = nnx.state(vf_model)
                     best_state_ema = nnx.state(ema_model)
-                
+
                 l_val = 0
                 l_train = 0
-
 
     vf_model.eval()
     # Save the model
@@ -397,15 +420,15 @@ if train_model:
     )
     checkpoint_manager.close()
 
-    # now we create the ema model and save it 
+    # now we create the ema model and save it
     ema_state = nnx.state(ema_model)
 
-    #save the ema model
+    # save the ema model
     checkpoint_manager_ema = ocp.CheckpointManager(
         checkpoint_dir_ema,
         options=ocp.CheckpointManagerOptions(
             max_to_keep=None,
-            keep_checkpoints_without_metrics=True,      
+            keep_checkpoints_without_metrics=True,
             create=True,
         ),
     )
@@ -413,7 +436,7 @@ if train_model:
     checkpoint_manager_ema.save(
         experiment_id, args=ocp.args.Composite(state=ocp.args.PyTreeSave(ema_state))
     )
-    checkpoint_manager_ema.close()  
+    checkpoint_manager_ema.close()
     print("Training complete and model saved.")
 
 # --------- C2ST TEST ---------
@@ -491,13 +514,13 @@ for idx in range(1, 11):
     )
     c2st_accuracy = c2st(reference_samples, samples)
     c2st_accuracies_ema.append(c2st_accuracy)
-    print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")    
+    print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")
 print(
     f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}"
 )
-# Save C2ST results in a txt file   
+# Save C2ST results in a txt file
 c2st_results_file_ema = f"{notebook_path}/c2st_results_ema_{experiment_id}.txt"
-with open(c2st_results_file_ema, "w") as f: 
+with open(c2st_results_file_ema, "w") as f:
     for idx, accuracy in enumerate(c2st_accuracies_ema, start=1):
         f.write(f"C2ST accuracy EMA for observation={idx}: {accuracy:.4f}\n")
 
@@ -506,3 +529,5 @@ with open(c2st_results_file_ema, "w") as f:
         f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}\n"
     )
 print("C2ST tests complete.")
+
+# %%

@@ -5,10 +5,6 @@
 
 task_name: two_moons
 
-strategy:
-  method: "flow"
-  model: "simformer"
-
 optimizer:
   patience: 10
   cooldown: 2
@@ -32,9 +28,10 @@ model:
 training:
   batch_size: 4096
   nsteps: 30000
-  ema_decay: 0.99
+  nepochs: 1
   multistep: 1
   early_stopping: true
+  print_every: 100
   val_every: 100
   experiment_id: 2
   restore_model: false
