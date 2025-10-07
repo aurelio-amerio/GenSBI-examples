@@ -329,18 +329,20 @@ print("Time taken:", time() - t0)
 
 # %%
 loss_fn_pipeline = pipeline.get_loss_fn()
-_next_batch = pipeline.get_train_batch_fn()
-train_step_fn = pipeline.get_train_step_fn(loss_fn_pipeline, _next_batch)
+train_step_fn = pipeline.get_train_step_fn(loss_fn_pipeline)
 # %%
 # %%
 rngs = nnx.Rngs(0)
-train_step_fn(vf_model, optimizer, rngs.train_step())
+batch = next_batch()
+train_step_fn(vf_model, optimizer, batch, rngs.train_step())
+#%%
 t0 = time()
 for i in range(30):
-    train_step_fn(vf_model, optimizer, rngs.train_step())
+    batch = next_batch()
+    train_step_fn(vf_model, optimizer, batch, rngs.train_step())
 print("Time taken pipeline:", time() - t0)
 # %%
-
+pipeline.train(rngs,nsteps=30,save_model=False)
 # %%
 # %timeit next_batch()
 # %timeit _next_batch()
