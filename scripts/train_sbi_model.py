@@ -127,6 +127,10 @@ if model_type == "simformer":
         num_hidden_layers=model_params.get("num_hidden_layers", 1),
     )
 elif model_type == "flux":
+    theta = model_params.get("theta", (dim_theta+dim_data)*10)
+    if theta == -1:
+        theta = 10 * (dim_theta + dim_data)
+
     params = FluxParams(
         in_channels=model_params.get("in_channels", 1),
         vec_in_dim=model_params.get("vec_in_dim", None),
@@ -140,7 +144,7 @@ elif model_type == "flux":
         qkv_bias=model_params.get("qkv_bias", True),
         obs_dim=dim_theta,
         cond_dim=dim_data,
-        theta=model_params.get("theta", (dim_theta+dim_data)*10),
+        theta=theta,
         rngs=nnx.Rngs(default=42),
         param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
     )
