@@ -66,14 +66,14 @@ assert method in [
 
 # Training parameters
 train_params = config.get("training", {})
-experiment_id = train_params.get("experiment_id", 3)
+multistep = train_params.get("multistep", 1)
+experiment_id = train_params.get("experiment_id", 1)
 restore_model = train_params.get("restore_model", False)
 train_model = train_params.get("train_model", True)
 batch_size = train_params.get("batch_size", 4096)
-nsteps = train_params.get("nsteps", 30000)
-multistep = train_params.get("multistep", 1)
 early_stopping = train_params.get("early_stopping", True)
-val_every = train_params.get("val_every", 100)
+nsteps = train_params.get("nsteps", 30000)*multistep
+val_every = train_params.get("val_every", 100)*multistep
 
 # Set checkpoint directory
 notebook_path = os.getcwd()
@@ -90,7 +90,7 @@ opt_params = config.get("optimizer", {})
 PATIENCE = opt_params.get("patience", 10)
 COOLDOWN = opt_params.get("cooldown", 2)
 FACTOR = opt_params.get("factor", 0.5)
-ACCUMULATION_SIZE = opt_params.get("accumulation_size", 100)
+ACCUMULATION_SIZE = opt_params.get("accumulation_size", 100)*multistep
 RTOL = opt_params.get("rtol", 1e-4)
 MAX_LR = opt_params.get("max_lr", 1e-3)
 MIN_LR = opt_params.get("min_lr", 0.0)
