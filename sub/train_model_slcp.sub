@@ -21,8 +21,8 @@ config_file = $(experiment_path)/config_$(method)_$(model)_6.yaml
 #########
 
 queue method,model, from (
-    # flow, simformer
     flow, flux
+    flow, simformer
     # diffusion, simformer
     # diffusion, flux
 )
