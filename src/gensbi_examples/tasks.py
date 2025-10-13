@@ -54,7 +54,7 @@ class Task:
             .shuffle(42)
             .repeat()
             .to_iter_dataset(
-                grain.ReadOptions(num_threads=0, prefetch_buffer_size=batch_size * 5) # we set threads to 0, since the dataset fits in memory
+                grain.ReadOptions(num_threads=1, prefetch_buffer_size=batch_size * 5) # we set threads to 1, since the dataset fits in memory
             )
             .batch(batch_size=batch_size)  # Batches consecutive elements.
         )
