@@ -1,6 +1,4 @@
-experiment_name = two_moons
-
-
+experiment_name = gaussian_mixture
 
 universe = vanilla
 
@@ -23,11 +21,10 @@ config_file = $(experiment_path)/config_$(method)_$(model).yaml
 #########
 
 queue method,model, from (
-    flow, simformer2
-    # flow, simformer
-    # flow, flux
-    # diffusion, simformer
-    # diffusion, flux
+    # flow, simformer
+    flow, flux
+    # diffusion, simformer
+    # diffusion, flux
 )
 #########
 

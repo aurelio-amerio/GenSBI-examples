@@ -16,10 +16,12 @@ from flax import nnx
 from gensbi_examples.tasks import get_task
 from gensbi_examples.c2st import c2st
 
-from gensbi.models import SimformerParams, FluxParams
+from gensbi.models import SimformerParams, Simformer2Params, FluxParams
 from gensbi.recipes import (
     SimformerFlowPipeline,
     SimformerDiffusionPipeline,
+    Simformer2FlowPipeline,
+    Simformer2DiffusionPipeline,
     FluxFlowPipeline,
     FluxDiffusionPipeline,
 )
@@ -57,6 +59,7 @@ task = get_task(task_name)
 
 assert model_type in [
     "simformer",
+    "simformer2",
     "flux",
 ], f"Model type must be 'simformer' or 'flux', got {model_type}."
 assert method in [
@@ -66,14 +69,14 @@ assert method in [
 
 # Training parameters
 train_params = config.get("training", {})
-experiment_id = train_params.get("experiment_id", 3)
+multistep = train_params.get("multistep", 1)
+experiment_id = train_params.get("experiment_id", 1)
 restore_model = train_params.get("restore_model", False)
 train_model = train_params.get("train_model", True)
 batch_size = train_params.get("batch_size", 4096)
-nsteps = train_params.get("nsteps", 30000)
-multistep = train_params.get("multistep", 1)
 early_stopping = train_params.get("early_stopping", True)
-val_every = train_params.get("val_every", 100)
+nsteps = train_params.get("nsteps", 30000) * multistep
+val_every = train_params.get("val_every", 100) * multistep
 
 # Set checkpoint directory
 notebook_path = os.getcwd()
@@ -90,7 +93,7 @@ opt_params = config.get("optimizer", {})
 PATIENCE = opt_params.get("patience", 10)
 COOLDOWN = opt_params.get("cooldown", 2)
 FACTOR = opt_params.get("factor", 0.5)
-ACCUMULATION_SIZE = opt_params.get("accumulation_size", 100)
+ACCUMULATION_SIZE = opt_params.get("accumulation_size", 100) * multistep
 RTOL = opt_params.get("rtol", 1e-4)
 MAX_LR = opt_params.get("max_lr", 1e-3)
 MIN_LR = opt_params.get("min_lr", 0.0)
@@ -126,7 +129,29 @@ if model_type == "simformer":
         qkv_features=model_params.get("qkv_features", 90),
         num_hidden_layers=model_params.get("num_hidden_layers", 1),
     )
+elif model_type == "simformer2":
+    theta = model_params.get("theta", -1)
+    if theta == -1:
+        theta = 4 * (dim_theta + dim_data)
+    params = Simformer2Params(
+        in_channels=model_params.get("in_channels", 1),
+        vec_in_dim=model_params.get("vec_in_dim", None),
+        mlp_ratio=model_params.get("mlp_ratio", 4),
+        num_heads=model_params.get("num_heads", 4),
+        depth_single_blocks=model_params.get("depth_single_blocks", 16),
+        axes_dim=model_params.get("axes_dim", [10]),
+        condition_dim=model_params.get("condition_dim", [4]),
+        qkv_bias=model_params.get("qkv_bias", True),
+        joint_dim=dim_joint,
+        theta=theta,
+        rngs=nnx.Rngs(default=42),
+        param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
+    )
 elif model_type == "flux":
+    theta = model_params.get("theta", -1)
+    if theta == -1:
+        theta = 4 * (dim_theta + dim_data)
+
     params = FluxParams(
         in_channels=model_params.get("in_channels", 1),
         vec_in_dim=model_params.get("vec_in_dim", None),
@@ -140,7 +165,7 @@ elif model_type == "flux":
         qkv_bias=model_params.get("qkv_bias", True),
         obs_dim=dim_theta,
         cond_dim=dim_data,
-        theta=model_params.get("theta", (dim_theta+dim_data)*10),
+        theta=theta,
         rngs=nnx.Rngs(default=42),
         param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
     )
@@ -150,6 +175,10 @@ if model_type == "simformer" and method == "flow":
     PipelineClass = SimformerFlowPipeline
 elif model_type == "simformer" and method == "diffusion":
     PipelineClass = SimformerDiffusionPipeline
+elif model_type == "simformer2" and method == "flow":
+    PipelineClass = Simformer2FlowPipeline
+elif model_type == "simformer2" and method == "diffusion":
+    PipelineClass = Simformer2DiffusionPipeline
 elif model_type == "flux" and method == "flow":
     PipelineClass = FluxFlowPipeline
 elif model_type == "flux" and method == "diffusion":
@@ -217,6 +246,9 @@ def get_samples(idx, nsamples=10_000, use_ema=False, rng=None):
 # Run C2ST
 print("Running C2ST tests...")
 
+c2st_dir = f"{notebook_path}/c2st_results"
+os.makedirs(c2st_dir, exist_ok=True)
+
 c2st_accuracies = []
 for idx in range(1, 11):
     samples, true_param, reference_samples = get_samples(
@@ -230,7 +262,9 @@ print(
     f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}"
 )
 # Save C2ST results in a txt file
-c2st_results_file = f"{notebook_path}/c2st_results_{experiment_id}_{method}_{model_type}.txt"
+c2st_results_file = (
+    f"{c2st_dir}/c2st_results_{experiment_id}_{method}_{model_type}.txt"
+)
 with open(c2st_results_file, "w") as f:
     for idx, accuracy in enumerate(c2st_accuracies, start=1):
         f.write(f"C2ST accuracy for observation={idx}: {accuracy:.4f}\n")
@@ -253,7 +287,9 @@ print(
     f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}"
 )
 # Save C2ST results in a txt file
-c2st_results_file_ema = f"{notebook_path}/c2st_results_ema_{experiment_id}_{method}_{model_type}.txt"
+c2st_results_file_ema = (
+    f"{c2st_dir}/c2st_results_ema_{experiment_id}_{method}_{model_type}.txt"
+)
 with open(c2st_results_file_ema, "w") as f:
     for idx, accuracy in enumerate(c2st_accuracies_ema, start=1):
         f.write(f"C2ST accuracy EMA for observation={idx}: {accuracy:.4f}\n")
