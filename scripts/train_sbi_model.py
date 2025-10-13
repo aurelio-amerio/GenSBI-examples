@@ -59,6 +59,7 @@ task = get_task(task_name)
 
 assert model_type in [
     "simformer",
+    "simformer2",
     "flux",
 ], f"Model type must be 'simformer' or 'flux', got {model_type}."
 assert method in [
