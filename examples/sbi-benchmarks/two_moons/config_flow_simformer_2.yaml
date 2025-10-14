@@ -7,7 +7,7 @@ task_name: two_moons
 
 strategy:
   method: "flow"
-  model: "simformer2"
+  model: "simformer"
 
 optimizer:
   patience: 10
@@ -19,25 +19,23 @@ optimizer:
   min_lr: 1.0e-8
 
 model:
-  in_channels: 1
-  vec_in_dim: null
-  context_in_dim: 1
-  mlp_ratio: 4
-  num_heads: 4
-  depth_single_blocks: 16
-  axes_dim: [10]
-  condition_dim: [4]
-  qkv_bias: true
-  theta: 40
-  params_dtype: "float32"
+  dim_value: 40
+  dim_id: 40
+  dim_condition: 10
+  fourier_features: 128
+  num_heads: 6
+  num_layers: 8
+  widening_factor: 3
+  qkv_features: 60
+  num_hidden_layers: 1
 
 training:
   batch_size: 4096
-  nsteps: 50000
-  ema_decay: 0.999
+  nsteps: 30000
+  ema_decay: 0.99
   multistep: 1
   early_stopping: true
   val_every: 100
-  experiment_id: 3
+  experiment_id: 2
   restore_model: false
   train_model: true
