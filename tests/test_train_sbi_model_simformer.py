@@ -4,7 +4,7 @@
 import os
 
 # Set JAX backend (use 'cuda' for GPU, 'cpu' otherwise)
-os.environ["JAX_PLATFORMS"] = "cpu"
+os.environ["JAX_PLATFORMS"] = "cuda"
 
 import argparse
 import yaml
@@ -62,7 +62,9 @@ class ModelEMA(nnx.Optimizer):
 # %%
 # Argument parser for config file
 
-config = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/two_moons/config_simformer_6.yaml"
+root_dir = "/home/aure/Documents/GitHub/GenSBI-examples"
+
+config = f"{root_dir}/examples/sbi-benchmarks/two_moons/config_flow_simformer.yaml"
 
 # Load config
 with open(config, "r") as f:
@@ -71,7 +73,7 @@ with open(config, "r") as f:
 
 # Change working directory to experiment_directory from config
 task_name = config.get("task_name", None)
-experiment_directory = f"/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/two_moons"
+experiment_directory = f"{root_dir}/examples/sbi-benchmarks/two_moons"
 
 if experiment_directory is not None:
     os.chdir(experiment_directory)
@@ -209,7 +211,7 @@ def sample_strutured_conditional_mask(
     return condition_mask
 
 
-"""
+
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     batch_size = x_1.shape[0]
     rng_x0, rng_t, rng_condition, rng_edge_mask1, rng_edge_mask2 = jax.random.split(
@@ -237,9 +239,9 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
         condition_mask=condition_mask,
     )
     return loss
-"""
 
-loss_fn_ = pipeline.get_loss_fn()
+
+# loss_fn_ = pipeline.get_loss_fn()
 
 
 @nnx.jit
