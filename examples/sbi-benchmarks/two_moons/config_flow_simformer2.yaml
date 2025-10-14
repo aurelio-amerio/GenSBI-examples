@@ -7,7 +7,7 @@ task_name: two_moons
 
 strategy:
   method: "flow"
-  model: "simformer2"
+  model: "flux1joint"
 
 optimizer:
   patience: 10
