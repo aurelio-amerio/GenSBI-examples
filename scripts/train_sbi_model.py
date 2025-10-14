@@ -157,7 +157,6 @@ elif model_type == "flux":
         vec_in_dim=model_params.get("vec_in_dim", None),
         context_in_dim=model_params.get("context_in_dim", 1),
         mlp_ratio=model_params.get("mlp_ratio", 4),
-        qkv_multiplier=model_params.get("qkv_multiplier", 1),
         num_heads=model_params.get("num_heads", 4),
         depth=model_params.get("depth", 8),
         depth_single_blocks=model_params.get("depth_single_blocks", 16),
