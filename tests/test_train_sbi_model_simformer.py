@@ -64,7 +64,7 @@ class ModelEMA(nnx.Optimizer):
 
 root_dir = "/home/aure/Documents/GitHub/GenSBI-examples"
 
-config = f"{root_dir}/examples/sbi-benchmarks/two_moons/config_flow_simformer.yaml"
+config = f"{root_dir}/examples/sbi-benchmarks/two_moons/config_flow_simformer_2.yaml"
 
 # Load config
 with open(config, "r") as f:
@@ -95,8 +95,8 @@ print_every = train_params.get("print_every", 100)
 
 # Set checkpoint directory
 notebook_path = os.getcwd()
-checkpoint_dir = f"{notebook_path}/checkpoints/{task_name}_simformer_v6"
-checkpoint_dir_ema = f"{notebook_path}/checkpoints/{task_name}_simformer_ema_v6"
+checkpoint_dir = f"{root_dir}/examples/sbi-benchmarks/two_moons/checkpoints/two_moons_flow_simformer"
+checkpoint_dir_ema = f"{root_dir}/examples/sbi-benchmarks/two_moons/checkpoints/two_moons_flow_simformer/ema"
 os.makedirs(checkpoint_dir, exist_ok=True)
 os.makedirs(checkpoint_dir_ema, exist_ok=True)
 
@@ -322,216 +322,194 @@ val_loss_array = []
 
 # %%
 # %% now we compare every function from the pipeline and this code. We need to find which one is the bottleneck
-rngs = nnx.Rngs(0)
-train_step(vf_model, optimizer, rngs.train_step())
-t0 = time()
-for i in range(30):
-    train_step(vf_model, optimizer, rngs.train_step())
-print("Time taken:", time() - t0)
+# rngs = nnx.Rngs(0)
+# train_step(vf_model, optimizer, rngs.train_step())
+# t0 = time()
+# for i in range(30):
+#     train_step(vf_model, optimizer, rngs.train_step())
+# print("Time taken:", time() - t0)
 
-# %%
-loss_fn_pipeline = pipeline.get_loss_fn()
-train_step_fn = pipeline.get_train_step_fn(loss_fn_pipeline)
-# %%
-# %%
-rngs = nnx.Rngs(0)
-batch = next_batch()
-train_step_fn(vf_model, optimizer, batch, rngs.train_step())
+# # %%
+# loss_fn_pipeline = pipeline.get_loss_fn()
+# train_step_fn = pipeline.get_train_step_fn(loss_fn_pipeline)
+# # %%
+# # %%
+# rngs = nnx.Rngs(0)
+# batch = next_batch()
+# #%%
+# t0 = time()
+# train_step_fn(vf_model, optimizer, batch, rngs.train_step())
+# print("Time taken pipeline first step:", time() - t0)
+# t0 = time()
+# for i in range(100):
+#     batch = next(dataset_iter)
+#     train_step_fn(vf_model, optimizer, batch, rngs.train_step())
+# print("Time taken pipeline:", time() - t0)
+
+# #%%
+# t0 = time()
+# train_step_fn(pipeline.model, optimizer, batch, rngs.train_step())
+# print("Time taken pipeline first step:", time() - t0)
+# t0 = time()
+# for i in range(100):
+#     batch = next(dataset_iter)
+#     train_step_fn(pipeline.model, optimizer, batch, rngs.train_step())
+# print("Time taken pipeline:", time() - t0)
+# #%%
+
+
+# # %%
+# pipeline.train(rngs,nsteps=30,save_model=False)
+# # %%
+# val_every = 100
+# pbar = tqdm(range(30))
+
+# t0 = time()
+# for j in pbar:
+
+#     batch = next(dataset_iter)
+
+#     loss = train_step_fn(vf_model, optimizer, batch, rngs.train_step())
+
+#     # update the parameters ema
+#     # if j % self.training_config["multistep"] == 0:
+#     #     ema_step(self.ema_model, self.model, ema_optimizer)
+
+#     if j == 0:
+#         l_train = loss
+#     else:
+#         l_train = 0.9 * l_train + 0.1 * loss
+
+#     # if j > 0 and j % val_every == 0:
+#     #     batch_val = next(self.val_dataset_iter)
+#     #     l_val = val_step(self.model, batch_val, rngs.val_step())
+
+#     #     ratio = l_val / l_train
+#     #     if ratio > val_error_ratio:
+#     #         counter += 1
+#     #     else:
+#     #         counter = 0
+
+#     #     pbar.set_postfix(
+#     #         loss=f"{l_train:.4f}",
+#     #         ratio=f"{ratio:.4f}",
+#     #         counter=counter,
+#     #         val_loss=f"{l_val:.4f}",
+#     #     )
+#     #     loss_array.append(l_train)
+#     #     val_loss_array.append(l_val)
+
+#     #     if l_val < min_val:
+#     #         min_val = l_val
+#     #         best_state = nnx.state(self.model)
+#     #         best_state_ema = nnx.state(self.ema_model)
+
+#     #     l_val = 0
+#     #     l_train = 0
+
+# print("Time taken custom loop:", time() - t0)
 #%%
-t0 = time()
-for i in range(30):
-    batch = next_batch()
-    train_step_fn(vf_model, optimizer, batch, rngs.train_step())
-print("Time taken pipeline:", time() - t0)
-# %%
-pipeline.train(rngs,nsteps=30,save_model=False)
-# %%
-# %timeit next_batch()
-# %timeit _next_batch()
-# %%
-t0 = time()
-pipeline
-
-# ---------------------
-
-# %%
+from typing import Optional, Tuple
 
 
-# %% ---------------------
-if train_model:
-    vf_model.train()
+def train(
+        self, rngs: nnx.Rngs, nsteps: Optional[int] = None, save_model=True
+    ) -> Tuple[list, list]:
+        """
+        Run the training loop for the model.
 
-    for ep in range(nepochs):
-        pbar = tqdm(range(nsteps))  # todo fixme
-        # pbar = tqdm(range(total_number_steps))
+        Parameters
+        ----------
+        rngs : nnx.Rngs
+            Random number generators for training/validation steps.
+
+        Returns
+        -------
+        loss_array : list
+            List of training losses.
+        val_loss_array : list
+            List of validation losses.
+        """
+
+        optimizer = self._get_optimizer()
+        ema_optimizer = self._get_ema_optimizer()
+
+        best_state = nnx.state(self.model)
+        best_state_ema = nnx.state(self.ema_model)
+
+        loss_fn = self.get_loss_fn()
+
+        train_step = self.get_train_step_fn(loss_fn)
+        val_step = self.get_val_step_fn(loss_fn)
+
+        batch_val = next(self.val_dataset_iter)
+        min_val = val_step(self.model, batch_val, rngs.val_step())
+
+        val_error_ratio = 1.1
+        counter = 0
+        cmax = 10
+
+        loss_array = []
+        val_loss_array = []
+
+        self.model.train()
+
+        if nsteps is None:
+            nsteps = self.training_config["num_steps"]
+        early_stopping = self.training_config["early_stopping"]
+        val_every = self.training_config["val_every"]
+
+        experiment_id = self.training_config["experiment_id"]
+
         l_train = None
 
+        def step_fn():
+            batch = next(dataset_iter) #next(self.train_dataset_iter)
+
+            loss = train_step(
+                self.model, optimizer, batch, rngs.train_step()
+            )
+
+            return loss
+        
+        # first step outside a loop to compile
+        step_fn()
+
+
+        # pbar = tqdm(range(nsteps))
+        pbar = range(nsteps)
+
+        jax.profiler.start_trace("./tmp/jax-trace")
+        t0 = time()
         for j in pbar:
-            if counter > cmax and early_stopping:
-                print("Early stopping")
-                graphdef, abstract_state = nnx.split(vf_model)
-                vf_model = nnx.merge(graphdef, best_state)
-                ema_params = best_state_ema
+            step_fn()
+        print("Time taken custom loop:", time() - t0)
+        jax.profiler.stop_trace()
 
-                break
-            loss = train_step(vf_model, optimizer, rngs.train_step())
-            # update the parameters ema
-            ema_step(ema_model, vf_model, ema_optimizer)  # Update the EMA model.
+        # self.model.eval()
 
-            if j == 0:
-                l_train = loss
-            else:
-                l_train = 0.9 * l_train + 0.1 * loss
+        # if save_model:
+        #     self.save_model(experiment_id)
 
-            if j > 50 and j % print_every == 0:
-                l_val = val_loss(vf_model, rngs.val_step())
-                ratio = l_val / l_train
-                if ratio > val_error_ratio:
-                    counter += 1
-                else:
-                    counter = 0
+        # self._wrap_model()
 
-                pbar.set_postfix(
-                    loss=f"{l_train:.4f}",
-                    ratio=f"{ratio:.4f}",
-                    counter=counter,
-                    val_loss=f"{l_val:.4f}",
-                )
-                loss_array.append(l_train)
-                val_loss_array.append(l_val)
-
-                if l_val < min_val:
-                    min_val = l_val
-                    best_state = nnx.state(vf_model)
-                    best_state_ema = nnx.state(ema_model)
-
-                l_val = 0
-                l_train = 0
-
-    vf_model.eval()
-    # Save the model
-    checkpoint_manager = ocp.CheckpointManager(
-        checkpoint_dir,
-        options=ocp.CheckpointManagerOptions(
-            max_to_keep=None,
-            keep_checkpoints_without_metrics=True,
-            create=True,
-        ),
-    )
-    model_state = nnx.state(vf_model)
-    checkpoint_manager.save(
-        experiment_id, args=ocp.args.Composite(state=ocp.args.PyTreeSave(model_state))
-    )
-    checkpoint_manager.close()
-
-    # now we create the ema model and save it
-    ema_state = nnx.state(ema_model)
-
-    # save the ema model
-    checkpoint_manager_ema = ocp.CheckpointManager(
-        checkpoint_dir_ema,
-        options=ocp.CheckpointManagerOptions(
-            max_to_keep=None,
-            keep_checkpoints_without_metrics=True,
-            create=True,
-        ),
-    )
-
-    checkpoint_manager_ema.save(
-        experiment_id, args=ocp.args.Composite(state=ocp.args.PyTreeSave(ema_state))
-    )
-    checkpoint_manager_ema.close()
-    print("Training complete and model saved.")
-
-# --------- C2ST TEST ---------
-
-from gensbi.flow_matching.solver import ODESolver
-
-ema_model.eval()
-
-# Wrap the trained model for conditional sampling
-vf_wrapped = SimformerWrapper(vf_model)
-vf_wrapped_ema = SimformerWrapper(ema_model)
-
-step_size = 0.01
+        return loss_array, val_loss_array
+#%%
+train(pipeline, nnx.Rngs(0), nsteps=100, save_model=False)
 
 
-def get_samples(vf_wrapped, idx, nsamples=10_000, edge_mask=None):
-    observation, reference_samples = task.get_reference(idx)
-    true_param = jnp.array(task.get_true_parameters(idx))
+#%%
+# jax.profiler.start_trace("/tmp/jax-trace", create_perfetto_trace=True)
+# pipeline.train(rngs,nsteps=30,save_model=False)
+# jax.profiler.stop_trace()
 
-    rng = jax.random.PRNGKey(45)
-    key1, key2 = jax.random.split(rng, 2)
-
-    x_init = jax.random.normal(key1, (nsamples, dim_theta))
-    cond = jnp.broadcast_to(observation[..., None], (1, dim_data, 1))
-
-    solver = ODESolver(velocity_model=vf_wrapped)
-    model_extras = {
-        "cond": cond,
-        "obs_ids": obs_ids,
-        "cond_ids": cond_ids,
-        "edge_mask": edge_mask,
-    }
-
-    sampler_ = solver.get_sampler(
-        method="Dopri5",
-        step_size=step_size,
-        return_intermediates=False,
-        model_extras=model_extras,
-    )
-    samples = sampler_(x_init)
-    return samples, true_param, reference_samples
-
-
-# Run C2ST
-print("Running C2ST tests...")
-
-c2st_accuracies = []
-for idx in range(1, 11):
-    samples, true_param, reference_samples = get_samples(
-        vf_wrapped, idx, nsamples=10_000
-    )
-    c2st_accuracy = c2st(reference_samples, samples)
-    c2st_accuracies.append(c2st_accuracy)
-    print(f"C2ST accuracy for observation={idx}: {c2st_accuracy:.4f}\n")
-
-print(
-    f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}"
-)
-# Save C2ST results in a txt file
-c2st_results_file = f"{notebook_path}/c2st_results_{experiment_id}.txt"
-with open(c2st_results_file, "w") as f:
-    for idx, accuracy in enumerate(c2st_accuracies, start=1):
-        f.write(f"C2ST accuracy for observation={idx}: {accuracy:.4f}\n")
-
-    # print mean and std accuracy
-    f.write(
-        f"Average C2ST accuracy: {np.mean(c2st_accuracies):.4f} +- {np.std(c2st_accuracies):.4f}\n"
-    )
-
-# repeat for the ema model
-c2st_accuracies_ema = []
-for idx in range(1, 11):
-    samples, true_param, reference_samples = get_samples(
-        vf_wrapped_ema, idx, nsamples=10_000
-    )
-    c2st_accuracy = c2st(reference_samples, samples)
-    c2st_accuracies_ema.append(c2st_accuracy)
-    print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")
-print(
-    f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}"
-)
-# Save C2ST results in a txt file
-c2st_results_file_ema = f"{notebook_path}/c2st_results_ema_{experiment_id}.txt"
-with open(c2st_results_file_ema, "w") as f:
-    for idx, accuracy in enumerate(c2st_accuracies_ema, start=1):
-        f.write(f"C2ST accuracy EMA for observation={idx}: {accuracy:.4f}\n")
-
-    # print mean and std accuracy
-    f.write(
-        f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}\n"
-    )
-print("C2ST tests complete.")
-
+#%%
+# function profiling
+# rngs = nnx.Rngs(0)
+# train_step(vf_model, optimizer, rngs.train_step())
+# with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
+#     for i in range(30):
+#         train_step(vf_model, optimizer, rngs.train_step())
 # %%
+# with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
+#     pipeline.train(rngs,nsteps=30,save_model=False)
