@@ -31,11 +31,11 @@ model:
 
 training:
   batch_size: 4096
-  nsteps: 30000
-  ema_decay: 0.99
+  nsteps: 50000
+  ema_decay: 0.999
   multistep: 1
   early_stopping: true
   val_every: 100
-  experiment_id: 2
-  restore_model: true
-  train_model: false
+  experiment_id: 3
+  restore_model: false
+  train_model: true
