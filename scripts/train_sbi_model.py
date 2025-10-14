@@ -16,14 +16,14 @@ from flax import nnx
 from gensbi_examples.tasks import get_task
 from gensbi_examples.c2st import c2st
 
-from gensbi.models import SimformerParams, Simformer2Params, FluxParams
+from gensbi.models import SimformerParams, Flux1JointParams, Flux1Params
 from gensbi.recipes import (
     SimformerFlowPipeline,
     SimformerDiffusionPipeline,
-    Simformer2FlowPipeline,
-    Simformer2DiffusionPipeline,
-    FluxFlowPipeline,
-    FluxDiffusionPipeline,
+    Flux1JointFlowPipeline,
+    Flux1JointDiffusionPipeline,
+    Flux1FlowPipeline,
+    Flux1DiffusionPipeline,
 )
 
 # %%
@@ -59,7 +59,7 @@ task = get_task(task_name)
 
 assert model_type in [
     "simformer",
-    "simformer2",
+    "flux1joint",
     "flux",
 ], f"Model type must be 'simformer' or 'flux', got {model_type}."
 assert method in [
@@ -129,11 +129,11 @@ if model_type == "simformer":
         qkv_features=model_params.get("qkv_features", 90),
         num_hidden_layers=model_params.get("num_hidden_layers", 1),
     )
-elif model_type == "simformer2":
+elif model_type == "flux1joint":
     theta = model_params.get("theta", -1)
     if theta == -1:
         theta = 4 * (dim_theta + dim_data)
-    params = Simformer2Params(
+    params = Flux1JointParams(
         in_channels=model_params.get("in_channels", 1),
         vec_in_dim=model_params.get("vec_in_dim", None),
         mlp_ratio=model_params.get("mlp_ratio", 4),
@@ -152,7 +152,7 @@ elif model_type == "flux":
     if theta == -1:
         theta = 4 * (dim_theta + dim_data)
 
-    params = FluxParams(
+    params = Flux1Params(
         in_channels=model_params.get("in_channels", 1),
         vec_in_dim=model_params.get("vec_in_dim", None),
         context_in_dim=model_params.get("context_in_dim", 1),
@@ -175,14 +175,14 @@ if model_type == "simformer" and method == "flow":
     PipelineClass = SimformerFlowPipeline
 elif model_type == "simformer" and method == "diffusion":
     PipelineClass = SimformerDiffusionPipeline
-elif model_type == "simformer2" and method == "flow":
-    PipelineClass = Simformer2FlowPipeline
-elif model_type == "simformer2" and method == "diffusion":
-    PipelineClass = Simformer2DiffusionPipeline
+elif model_type == "flux1joint" and method == "flow":
+    PipelineClass = Flux1JointFlowPipeline
+elif model_type == "flux1joint" and method == "diffusion":
+    PipelineClass = Flux1JointDiffusionPipeline
 elif model_type == "flux" and method == "flow":
-    PipelineClass = FluxFlowPipeline
+    PipelineClass = Flux1FlowPipeline
 elif model_type == "flux" and method == "diffusion":
-    PipelineClass = FluxDiffusionPipeline
+    PipelineClass = Flux1DiffusionPipeline
 else:
     raise ValueError(
         f"Invalid combination of model_type {model_type} and method {method}"
