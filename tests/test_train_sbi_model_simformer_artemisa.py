@@ -62,7 +62,7 @@ class ModelEMA(nnx.Optimizer):
 # %%
 # Argument parser for config file
 
-root_dir = "/home/aure/Documents/GitHub/GenSBI-examples"
+root_dir = "/lhome/ific/a/aamerio/data/github/GenSBI-examples"
 
 config = f"{root_dir}/examples/sbi-benchmarks/two_moons/config/config_flow_simformer_2.yaml"
 

@@ -87,7 +87,7 @@ experiment_id = train_params.get("experiment_id", 3)
 restore_model = train_params.get("restore_model", False)
 train_model = train_params.get("train_model", True)
 batch_size = train_params.get("batch_size", 4096)
-nsteps = train_params.get("nsteps", 10000)
+nsteps = 1000 #train_params.get("nsteps", 10000)
 nepochs = train_params.get("nepochs", 3)
 multistep = train_params.get("multistep", 1)
 early_stopping = train_params.get("early_stopping", True)
@@ -157,6 +157,7 @@ params = SimformerParams(
     num_hidden_layers=model_params.get("num_hidden_layers", 1),
 )
 
+##################################
 loss_fn_cfm = SimformerCFMLoss(path)
 
 undirected_edge_mask = jnp.ones((dim_joint, dim_joint), dtype=jnp.bool_)
@@ -165,9 +166,6 @@ p0_dist_model = dist.Independent(
     dist.Normal(loc=jnp.zeros((dim_joint, 1)), scale=jnp.ones((dim_joint, 1))),
     reinterpreted_batch_ndims=1,
 )
-
-# define the pipeline
-pipeline = SimformerFlowPipeline(train_dataset, val_dataset, 2, 2, params=params)
 
 
 def sample_strutured_conditional_mask(
@@ -241,32 +239,30 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     return loss
 
 
-# loss_fn_ = pipeline.get_loss_fn()
-
 
 @nnx.jit
 def train_loss(vf_model, key: jax.random.PRNGKey):
     x_1 = next_batch()
-    return loss_fn_(vf_model, x_1, key)
+    return loss_fn_(vf_model, x_1, key, "posterior")
 
 
 @nnx.jit
 def val_loss(vf_model, key):
     x_1 = next_val_batch()
-    return loss_fn_(vf_model, x_1, key)
+    return loss_fn_(vf_model, x_1, key, "posterior")
 
 
 @nnx.jit
 def train_step(model, optimizer, rng):
     loss_fn = lambda model: train_loss(model, rng)
     loss, grads = nnx.value_and_grad(loss_fn)(model)
-    optimizer.update(model, grads, value=loss)
+    optimizer.update(grads, value=loss)
     return loss
 
 
-@nnx.jit
-def ema_step(ema_model, model, ema_optimizer: nnx.Optimizer):
-    ema_optimizer.update(ema_model, model)
+# @nnx.jit
+# def ema_step(ema_model, model, ema_optimizer: nnx.Optimizer):
+#     ema_optimizer.update(ema_model, model)
 
 
 # define the ema params from the main model
@@ -312,7 +308,7 @@ rngs = nnx.Rngs(0)
 best_state = nnx.state(vf_model)
 best_state_ema = nnx.state(ema_model)
 
-min_val = val_loss(vf_model, jax.random.PRNGKey(0))
+min_val = loss_fn_(vf_model, next(val_dataset_iter),jax.random.PRNGKey(0))
 val_error_ratio = 1.1
 counter = 0
 cmax = 10
@@ -320,199 +316,60 @@ cmax = 10
 loss_array = []
 val_loss_array = []
 
-# %%
-# %% now we compare every function from the pipeline and this code. We need to find which one is the bottleneck
-# rngs = nnx.Rngs(0)
-# train_step(vf_model, optimizer, rngs.train_step())
-# t0 = time()
-# for i in range(30):
-#     train_step(vf_model, optimizer, rngs.train_step())
-# print("Time taken:", time() - t0)
 
-# %%
-loss_fn_pipeline = pipeline.get_loss_fn()
-train_step_fn = pipeline.get_train_step_fn(loss_fn_pipeline)
-# %%
-# # %%
-rngs = nnx.Rngs(0)
-# batch = next_batch()
+
+if train_model:
+    vf_model.train()
+
+    pbar = tqdm(range(nsteps))
+    l = 0
+    v_l = 0
+    t0 = time()
+    for j in pbar:
+        if counter > cmax and early_stopping:
+            print("Early stopping")
+            graphdef, abstract_state = nnx.split(vf_model)
+            vf_model = nnx.merge(graphdef, best_state)
+            break
+        loss = train_step(vf_model, optimizer, rngs.train_step())
+        l += loss.item()
+        v_loss = val_loss(vf_model, rngs.val_step())
+        v_l += v_loss.item()
+        if j > 0 and j % 100 == 0:
+            loss_ = l / 100
+            val_ = v_l / 100
+            ratio1 = val_ / loss_
+            ratio2 = val_ / min_val
+
+            if ratio1 < val_error_ratio:
+                counter = 0
+            else:
+                counter += 1
+
+            if val_ < min_val:
+                min_val = val_
+                best_state = nnx.state(vf_model)
+
+            pbar.set_postfix(
+                loss=f"{loss_:.4f}",
+                ratio=f"{ratio1:.4f}",
+                counter=counter,
+                val_loss=f"{val_:.4f}",
+            )
+            loss_array.append(loss_)
+            val_loss_array.append(val_)
+            l = 0
+            v_l = 0
+
+    vf_model.eval()
+
+    print("Manual training complete in {:.2f} seconds".format(time() - t0))
+
 #%%
+# define the pipeline
+pipeline = SimformerFlowPipeline(train_dataset, val_dataset, 2, 2, params=params)
+
 t0 = time()
-train_step_fn(vf_model, optimizer, next(dataset_iter), rngs.train_step())
-print("Time taken pipeline first step:", time() - t0)
-# t0 = time()
-# with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
-jax.profiler.start_trace("/home/aure/Documents/GitHub/GenSBI-examples/tests/tmp/jax-trace", create_perfetto_trace=True)
-for i in range(20):
-    batch = next(dataset_iter)
-    train_step_fn(vf_model, optimizer, batch, rngs.train_step())
-jax.profiler.stop_trace()
-# print("Time taken pipeline:", time() - t0)
+pipeline.train(nnx.Rngs(0), nsteps=nsteps, save_model=False)
 
-#%%
-# t0 = time()
-# train_step_fn(pipeline.model, optimizer, batch, rngs.train_step())
-# print("Time taken pipeline first step:", time() - t0)
-# t0 = time()
-# for i in range(100):
-#     batch = next(dataset_iter)
-#     train_step_fn(pipeline.model, optimizer, batch, rngs.train_step())
-# print("Time taken pipeline:", time() - t0)
-# #%%
-
-
-# # %%
-# pipeline.train(rngs,nsteps=30,save_model=False)
-# # %%
-# val_every = 100
-# pbar = tqdm(range(30))
-
-# t0 = time()
-# for j in pbar:
-
-#     batch = next(dataset_iter)
-
-#     loss = train_step_fn(vf_model, optimizer, batch, rngs.train_step())
-
-#     # update the parameters ema
-#     # if j % self.training_config["multistep"] == 0:
-#     #     ema_step(self.ema_model, self.model, ema_optimizer)
-
-#     if j == 0:
-#         l_train = loss
-#     else:
-#         l_train = 0.9 * l_train + 0.1 * loss
-
-#     # if j > 0 and j % val_every == 0:
-#     #     batch_val = next(self.val_dataset_iter)
-#     #     l_val = val_step(self.model, batch_val, rngs.val_step())
-
-#     #     ratio = l_val / l_train
-#     #     if ratio > val_error_ratio:
-#     #         counter += 1
-#     #     else:
-#     #         counter = 0
-
-#     #     pbar.set_postfix(
-#     #         loss=f"{l_train:.4f}",
-#     #         ratio=f"{ratio:.4f}",
-#     #         counter=counter,
-#     #         val_loss=f"{l_val:.4f}",
-#     #     )
-#     #     loss_array.append(l_train)
-#     #     val_loss_array.append(l_val)
-
-#     #     if l_val < min_val:
-#     #         min_val = l_val
-#     #         best_state = nnx.state(self.model)
-#     #         best_state_ema = nnx.state(self.ema_model)
-
-#     #     l_val = 0
-#     #     l_train = 0
-
-# print("Time taken custom loop:", time() - t0)
-#%%
-# from typing import Optional, Tuple
-
-
-# def train(
-#         self, rngs: nnx.Rngs, nsteps: Optional[int] = None, save_model=True
-#     ) -> Tuple[list, list]:
-#         """
-#         Run the training loop for the model.
-
-#         Parameters
-#         ----------
-#         rngs : nnx.Rngs
-#             Random number generators for training/validation steps.
-
-#         Returns
-#         -------
-#         loss_array : list
-#             List of training losses.
-#         val_loss_array : list
-#             List of validation losses.
-#         """
-
-#         optimizer = self._get_optimizer()
-#         ema_optimizer = self._get_ema_optimizer()
-
-#         best_state = nnx.state(self.model)
-#         best_state_ema = nnx.state(self.ema_model)
-
-#         loss_fn = self.get_loss_fn()
-
-#         train_step = self.get_train_step_fn(loss_fn)
-#         val_step = self.get_val_step_fn(loss_fn)
-
-#         batch_val = next(self.val_dataset_iter)
-#         min_val = val_step(self.model, batch_val, rngs.val_step())
-
-#         val_error_ratio = 1.1
-#         counter = 0
-#         cmax = 10
-
-#         loss_array = []
-#         val_loss_array = []
-
-#         self.model.train()
-
-#         if nsteps is None:
-#             nsteps = self.training_config["num_steps"]
-#         early_stopping = self.training_config["early_stopping"]
-#         val_every = self.training_config["val_every"]
-
-#         experiment_id = self.training_config["experiment_id"]
-
-#         l_train = None
-
-#         def step_fn():
-#             batch = next(dataset_iter) #next(self.train_dataset_iter)
-
-#             loss = train_step(
-#                 self.model, optimizer, batch, rngs.train_step()
-#             )
-
-#             return loss
-        
-#         # first step outside a loop to compile
-#         step_fn()
-
-
-#         # pbar = tqdm(range(nsteps))
-#         pbar = range(nsteps)
-
-#         jax.profiler.start_trace("./tmp/jax-trace")
-#         t0 = time()
-#         for j in pbar:
-#             step_fn()
-#         print("Time taken custom loop:", time() - t0)
-#         jax.profiler.stop_trace()
-
-#         # self.model.eval()
-
-#         # if save_model:
-#         #     self.save_model(experiment_id)
-
-#         # self._wrap_model()
-
-#         return loss_array, val_loss_array
-#%%
-# train(pipeline, nnx.Rngs(0), nsteps=3, save_model=False)
-
-
-#%%
-# jax.profiler.start_trace("/tmp/jax-trace", create_perfetto_trace=True)
-# pipeline.train(rngs,nsteps=30,save_model=False)
-# jax.profiler.stop_trace()
-
-#%%
-# function profiling
-# rngs = nnx.Rngs(0)
-# train_step(vf_model, optimizer, rngs.train_step())
-# with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
-#     for i in range(30):
-#         train_step(vf_model, optimizer, rngs.train_step())
-# %%
-# with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
-#     pipeline.train(rngs,nsteps=30,save_model=False)
+print("Pipeline training complete in {:.2f} seconds".format(time() - t0))
