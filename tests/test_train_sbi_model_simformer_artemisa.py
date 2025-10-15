@@ -64,7 +64,9 @@ class ModelEMA(nnx.Optimizer):
 
 root_dir = "/lhome/ific/a/aamerio/data/github/GenSBI-examples"
 
-config = f"{root_dir}/examples/sbi-benchmarks/two_moons/config/config_flow_simformer_2.yaml"
+config = (
+    f"{root_dir}/examples/sbi-benchmarks/two_moons/config/config_flow_simformer_2.yaml"
+)
 
 # Load config
 with open(config, "r") as f:
@@ -95,7 +97,9 @@ print_every = train_params.get("print_every", 100)
 
 # Set checkpoint directory
 notebook_path = os.getcwd()
-checkpoint_dir = f"{root_dir}/examples/sbi-benchmarks/two_moons/checkpoints/two_moons_flow_simformer"
+checkpoint_dir = (
+    f"{root_dir}/examples/sbi-benchmarks/two_moons/checkpoints/two_moons_flow_simformer"
+)
 checkpoint_dir_ema = f"{root_dir}/examples/sbi-benchmarks/two_moons/checkpoints/two_moons_flow_simformer/ema"
 os.makedirs(checkpoint_dir, exist_ok=True)
 os.makedirs(checkpoint_dir_ema, exist_ok=True)
@@ -209,7 +213,6 @@ def sample_strutured_conditional_mask(
     # If all are ones, then set to false
     condition_mask = jnp.where(all_ones_mask[..., None], False, condition_mask)
     return condition_mask
-
 
 
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
@@ -336,20 +339,23 @@ train_step_fn = pipeline.get_train_step_fn(loss_fn_pipeline)
 # # %%
 rngs = nnx.Rngs(0)
 # batch = next_batch()
-#%%
+# %%
 t0 = time()
 train_step_fn(vf_model, optimizer, next(dataset_iter), rngs.train_step())
 print("Time taken pipeline first step:", time() - t0)
 # t0 = time()
 # with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
-jax.profiler.start_trace("/home/aure/Documents/GitHub/GenSBI-examples/tests/tmp/jax-trace", create_perfetto_trace=True)
+jax.profiler.start_trace(
+    f"{root_dir}/tests/tmp/jax-trace",
+    create_perfetto_trace=True,
+)
 for i in range(20):
     batch = next(dataset_iter)
     train_step_fn(vf_model, optimizer, batch, rngs.train_step())
 jax.profiler.stop_trace()
 # print("Time taken pipeline:", time() - t0)
 
-#%%
+# %%
 # t0 = time()
 # train_step_fn(pipeline.model, optimizer, batch, rngs.train_step())
 # print("Time taken pipeline first step:", time() - t0)
@@ -411,7 +417,7 @@ jax.profiler.stop_trace()
 #     #     l_train = 0
 
 # print("Time taken custom loop:", time() - t0)
-#%%
+# %%
 # from typing import Optional, Tuple
 
 
@@ -474,7 +480,7 @@ jax.profiler.stop_trace()
 #             )
 
 #             return loss
-        
+
 #         # first step outside a loop to compile
 #         step_fn()
 
@@ -497,16 +503,16 @@ jax.profiler.stop_trace()
 #         # self._wrap_model()
 
 #         return loss_array, val_loss_array
-#%%
+# %%
 # train(pipeline, nnx.Rngs(0), nsteps=3, save_model=False)
 
 
-#%%
+# %%
 # jax.profiler.start_trace("/tmp/jax-trace", create_perfetto_trace=True)
 # pipeline.train(rngs,nsteps=30,save_model=False)
 # jax.profiler.stop_trace()
 
-#%%
+# %%
 # function profiling
 # rngs = nnx.Rngs(0)
 # train_step(vf_model, optimizer, rngs.train_step())
