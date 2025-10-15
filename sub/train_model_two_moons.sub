@@ -18,7 +18,7 @@ error                   = condor_logs/errors_$(experiment_name)_$(method)_$(mode
 
 
 experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)
-config_file = $(experiment_path)/config_$(method)_$(model).yaml
+config_file = $(experiment_path)/config/config_$(method)_$(model).yaml
 
 #########
 

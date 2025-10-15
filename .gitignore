@@ -212,3 +212,6 @@ task_data/*
 
 #sub
 condor_logs/
+
+#some test traces
+tests/tmp/*
