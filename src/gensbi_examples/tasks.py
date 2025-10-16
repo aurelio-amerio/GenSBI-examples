@@ -27,8 +27,8 @@ class Task:
 
         self.max_samples = self.dataset["train"].num_rows
 
-        self.observations = self.dataset_posterior["observations"]
-        self.reference_samples = self.dataset_posterior["reference_samples"]
+        self.observations = self.dataset_posterior["reference_posterior"]["observations"]
+        self.reference_samples = self.dataset_posterior["reference_posterior"]["reference_samples"]
 
         self.dim_data = metadata[task_name]["dim_data"]
         self.dim_theta = metadata[task_name]["dim_theta"]
