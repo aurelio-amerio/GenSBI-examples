@@ -3,49 +3,77 @@ from jax import numpy as jnp
 import grain
 import numpy as np
 
+from datasets import load_dataset
+from huggingface_hub import hf_hub_download
+import json
+
 from .utils import download_artifacts
 from .graph import faithfull_mask, min_faithfull_mask, moralize
 
 
 class Task:
     def __init__(self, task_name, data_dir=None, dtype=jnp.float32):
+
+        self.repo_name = "aurelio-amerio/SBI-benchmarks"
+
         self.task_name = task_name
-        self.data_dir = data_dir or "./"
-        download_artifacts(task=task_name, dir=self.data_dir)
-        self.data = jnp.load(f"{self.data_dir}/task_data/data_{task_name}.npz")
 
-        self.max_samples = int(1e6)
+        fname = hf_hub_download(repo_id=self.repo_name, filename="metadata.json", repo_type="dataset")
+        with open(fname, 'r') as f:
+            metadata = json.load(f)
 
-        self.xs = self.data["xs"][: self.max_samples]
-        self.xs = self.xs.astype(dtype)
-        self.thetas = self.data["thetas"][: self.max_samples]
-        self.thetas = self.thetas.astype(dtype)
+        self.dataset = load_dataset(self.repo_name, task_name).with_format("jax")
+        self.dataset_posterior = load_dataset(self.repo_name, f"{task_name}_posterior").with_format("jax")
 
-        self.xs_val = self.data["xs"][self.max_samples :]
-        self.xs_val = self.xs_val.astype(dtype)
-        self.thetas_val = self.data["thetas"][self.max_samples :]
-        self.thetas_val = self.thetas_val.astype(dtype)
+        self.max_samples = self.dataset["train"].num_rows
 
-        self.observations = self.data["observations"]
-        self.observations = self.observations.astype(dtype)
+        self.observations = self.dataset_posterior["observations"]
+        self.reference_samples = self.dataset_posterior["reference_samples"]
 
-        self.reference_samples = self.data["reference_samples"]
-        self.reference_samples = self.reference_samples.astype(dtype)
+        self.dim_data = metadata[task_name]["dim_data"]
+        self.dim_theta = metadata[task_name]["dim_theta"]
 
-        self.true_parameters = self.data["true_parameters"]
-        self.true_parameters = self.true_parameters.astype(dtype)
+        self.dim_joint = self.dim_data + self.dim_joint
+
+        self.num_observations = self.dataset_posterior["observations"].num_rows
+
+
+        # self.data_dir = data_dir or "./"
+        # download_artifacts(task=task_name, dir=self.data_dir)
+        # self.data = jnp.load(f"{self.data_dir}/task_data/data_{task_name}.npz")
+
+        # self.max_samples = int(1e6)
+
+        # self.xs = self.data["xs"][: self.max_samples]
+        # self.xs = self.xs.astype(dtype)
+        # self.thetas = self.data["thetas"][: self.max_samples]
+        # self.thetas = self.thetas.astype(dtype)
+
+        # self.xs_val = self.data["xs"][self.max_samples :]
+        # self.xs_val = self.xs_val.astype(dtype)
+        # self.thetas_val = self.data["thetas"][self.max_samples :]
+        # self.thetas_val = self.thetas_val.astype(dtype)
+
+        # self.observations = self.data["observations"]
+        # self.observations = self.observations.astype(dtype)
+
+        # self.reference_samples = self.data["reference_samples"]
+        # self.reference_samples = self.reference_samples.astype(dtype)
+
+        # self.true_parameters = self.data["true_parameters"]
+        # self.true_parameters = self.true_parameters.astype(dtype)
         
-        self.dim_data = self.data["dim_data"]
-        self.dim_theta = self.data["dim_theta"]
-        self.dim_joint = self.dim_data + self.dim_theta
-        self.num_observations = self.data["num_observations"]
+        # self.dim_data = self.data["dim_data"]
+        # self.dim_theta = self.data["dim_theta"]
+        # self.dim_joint = self.dim_data + self.dim_theta
+        # self.num_observations = self.data["num_observations"]
 
     def get_train_dataset(self, batch_size, nsamples=1e5):
         assert (
             nsamples < self.max_samples
         ), f"nsamples must be less than {self.max_samples}"
-        xs = self.xs[: int(nsamples)][...,None]
-        thetas = self.thetas[: int(nsamples)][...,None]
+        xs = self.dataset["train"]["xs"][: int(nsamples)][...,None]
+        thetas = self.dataset["train"]["thetas"][: int(nsamples)][...,None]
 
         train_data = jnp.concatenate((thetas, xs), axis=1)
 
@@ -61,13 +89,13 @@ class Task:
         return dataset_grain
 
     def get_val_dataset(self):
-        xs_val = self.xs_val[...,None]
-        thetas_val = self.thetas_val[...,None]
+        xs = self.dataset["validation"]["xs"][...,None]
+        thetas = self.dataset["validation"]["thetas"][...,None]
 
-        val_data = jnp.concatenate((thetas_val, xs_val), axis=1)
+        val_data = jnp.concatenate((thetas, xs), axis=1)
 
         val_dataset_grain = (
-            grain.MapDataset.source(np.array(val_data))
+            grain.MapDataset.source(val_data)
             .shuffle(42)
             .repeat()
             .to_iter_dataset()
