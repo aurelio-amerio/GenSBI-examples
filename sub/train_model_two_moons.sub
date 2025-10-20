@@ -17,7 +17,10 @@ output                  = condor_logs/outfile_$(experiment_name)_$(method)_$(mod
 error                   = condor_logs/errors_$(experiment_name)_$(method)_$(model).err
 
 
-experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)
+
+# New variant path structure
+variant = $(method)_$(model)
+experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)/$(variant)
 config_file = $(experiment_path)/config/config_$(method)_$(model).yaml
 
 #########
