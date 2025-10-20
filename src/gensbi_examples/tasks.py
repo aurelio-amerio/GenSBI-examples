@@ -68,7 +68,10 @@ class Task:
         )
 
         performance_config = grain.experimental.pick_performance_config(
-            ds=dataset_grain, ram_budget_mb=1024, max_workers=None, max_buffer_size=None
+            ds=dataset_grain,
+            ram_budget_mb=1024 * 4,
+            max_workers=None,
+            max_buffer_size=None,
         )
 
         dataset_batched = dataset_grain.batch(batch_size).mp_prefetch(
@@ -85,13 +88,13 @@ class Task:
         val_data = np.concatenate((thetas, xs), axis=1)
 
         val_dataset_grain = (
-            grain.MapDataset.source(val_data)
-            .shuffle(42)
-            .repeat()
-            .to_iter_dataset()
+            grain.MapDataset.source(val_data).shuffle(42).repeat().to_iter_dataset()
         )
         performance_config = grain.experimental.pick_performance_config(
-            ds=val_dataset_grain, ram_budget_mb=1024, max_workers=None, max_buffer_size=None
+            ds=val_dataset_grain,
+            ram_budget_mb=1024 * 4,
+            max_workers=None,
+            max_buffer_size=None,
         )
         val_dataset_grain = val_dataset_grain.batch(512).mp_prefetch(
             performance_config.multiprocessing_options
