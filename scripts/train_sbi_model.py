@@ -33,8 +33,8 @@ parser = argparse.ArgumentParser(description="Simformer Training Script")
 parser.add_argument(
     "--config",
     type=str,
-    default="config_simformer.yaml",
-    help="Path to YAML config file",
+    required=True,
+    help="Path to YAML config file (e.g. .../two_moons/flow_simformer/config/config_flow_simformer.yaml)",
 )
 args, _ = parser.parse_known_args()
 
@@ -44,15 +44,17 @@ with open(args.config, "r") as f:
 
 # methodology
 strategy = config.get("strategy", {})
-method = strategy.get("method", "flow")
-model_type = strategy.get("model", "simformer")
+method = strategy.get("method")
+model_type = strategy.get("model")
 
-# Change working directory to experiment_directory from config
-task_name = config.get("task_name", None)
-experiment_directory = f"examples/sbi-benchmarks/{task_name}"
+# task_name and variant
+task_name = config.get("task_name")
+variant = f"{method}_{model_type}"
 
-if experiment_directory is not None:
-    os.chdir(experiment_directory)
+# Set experiment directory to new structure
+experiment_directory = f"examples/sbi-benchmarks/{task_name}/{variant}"
+os.makedirs(experiment_directory, exist_ok=True)
+os.chdir(experiment_directory)
 
 # Task and dataset setup
 task = get_task(task_name)
@@ -78,12 +80,10 @@ early_stopping = train_params.get("early_stopping", True)
 nsteps = train_params.get("nsteps", 30000) * multistep
 val_every = train_params.get("val_every", 100) * multistep
 
-# Set checkpoint directory
-notebook_path = os.getcwd()
-checkpoint_dir = f"{notebook_path}/checkpoints/{task_name}_{method}_{model_type}"
-checkpoint_dir_ema = (
-    f"{notebook_path}/checkpoints/{task_name}_{method}_{model_type}/ema"
-)
+
+# Set checkpoint directory (new structure)
+checkpoint_dir = os.path.join(os.getcwd(), "checkpoints")
+checkpoint_dir_ema = os.path.join(checkpoint_dir, "ema")
 os.makedirs(checkpoint_dir, exist_ok=True)
 os.makedirs(checkpoint_dir_ema, exist_ok=True)
 
@@ -245,7 +245,9 @@ def get_samples(idx, nsamples=10_000, use_ema=False, rng=None):
 # Run C2ST
 print("Running C2ST tests...")
 
-c2st_dir = f"{notebook_path}/c2st_results"
+
+# Set c2st_results directory (new structure)
+c2st_dir = os.path.join(os.getcwd(), "c2st_results")
 os.makedirs(c2st_dir, exist_ok=True)
 
 c2st_accuracies = []
