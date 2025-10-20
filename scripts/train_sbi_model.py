@@ -132,7 +132,7 @@ if model_type == "simformer":
 elif model_type == "flux1joint":
     theta = model_params.get("theta", -1)
     if theta == -1:
-        theta = 4 * (dim_theta + dim_data)
+        theta = 5 * (dim_theta + dim_data)
     params = Flux1JointParams(
         in_channels=model_params.get("in_channels", 1),
         vec_in_dim=model_params.get("vec_in_dim", None),
