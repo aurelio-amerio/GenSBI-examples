@@ -2,7 +2,7 @@ experiment_name = slcp
 
 universe = vanilla
 
-request_memory = 32 GB
+request_memory = 64 GB
 request_cpus = 8
 
 executable = start_training.sh
