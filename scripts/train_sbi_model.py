@@ -210,8 +210,8 @@ training_config["checkpoint_dir"] = checkpoint_dir
 pipeline = PipelineClass(
     train_dataset,
     val_dataset,
-    dim_theta.item(),
-    dim_data.item(),
+    dim_theta,
+    dim_data,
     params,
     training_config,
 )
@@ -300,3 +300,20 @@ with open(c2st_results_file_ema, "w") as f:
         f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}\n"
     )
 print("C2ST tests complete.")
+
+print("Generating model card...")
+# now we call the script to generate the model card
+from generate_model_card import create_markdown_content, parse_config, parse_results
+
+# parse config and results
+config_data = parse_config(args.config)
+results_data = {"mean_accuracy": float(np.mean(c2st_accuracies_ema)), "std_dev": float(np.std(c2st_accuracies_ema))}
+
+markdown = create_markdown_content(config_data, results_data)
+
+# save the model card
+
+with open("README.md", "w") as f:
+    f.write(markdown)   
+
+print("Model card generated as README.md")

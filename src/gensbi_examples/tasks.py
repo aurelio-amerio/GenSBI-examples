@@ -38,6 +38,10 @@ class Task:
             "reference_samples"
         ]
 
+        self.true_parameters = self.dataset_posterior["reference_posterior"][
+            "true_parameters"
+        ]
+
         self.dim_data = metadata[task_name]["dim_data"]
         self.dim_theta = metadata[task_name]["dim_theta"]
 

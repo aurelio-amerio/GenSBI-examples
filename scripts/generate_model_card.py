@@ -74,7 +74,7 @@ This document provides a summary of the `{model_name}` model trained on the `{ta
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** {results.get('mean_accuracy', 'N/A')} ± {results.get('std_dev', 'N/A')}
+- **Average C2ST Accuracy:** {results.get('mean_accuracy', 'N/A'):.3f} ± {results.get('std_dev', 'N/A'):.3f}
 
 ---
 *This model card was automatically generated.*
