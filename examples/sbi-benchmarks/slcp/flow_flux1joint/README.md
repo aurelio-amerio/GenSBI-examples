@@ -1,17 +1,17 @@
 
-# Model Card: Flux on gaussian_mixture
+# Model Card: Flux1joint on slcp
 
-This document provides a summary of the `flux` model trained on the `gaussian_mixture` dataset.
+This document provides a summary of the `flux1joint` model trained on the `slcp` dataset.
 
 ## 1. Model & Pipeline
 
-- **Model Architecture:** `flux`
+- **Model Architecture:** `flux1joint`
 - **Training Pipeline:** `Flow Matching`
 - **Purpose:** Reconstruct posterior distributions in a Simulation-Based Inference (SBI) context.
 
 ## 2. Dataset
 
-- **Dataset:** `gaussian_mixture`
+- **Dataset:** `slcp`
 - **Description:** A synthetic benchmark dataset.
 - **Training Size:** The model was trained on 100,000 (1e5) samples.
 
@@ -23,10 +23,10 @@ This document provides a summary of the `flux` model trained on the `gaussian_mi
 | `vec_in_dim` | `None` |
 | `context_in_dim` | `1` |
 | `mlp_ratio` | `4` |
-| `num_heads` | `4` |
-| `depth` | `8` |
+| `num_heads` | `6` |
 | `depth_single_blocks` | `16` |
 | `axes_dim` | `[10]` |
+| `condition_dim` | `[4]` |
 | `qkv_bias` | `True` |
 | `theta` | `-1` |
 | `params_dtype` | `float32` |
@@ -56,7 +56,7 @@ This document provides a summary of the `flux` model trained on the `gaussian_mi
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.524 ± 0.012
+- **Average C2ST Accuracy:** 0.662 ± 0.054
 
 ---
 *This model card was automatically generated.*

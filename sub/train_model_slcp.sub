@@ -18,14 +18,14 @@ error                   = condor_logs/errors_$(experiment_name)_$(method)_$(mode
 # New variant path structure
 variant = $(method)_$(model)
 experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)/$(variant)
-config_file = $(experiment_path)/config_$(method)_$(model)_7.yaml
+config_file = $(experiment_path)/config/config_$(method)_$(model).yaml
 
 #########
 
 queue method,model, from (
-    # flow, flux1joint
-    flow, simformer
-    flow, flux
+    flow, flux1joint
+    # flow, simformer
+    # flow, flux
     # diffusion, simformer
     # diffusion, flux1joint
     # diffusion, flux
