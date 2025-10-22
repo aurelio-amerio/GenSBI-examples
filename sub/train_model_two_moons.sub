@@ -4,7 +4,7 @@ experiment_name = two_moons
 
 universe = vanilla
 
-request_memory = 32 GB
+request_memory = 64 GB
 request_cpus = 8
 
 executable = start_training.sh
@@ -17,15 +17,20 @@ output                  = condor_logs/outfile_$(experiment_name)_$(method)_$(mod
 error                   = condor_logs/errors_$(experiment_name)_$(method)_$(model).err
 
 
-experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)
-config_file = $(experiment_path)/config_$(method)_$(model).yaml
+
+# New variant path structure
+variant = $(method)_$(model)
+experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)/$(variant)
+config_file = $(experiment_path)/config/config_$(method)_$(model).yaml
 
 #########
 
 queue method,model, from (
+    # flow, flux1joint
     flow, simformer
-    # flow, flux
-    diffusion, simformer
+    flow, flux
+    # diffusion, simformer
+    # diffusion, flux1joint
     # diffusion, flux
 )
 #########

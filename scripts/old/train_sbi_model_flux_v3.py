@@ -18,12 +18,12 @@ import orbax.checkpoint as ocp
 from gensbi.flow_matching.path.scheduler import CondOTScheduler
 from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
-from gensbi.models import Flux, FluxParams, FluxCFMLoss, FluxWrapper
+from gensbi.models import Flux1, Flux1Params, Flux1CFMLoss, Flux1Wrapper
 from gensbi_examples.c2st import c2st
 from gensbi.flow_matching.solver import ODESolver
 
 # Argument parser for config file
-parser = argparse.ArgumentParser(description="Flux Training Script")
+parser = argparse.ArgumentParser(description="Flux1 Training Script")
 parser.add_argument(
     "--config",
     type=str,
@@ -105,12 +105,11 @@ obs_ids = jnp.arange(dim_data, dtype=jnp.int32).reshape(1, -1, 1)
 
 # Model parameters from config
 model_params = config.get("model", {})
-params = FluxParams(
+params = Flux1Params(
     in_channels=model_params.get("in_channels", 1),
     vec_in_dim=model_params.get("vec_in_dim", None),
     context_in_dim=model_params.get("context_in_dim", 1),
     mlp_ratio=model_params.get("mlp_ratio", 4),
-    qkv_multiplier=model_params.get("qkv_multiplier", 1),
     num_heads=model_params.get("num_heads", 6),
     depth=model_params.get("depth", 8),
     depth_single_blocks=model_params.get("depth_single_blocks", 16),
@@ -123,7 +122,7 @@ params = FluxParams(
     param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
 )
 
-loss_fn_cfm = FluxCFMLoss(path)
+loss_fn_cfm = Flux1CFMLoss(path)
 
 p0_dist_model = dist.Independent(
     dist.Normal(loc=jnp.zeros((dim_theta,)), scale=jnp.ones((dim_theta,))),
@@ -162,7 +161,7 @@ def train_step(model, optimizer, rng):
     optimizer.update(grads, value=loss)
     return loss
 
-vf_model = Flux(params)
+vf_model = Flux1(params)
 
 if restore_model:
     model_state = nnx.state(vf_model)
@@ -265,7 +264,7 @@ if train_model:
 # --------- C2ST TEST ---------
 
 # Wrap the trained model for conditional sampling
-vf_wrapped = FluxWrapper(vf_model)
+vf_wrapped = Flux1Wrapper(vf_model)
 
 def get_samples(vf_wrapped, idx, nsamples=10_000):
     observation, reference_samples = task.get_reference(idx)
