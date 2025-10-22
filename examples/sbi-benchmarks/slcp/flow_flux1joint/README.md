@@ -23,12 +23,12 @@ This document provides a summary of the `flux1joint` model trained on the `slcp`
 | `vec_in_dim` | `None` |
 | `context_in_dim` | `1` |
 | `mlp_ratio` | `4` |
-| `num_heads` | `6` |
+| `num_heads` | `4` |
 | `depth_single_blocks` | `16` |
 | `axes_dim` | `[10]` |
 | `condition_dim` | `[4]` |
 | `qkv_bias` | `True` |
-| `theta` | `60` |
+| `theta` | `50` |
 | `params_dtype` | `float32` |
 
 ## 4. Training Configuration
@@ -41,7 +41,7 @@ This document provides a summary of the `flux1joint` model trained on the `slcp`
 | `multistep` | `8` |
 | `early_stopping` | `True` |
 | `val_every` | `100` |
-| `experiment_id` | `3` |
+| `experiment_id` | `4` |
 | `restore_model` | `False` |
 | `train_model` | `True` |
 | `patience` | `10` |
@@ -56,7 +56,7 @@ This document provides a summary of the `flux1joint` model trained on the `slcp`
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.579 ± 0.035
+- **Average C2ST Accuracy:** 0.608 ± 0.047
 
 ---
 *This model card was automatically generated.*
