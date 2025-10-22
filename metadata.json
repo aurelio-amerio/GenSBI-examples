@@ -1,0 +1,22 @@
+{
+    "two_moons": {
+        "dim_data": 2,
+        "dim_theta": 2
+    },
+    "slcp": {
+        "dim_data": 8,
+        "dim_theta": 5
+    },
+    "gaussian_linear_uniform": {
+        "dim_data": 10,
+        "dim_theta": 10
+    },
+    "gaussian_linear": {
+        "dim_data": 10,
+        "dim_theta": 10
+    },
+    "gaussian_mixture": {
+        "dim_data": 2,
+        "dim_theta": 2
+    }
+}
