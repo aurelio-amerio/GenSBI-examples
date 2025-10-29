@@ -79,12 +79,14 @@ thetas = torch.cat([thetas, theta1, theta2, theta3, theta4, theta5, theta6, thet
 xs_raw = torch.cat([xs_raw, xs_raw1, xs_raw2, xs_raw3, xs_raw4, xs_raw5, xs_raw6, xs_raw7, xs_raw8], dim=0)
 
 # %%
+
+#%%
 thetas = thetas.numpy()
-xs_raw = xs_raw.numpy()
+xs_raw = np.permute_dims(xs_raw.numpy(), (0, 2, 1))
 
 
 thetas_test = theta9.numpy()
-xs_test = xs_raw9.numpy()
+xs_test = np.permute_dims(xs_raw9.numpy(), (0, 2, 1))
 #%%
 thetas.shape, xs_raw.shape
 # %%
@@ -105,7 +107,7 @@ def data_generator(xs, thetas):
         yield {"xs": xs[i], "thetas": thetas[i]}    
 
 features = Features({
-    "xs": Array2D(shape=(2, 8192), dtype='float32'),
+    "xs": Array2D(shape=(8192,2), dtype='float32'),
     "thetas": List(Value('float32')),
 })
 
