@@ -18,7 +18,7 @@ import orbax.checkpoint as ocp
 from gensbi.flow_matching.path.scheduler import CondOTScheduler
 from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
-from gensbi.models import Flux1, Flux1Params, Flux1CFMLoss, Flux1Wrapper
+from gensbi.models import Flux1, Flux1Params, ConditionalCFMLoss, ConditionalWrapper
 from gensbi_examples.c2st import c2st
 from gensbi.flow_matching.solver import ODESolver
 
@@ -122,7 +122,7 @@ params = Flux1Params(
     param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
 )
 
-loss_fn_cfm = Flux1CFMLoss(path)
+loss_fn_cfm = ConditionalCFMLoss(path)
 
 p0_dist_model = dist.Independent(
     dist.Normal(loc=jnp.zeros((dim_theta,)), scale=jnp.ones((dim_theta,))),
@@ -264,7 +264,7 @@ if train_model:
 # --------- C2ST TEST ---------
 
 # Wrap the trained model for conditional sampling
-vf_wrapped = Flux1Wrapper(vf_model)
+vf_wrapped = ConditionalWrapper(vf_model)
 
 def get_samples(vf_wrapped, idx, nsamples=10_000):
     observation, reference_samples = task.get_reference(idx)

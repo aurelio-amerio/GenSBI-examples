@@ -21,7 +21,7 @@ import orbax.checkpoint as ocp
 from gensbi.flow_matching.path.scheduler import CondOTScheduler
 from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
-from gensbi.models import Simformer, SimformerParams, SimformerCFMLoss, SimformerWrapper
+from gensbi.models import Simformer, SimformerParams, JointCFMLoss, JointWrapper
 from gensbi_examples.c2st import c2st
 
 from gensbi.models import SimformerParams
@@ -291,7 +291,7 @@ class SimformerConditioner_old(nnx.Module):
             return self.unconditioned(obs, obs_ids, t, edge_mask=edge_mask)
 
 
-class SimformerWrapper_old(ModelWrapper_old):
+class JointWrapper_old(ModelWrapper_old):
     def __init__(self, model, dim_joint):
         model_conditioned = SimformerConditioner_old(model, dim_joint)
         super().__init__(model_conditioned)
@@ -347,7 +347,7 @@ pipeline._wrap_model()
 vf_model_wrapped = pipeline.model_wrapped
 #%% get the old wrapped model
 
-vf_model_wrapped_old = SimformerWrapper_old(pipeline.model, dim_joint)
+vf_model_wrapped_old = JointWrapper_old(pipeline.model, dim_joint)
 # %%
 # x = jnp.array([[-1.0, 0.0], [1.0, 0.0]]).reshape(2,2,1)
 # t = jnp.array([0.5, 0.5])

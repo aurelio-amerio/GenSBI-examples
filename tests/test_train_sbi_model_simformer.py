@@ -21,7 +21,7 @@ import orbax.checkpoint as ocp
 from gensbi.flow_matching.path.scheduler import CondOTScheduler
 from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
-from gensbi.models import Simformer, SimformerParams, SimformerCFMLoss, SimformerWrapper
+from gensbi.models import Simformer, SimformerParams, JointCFMLoss, JointWrapper
 from gensbi_examples.c2st import c2st
 
 from gensbi.models import SimformerParams
@@ -157,7 +157,7 @@ params = SimformerParams(
     num_hidden_layers=model_params.get("num_hidden_layers", 1),
 )
 
-loss_fn_cfm = SimformerCFMLoss(path)
+loss_fn_cfm = JointCFMLoss(path)
 
 undirected_edge_mask = jnp.ones((dim_joint, dim_joint), dtype=jnp.bool_)
 

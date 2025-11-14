@@ -22,7 +22,7 @@ import orbax.checkpoint as ocp
 from gensbi.flow_matching.path.scheduler import CondOTScheduler
 from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
-from gensbi.models import Simformer, SimformerParams, SimformerCFMLoss, SimformerWrapper
+from gensbi.models import Simformer, SimformerParams, JointCFMLoss, JointWrapper
 from gensbi_examples.c2st import c2st
 from gensbi_examples.mask import get_condition_mask_fn
 
@@ -144,7 +144,7 @@ params = SimformerParams(
     num_hidden_layers=model_params.get("num_hidden_layers", 1),
 )
 
-loss_fn_cfm = SimformerCFMLoss(path)
+loss_fn_cfm = JointCFMLoss(path)
 
 undirected_edge_mask = jnp.ones((dim_joint, dim_joint), dtype=jnp.bool_)
 posterior_mask = jnp.concatenate(
@@ -336,7 +336,7 @@ from gensbi.flow_matching.solver import ODESolver
 
 
 # Wrap the trained model for conditional sampling
-vf_wrapped = SimformerWrapper(vf_model)
+vf_wrapped = JointWrapper(vf_model)
 
 step_size = 0.01
 
