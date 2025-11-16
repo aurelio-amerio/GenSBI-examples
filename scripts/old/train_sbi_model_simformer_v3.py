@@ -139,6 +139,7 @@ cond_ids = jnp.arange(dim_theta, dim_joint)  # conditional ids
 model_params = config.get("model", {})
 params = SimformerParams(
     rngs=nnx.Rngs(0),
+    in_channels=model_params.get("in_channels", 1),
     dim_value=model_params.get("dim_value", 40),
     dim_id=model_params.get("dim_id", 40),
     dim_condition=model_params.get("dim_condition", 10),
