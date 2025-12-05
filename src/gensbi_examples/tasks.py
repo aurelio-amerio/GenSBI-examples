@@ -42,10 +42,10 @@ class Task:
             "true_parameters"
         ]
 
-        self.dim_data = metadata[task_name]["dim_data"]
-        self.dim_theta = metadata[task_name]["dim_theta"]
+        self.dim_cond = metadata[task_name]["dim_cond"]
+        self.dim_obs = metadata[task_name]["dim_obs"]
 
-        self.dim_joint = self.dim_data + self.dim_theta
+        self.dim_joint = self.dim_cond + self.dim_obs
 
         self.num_observations = len(self.observations)
 
@@ -174,8 +174,8 @@ class TwoMoons(Task):
         super().__init__(task_name, data_dir, dtype=dtype)
 
     def get_base_mask_fn(self):
-        theta_dim = self.dim_theta
-        x_dim = self.dim_data
+        theta_dim = self.dim_obs
+        x_dim = self.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
         x_mask = jnp.tril(jnp.ones((theta_dim, x_dim), dtype=jnp.bool_))
         base_mask = jnp.block(
@@ -207,8 +207,8 @@ class GaussianLinear(Task):
         super().__init__(task_name, data_dir, dtype=dtype)
 
     def get_base_mask_fn(self):
-        theta_dim = self.dim_theta
-        x_dim = self.dim_data
+        theta_dim = self.dim_obs
+        x_dim = self.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
         x_i_mask = jnp.eye(x_dim, dtype=jnp.bool_)
         base_mask = jnp.block(
@@ -228,8 +228,8 @@ class GaussianLinearUniform(Task):
         super().__init__(task_name, data_dir, dtype=dtype)
 
     def get_base_mask_fn(self):
-        theta_dim = self.dim_theta
-        x_dim = self.dim_data
+        theta_dim = self.dim_obs
+        x_dim = self.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
         x_i_mask = jnp.eye(x_dim, dtype=jnp.bool_)
         base_mask = jnp.block(
@@ -249,8 +249,8 @@ class GaussianMixture(Task):
         super().__init__(task_name, data_dir, dtype=dtype)
 
     def get_base_mask_fn(self):
-        theta_dim = self.dim_theta
-        x_dim = self.dim_data
+        theta_dim = self.dim_obs
+        x_dim = self.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
         x_mask = jnp.tril(jnp.ones((theta_dim, x_dim), dtype=jnp.bool_))
         base_mask = jnp.block(
@@ -273,8 +273,8 @@ class SLCP(Task):
         super().__init__(task_name, data_dir, dtype=dtype)
 
     def get_base_mask_fn(self):
-        theta_dim = self.dim_theta
-        x_dim = self.dim_data
+        theta_dim = self.dim_obs
+        x_dim = self.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
         x_i_dim = x_dim // 4
         x_i_mask = jax.scipy.linalg.block_diag(

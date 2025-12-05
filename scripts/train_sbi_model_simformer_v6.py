@@ -144,12 +144,12 @@ def next_val_batch():
 
 # Model definition
 path = AffineProbPath(scheduler=CondOTScheduler())
-dim_theta = task.dim_theta
-dim_data = task.dim_data
+dim_obs = task.dim_obs
+dim_cond = task.dim_cond
 dim_joint = task.dim_joint
 node_ids = jnp.arange(dim_joint)
-obs_ids = jnp.arange(dim_theta)  # observation ids
-cond_ids = jnp.arange(dim_theta, dim_joint)  # conditional ids
+obs_ids = jnp.arange(dim_obs)  # observation ids
+cond_ids = jnp.arange(dim_obs, dim_joint)  # conditional ids
 
 # Model parameters from config
 model_params = config.get("model", {})
@@ -232,8 +232,8 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     condition_mask = sample_strutured_conditional_mask(
         rng_condition,
         batch_size,
-        dim_theta.item(),
-        dim_data.item(),
+        dim_obs.item(),
+        dim_cond.item(),
     )
 
     edge_masks = undirected_edge_mask
@@ -437,8 +437,8 @@ def get_samples(vf_wrapped, idx, nsamples=10_000, edge_mask=None):
     rng = jax.random.PRNGKey(45)
     key1, key2 = jax.random.split(rng, 2)
 
-    x_init = jax.random.normal(key1, (nsamples, dim_theta))
-    cond = jnp.broadcast_to(observation[..., None], (1, dim_data, 1))
+    x_init = jax.random.normal(key1, (nsamples, dim_obs))
+    cond = jnp.broadcast_to(observation[..., None], (1, dim_cond, 1))
 
     solver = ODESolver(velocity_model=vf_wrapped)
     model_extras = {

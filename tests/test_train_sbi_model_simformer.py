@@ -134,12 +134,12 @@ def next_val_batch():
 
 # Model definition
 path = AffineProbPath(scheduler=CondOTScheduler())
-dim_theta = task.dim_theta
-dim_data = task.dim_data
+dim_obs = task.dim_obs
+dim_cond = task.dim_cond
 dim_joint = task.dim_joint
 node_ids = jnp.arange(dim_joint)
-obs_ids = jnp.arange(dim_theta)  # observation ids
-cond_ids = jnp.arange(dim_theta, dim_joint)  # conditional ids
+obs_ids = jnp.arange(dim_obs)  # observation ids
+cond_ids = jnp.arange(dim_obs, dim_joint)  # conditional ids
 
 # Model parameters from config
 model_params = config.get("model", {})
@@ -225,8 +225,8 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     condition_mask = sample_strutured_conditional_mask(
         rng_condition,
         batch_size,
-        dim_theta.item(),
-        dim_data.item(),
+        dim_obs.item(),
+        dim_cond.item(),
     )
 
     edge_masks = undirected_edge_mask

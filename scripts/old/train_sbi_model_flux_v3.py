@@ -95,13 +95,13 @@ def next_val_batch():
 
 # Model definition
 path = AffineProbPath(scheduler=CondOTScheduler())
-dim_theta = task.dim_theta
-dim_data = task.dim_data
+dim_obs = task.dim_obs
+dim_cond = task.dim_cond
 dim_joint = task.dim_joint
 
 # Define observation and condition IDs
-cond_ids = jnp.arange(dim_data, dim_joint, dtype=jnp.int32).reshape(1, -1, 1)
-obs_ids = jnp.arange(dim_data, dtype=jnp.int32).reshape(1, -1, 1)
+cond_ids = jnp.arange(dim_cond, dim_joint, dtype=jnp.int32).reshape(1, -1, 1)
+obs_ids = jnp.arange(dim_cond, dtype=jnp.int32).reshape(1, -1, 1)
 
 # Model parameters from config
 model_params = config.get("model", {})
@@ -115,8 +115,8 @@ params = Flux1Params(
     depth_single_blocks=model_params.get("depth_single_blocks", 16),
     axes_dim=model_params.get("axes_dim", [6]),
     qkv_bias=model_params.get("qkv_bias", True),
-    obs_dim=dim_theta,
-    cond_dim=dim_data,
+    obs_dim=dim_obs,
+    cond_dim=dim_cond,
     theta=model_params.get("theta", 20),
     rngs=nnx.Rngs(default=42),
     param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
@@ -125,13 +125,13 @@ params = Flux1Params(
 loss_fn_cfm = ConditionalCFMLoss(path)
 
 p0_dist_model = dist.Independent(
-    dist.Normal(loc=jnp.zeros((dim_theta,)), scale=jnp.ones((dim_theta,))),
+    dist.Normal(loc=jnp.zeros((dim_obs,)), scale=jnp.ones((dim_obs,))),
     reinterpreted_batch_ndims=1,
 )
 
 def loss_fn_(vf_model, batch, key: jax.random.PRNGKey):
-    obs = batch[:, :dim_theta][..., None]
-    cond = batch[:, dim_theta:][..., None]
+    obs = batch[:, :dim_obs][..., None]
+    cond = batch[:, dim_obs:][..., None]
 
     key1, key2 = jax.random.split(key, 2)
 
@@ -273,8 +273,8 @@ def get_samples(vf_wrapped, idx, nsamples=10_000):
     rng = jax.random.PRNGKey(45)
     key1, key2 = jax.random.split(rng, 2)
 
-    x_init = jax.random.normal(key1, (nsamples, dim_theta))
-    cond = jnp.broadcast_to(observation[..., None], (1, dim_data, 1))
+    x_init = jax.random.normal(key1, (nsamples, dim_obs))
+    cond = jnp.broadcast_to(observation[..., None], (1, dim_cond, 1))
 
     solver = ODESolver(velocity_model=vf_wrapped)
     model_extras = {"cond": cond, "obs_ids": obs_ids, "cond_ids": cond_ids}

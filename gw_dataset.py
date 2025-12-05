@@ -29,10 +29,10 @@ repo_name = "aurelio-amerio/SBI-benchmarks"
 
 # for task_name in tasks:
 #     task = get_task(task_name)
-#     dim_data = task.data["dim_data"].item()
-#     dim_theta = task.data["dim_theta"].item()
+#     dim_cond = task.data["dim_cond"].item()
+#     dim_obs = task.data["dim_obs"].item()
 
-#     metadata[task_name] = {"dim_data": dim_data, "dim_theta": dim_theta}
+#     metadata[task_name] = {"dim_cond": dim_cond, "dim_obs": dim_obs}
 
 # file_path = "metadata.json"
 # with open(file_path, 'w') as f:
