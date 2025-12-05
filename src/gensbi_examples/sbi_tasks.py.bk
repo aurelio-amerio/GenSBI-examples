@@ -123,7 +123,7 @@ class SBIBMTask(InferenceTask):
         return self.task.dim_parameters
     
     def get_x_dim(self):
-        return self.task.dim_data
+        return self.task.dim_cond
 
     def get_prior(self):
         if self.backend == "torch":
@@ -205,7 +205,7 @@ class LinearGaussian(SBIBMTask):
     def get_base_mask_fn(self):
         task = _get_torch_task(self.name)
         theta_dim = task.dim_parameters
-        x_dim = task.dim_data
+        x_dim = task.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
         x_i_mask = jnp.eye(x_dim, dtype=jnp.bool_)
         base_mask = jnp.block([[thetas_mask, jnp.zeros((theta_dim, x_dim))], [jnp.eye((x_dim)), x_i_mask]])
@@ -239,7 +239,7 @@ class MixtureGaussian(SBIBMTask):
     def get_base_mask_fn(self):
         task = _get_torch_task(self.name)
         theta_dim = task.dim_parameters
-        x_dim = task.dim_data
+        x_dim = task.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
         x_mask = jnp.tril(jnp.ones((theta_dim, x_dim), dtype=jnp.bool_))
         base_mask = jnp.block([[thetas_mask, jnp.zeros((theta_dim, x_dim))], [jnp.ones((x_dim, theta_dim)), x_mask]])
@@ -259,7 +259,7 @@ class TwoMoons(SBIBMTask):
     def get_base_mask_fn(self):
         task = self.task
         theta_dim = task.dim_parameters
-        x_dim = task.dim_data
+        x_dim = task.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_)
         x_mask = jnp.tril(jnp.ones((theta_dim, x_dim), dtype=jnp.bool_))
         base_mask = jnp.block([[thetas_mask, jnp.zeros((theta_dim, x_dim))], [jnp.ones((x_dim, theta_dim)), x_mask]])
@@ -277,7 +277,7 @@ class SLCP(SBIBMTask):
     def get_base_mask_fn(self):
         task = _get_torch_task(self.name)
         theta_dim = task.dim_parameters
-        x_dim = task.dim_data
+        x_dim = task.dim_cond
         thetas_mask = jnp.eye(theta_dim, dtype=jnp.bool_) 
         # TODO This could be triangular -> DAG
         x_i_dim = x_dim // 4

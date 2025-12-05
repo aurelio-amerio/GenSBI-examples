@@ -318,8 +318,8 @@ val_dataset = task.get_val_dataset()
 
 
 # Model definition
-dim_theta = task.dim_theta
-dim_data = task.dim_data
+dim_obs = task.dim_obs
+dim_cond = task.dim_cond
 dim_joint = task.dim_joint
 
 params = SimformerParams(
@@ -359,8 +359,8 @@ vf_model_wrapped_old = JointWrapper_old(pipeline.model, dim_joint)
 # }
 
 batch_size = 5
-obs = jax.random.normal(jax.random.PRNGKey(0), (batch_size, dim_theta, 1))*2
-cond = jax.random.normal(jax.random.PRNGKey(1), (batch_size, dim_data, 1))*2
+obs = jax.random.normal(jax.random.PRNGKey(0), (batch_size, dim_obs, 1))*2
+cond = jax.random.normal(jax.random.PRNGKey(1), (batch_size, dim_cond, 1))*2
 t = jax.random.uniform(jax.random.PRNGKey(2), (batch_size,), minval=0.0, maxval=1.0)
 
 

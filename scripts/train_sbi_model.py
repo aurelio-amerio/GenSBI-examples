@@ -115,8 +115,8 @@ def main():
     val_dataset_iter = iter(val_dataset)
 
 
-    dim_theta = task.dim_theta
-    dim_data = task.dim_data
+    dim_obs = task.dim_obs
+    dim_cond = task.dim_cond
     dim_joint = task.dim_joint
 
 
@@ -141,7 +141,7 @@ def main():
     elif model_type == "flux1joint":
         theta = model_params.get("theta", -1)
         if theta == -1:
-            theta = 5 * (dim_theta + dim_data)
+            theta = 5 * (dim_obs + dim_cond)
         params = Flux1JointParams(
             in_channels=model_params.get("in_channels", 1),
             vec_in_dim=model_params.get("vec_in_dim", None),
@@ -159,7 +159,7 @@ def main():
     elif model_type == "flux":
         theta = model_params.get("theta", -1)
         if theta == -1:
-            theta = 4 * (dim_theta + dim_data)
+            theta = 4 * (dim_obs + dim_cond)
 
         params = Flux1Params(
             in_channels=model_params.get("in_channels", 1),
@@ -171,8 +171,8 @@ def main():
             depth_single_blocks=model_params.get("depth_single_blocks", 16),
             axes_dim=model_params.get("axes_dim", [10]),
             qkv_bias=model_params.get("qkv_bias", True),
-            obs_dim=dim_theta,
-            cond_dim=dim_data,
+            obs_dim=dim_obs,
+            cond_dim=dim_cond,
             theta=theta,
             rngs=nnx.Rngs(default=42),
             param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
@@ -219,8 +219,8 @@ def main():
     pipeline = PipelineClass(
         train_dataset,
         val_dataset,
-        dim_theta,
-        dim_data,
+        dim_obs,
+        dim_cond,
         params,
         training_config,
     )
