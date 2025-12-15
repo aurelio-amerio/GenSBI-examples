@@ -33,7 +33,7 @@ def likelihood_conditional_mask(key, num_samples, theta_dim, x_dim):
     return jnp.array([[True] * theta_dim + [False] * x_dim]*num_samples)
 
 
-def sample_strutured_conditional_mask(
+def sample_structured_conditional_mask(
     key,
     num_samples,
     theta_dim,
@@ -64,7 +64,7 @@ def sample_strutured_conditional_mask(
 
 def get_condition_mask_fn(name, **kwargs):
     if name.lower() == "structured_random":
-        return partial(sample_strutured_conditional_mask, **kwargs)
+        return partial(sample_structured_conditional_mask, **kwargs)
     elif name.lower() == "random":
         return partial(sample_random_conditional_mask, **kwargs)
     elif name.lower() == "joint":
