@@ -168,7 +168,7 @@ p0_dist_model = dist.Independent(
 )
 
 
-def sample_strutured_conditional_mask(
+def sample_structured_conditional_mask(
     key,
     num_samples,
     theta_dim,
@@ -220,7 +220,7 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     batch = (x_0, x_1, t)
 
     # condition_mask = get_random_condition_mask(rng_condition, batch_size)
-    condition_mask = sample_strutured_conditional_mask(
+    condition_mask = sample_structured_conditional_mask(
         rng_condition,
         batch_size,
         dim_obs.item(),
