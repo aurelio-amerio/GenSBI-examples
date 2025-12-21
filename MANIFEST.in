@@ -1,2 +1,0 @@
-include src/gensbi_examples/*
-recursive-include examples *
