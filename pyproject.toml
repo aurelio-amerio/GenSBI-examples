@@ -14,9 +14,6 @@ dependencies = [
     "huggingface_hub",
 ]
 
-[project.optional-dependencies]
-cuda12 = ["gensbi[cuda12] @ git+https://github.com/aurelio-amerio/GenSBI.git"]
-
 [project.urls]
 Homepage = "https://github.com/aurelio-amerio/GenSBI-examples"
 Issues = "https://github.com/aurelio-amerio/GenSBI-examples/issues"
