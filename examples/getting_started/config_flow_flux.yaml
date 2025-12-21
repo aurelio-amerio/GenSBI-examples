@@ -18,14 +18,14 @@ model:
   in_channels: 1
   vec_in_dim: null
   context_in_dim: 1
-  mlp_ratio: 4
-  num_heads: 4
-  depth: 8
-  depth_single_blocks: 16
+  mlp_ratio: 3
+  num_heads: 2
+  depth: 4
+  depth_single_blocks: 8
   axes_dim: [10]
   qkv_bias: true
   theta: 60
-  params_dtype: "float32"
+  params_dtype: "bfloat16"
 
 training:
   batch_size: 1024
@@ -35,5 +35,5 @@ training:
   early_stopping: true
   val_every: 100
   experiment_id: 2
-  restore_model: false
-  train_model: true
+  restore_model: true
+  train_model: false
