@@ -32,14 +32,4 @@ allow-direct-references = true
 sources = ["src"]
 
 [tool.hatch.build.targets.wheel]
-include = [
-    "src/gensbi_examples/*",
-    "examples/**",
-]
-# force-include = { "src/gensbi_examples" = "gensbi_examples" }
-
-[tool.hatch.build.targets.sdist]
-include = [
-    "src/gensbi_examples/*",
-    "examples/**",
-]
+force-include = { "src/gensbi_examples" = "gensbi_examples" }
