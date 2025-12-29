@@ -42,9 +42,9 @@ def c2st(
 
 
     if noise_scale is not None:
-        rng = jax.random.PRNGKey(seed)
-        X += noise_scale * jax.random.normal(rng, X.shape) * noise_scale
-        Y += noise_scale * jax.random.normal(rng, Y.shape) * noise_scale
+        key = jax.random.PRNGKey(seed)
+        X += noise_scale * jax.random.normal(key, X.shape) * noise_scale
+        Y += noise_scale * jax.random.normal(key, Y.shape) * noise_scale
 
 
     # Convert to numpy if not already

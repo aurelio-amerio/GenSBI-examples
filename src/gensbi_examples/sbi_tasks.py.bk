@@ -36,7 +36,7 @@ class Task(ABC):
     def get_x_dim(self):
         raise NotImplementedError()
     
-    def get_data(self, num_samples: int, rng=None):
+    def get_data(self, num_samples: int, key=None):
         raise NotImplementedError()
     
     def get_node_id(self):
@@ -62,7 +62,7 @@ class InferenceTask(Task):
     def get_simulator(self):
         raise NotImplementedError()
     
-    def get_data(self, num_samples: int, rng=None):
+    def get_data(self, num_samples: int, key=None):
         raise NotImplementedError()
     
     def get_observation(self, index: int):

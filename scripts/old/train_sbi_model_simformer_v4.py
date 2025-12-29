@@ -94,7 +94,7 @@ from gensbi_examples.mask import get_condition_mask_fn
 
 
 # @partial(jax.jit, static_argnames=["nsamples"])
-# def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
+# def get_random_condition_mask(key: jax.random.PRNGKey, nsamples):
 #     mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
 #     mask_posterior = jnp.concatenate(
 #         [
@@ -103,18 +103,18 @@ from gensbi_examples.mask import get_condition_mask_fn
 #         ],
 #         axis=-1,
 #     )
-#     mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
+#     mask1 = jax.random.bernoulli(key, p=0.3, shape=(nsamples, dim_joint))
 #     filter = ~jnp.all(mask1, axis=-1)
 #     mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
 #     masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
-#     return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
+#     return jax.random.choice(key, masks, shape=(nsamples,), replace=False, axis=0)
 
 
-def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
+def marginalize(key: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
     if marginal_ids is None:
         marginal_ids = jnp.arange(edge_mask.shape[0])
 
-    idx = jax.random.choice(rng, marginal_ids, shape=(1,), replace=False)
+    idx = jax.random.choice(key, marginal_ids, shape=(1,), replace=False)
     edge_mask = edge_mask.at[idx, :].set(False)
     edge_mask = edge_mask.at[:, idx].set(False)
     edge_mask = edge_mask.at[idx, idx].set(True)
@@ -257,7 +257,7 @@ def sample_structured_conditional_mask(
 
 
 # @partial(jax.jit, static_argnames=["nsamples"])
-# def get_random_condition_mask(rng: jax.random.PRNGKey, nsamples):
+# def get_random_condition_mask(key: jax.random.PRNGKey, nsamples):
 #     mask_joint = jnp.zeros((5 * nsamples, dim_joint), dtype=jnp.bool_)
 #     mask_posterior = jnp.concatenate(
 #         [
@@ -267,13 +267,13 @@ def sample_structured_conditional_mask(
 #         axis=-1,
 #     )
 
-#     mask1 = jax.random.bernoulli(rng, p=0.3, shape=(nsamples, dim_joint))
+#     mask1 = jax.random.bernoulli(key, p=0.3, shape=(nsamples, dim_joint))
 #     filter = ~jnp.all(mask1, axis=-1)
 #     mask1 = jnp.logical_and(mask1, filter.reshape(-1, 1))
 
 #     # masks = jnp.concatenate([mask_joint, mask1, mask_posterior, mask_likelihood], axis=0)
 #     masks = jnp.concatenate([mask_joint, mask1, mask_posterior], axis=0)
-#     return jax.random.choice(rng, masks, shape=(nsamples,), replace=False, axis=0)
+#     return jax.random.choice(key, masks, shape=(nsamples,), replace=False, axis=0)
 
 
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
@@ -318,8 +318,8 @@ def val_loss(vf_model, key):
 
 
 @nnx.jit
-def train_step(model, optimizer, rng):
-    loss_fn = lambda model: train_loss(model, rng)
+def train_step(model, optimizer, key):
+    loss_fn = lambda model: train_loss(model, key)
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(model, grads, value=loss)
     return loss
@@ -449,8 +449,8 @@ def get_samples(vf_wrapped, idx, nsamples=10_000, edge_mask=None):
     observation, reference_samples = task.get_reference(idx)
     true_param = jnp.array(task.get_true_parameters(idx))
 
-    rng = jax.random.PRNGKey(45)
-    key1, key2 = jax.random.split(rng, 2)
+    key = jax.random.PRNGKey(45)
+    key1, key2 = jax.random.split(key, 2)
 
     x_init = jax.random.normal(key1, (nsamples, dim_obs))
     cond = jnp.broadcast_to(observation[..., None], (1, dim_cond, 1))
