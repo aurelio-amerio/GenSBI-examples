@@ -155,8 +155,8 @@ def val_loss(vf_model, key):
     return loss_fn_(vf_model, x_1, key)
 
 @nnx.jit
-def train_step(model, optimizer, rng):
-    loss_fn = lambda model: train_loss(model, rng)
+def train_step(model, optimizer, key):
+    loss_fn = lambda model: train_loss(model, key)
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(grads, value=loss)
     return loss
@@ -270,8 +270,8 @@ def get_samples(vf_wrapped, idx, nsamples=10_000):
     observation, reference_samples = task.get_reference(idx)
     true_param = jnp.array(task.get_true_parameters(idx))
 
-    rng = jax.random.PRNGKey(45)
-    key1, key2 = jax.random.split(rng, 2)
+    key = jax.random.PRNGKey(45)
+    key1, key2 = jax.random.split(key, 2)
 
     x_init = jax.random.normal(key1, (nsamples, dim_obs))
     cond = jnp.broadcast_to(observation[..., None], (1, dim_cond, 1))

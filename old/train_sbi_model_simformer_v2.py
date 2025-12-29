@@ -98,12 +98,12 @@ devices = jax.devices()
 mesh = jax.sharding.Mesh(devices, axis_names=("data",))
 
 
-def marginalize(rng: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
+def marginalize(key: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
     if marginal_ids is None:
         marginal_ids = jnp.arange(edge_mask.shape[0])
 
     idx = jax.random.choice(
-        rng, marginal_ids, shape=(1,), replace=False
+        key, marginal_ids, shape=(1,), replace=False
     )
     edge_mask = edge_mask.at[idx, :].set(False)
     edge_mask = edge_mask.at[:, idx].set(False)
@@ -224,8 +224,8 @@ def val_loss(vf_model, key):
 
 
 @nnx.jit
-def train_step(model, optimizer, rng):
-    loss_fn = lambda model: train_loss(model, rng)
+def train_step(model, optimizer, key):
+    loss_fn = lambda model: train_loss(model, key)
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(grads, value=loss)
     return loss
@@ -346,8 +346,8 @@ def get_samples(vf_wrapped, idx, nsamples=10_000, edge_mask=posterior_faithfull)
     observation, reference_samples = task.get_reference(idx)
     true_param = jnp.array(task.get_true_parameters(idx))
 
-    rng = jax.random.PRNGKey(45)
-    key1, key2 = jax.random.split(rng, 2)
+    key = jax.random.PRNGKey(45)
+    key1, key2 = jax.random.split(key, 2)
 
     x_init = jax.random.normal(key1, (nsamples, dim_obs))
     cond = jnp.broadcast_to(observation[..., None], (1, dim_cond, 1))

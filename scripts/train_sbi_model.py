@@ -240,14 +240,14 @@ def main():
     # --------- C2ST TEST ---------
 
 
-    def get_samples(idx, nsamples=10_000, use_ema=False, rng=None):
+    def get_samples(idx, nsamples=10_000, use_ema=False, key=None):
         observation, reference_samples = task.get_reference(idx)
         true_param = jnp.array(task.get_true_parameters(idx))
 
-        if rng is None:
-            rng = jax.random.PRNGKey(42)
+        if key is None:
+            key = jax.random.PRNGKey(42)
 
-        samples = pipeline.sample(rng, observation, nsamples, use_ema=use_ema)
+        samples = pipeline.sample(key, observation, nsamples, use_ema=use_ema)
         return samples, true_param, reference_samples
 
 

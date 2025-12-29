@@ -239,8 +239,8 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
 
 
 @nnx.jit
-def train_step(model, optimizer, x_1, rng):
-    loss, grads = nnx.value_and_grad(loss_fn_)(model, x_1, rng)
+def train_step(model, optimizer, x_1, key):
+    loss, grads = nnx.value_and_grad(loss_fn_)(model, x_1, key)
     optimizer.update(model, grads, value=loss)
     return loss
 

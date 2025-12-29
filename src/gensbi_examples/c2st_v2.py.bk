@@ -65,9 +65,9 @@ def c2st(
         Y = (Y - X_mean) / X_std
 
     if noise_scale is not None:
-        rng = jax.random.PRNGKey(seed)
-        X = X + noise_scale * jax.random.normal(rng, X.shape)
-        Y = Y + noise_scale * jax.random.normal(rng, Y.shape)
+        key = jax.random.PRNGKey(seed)
+        X = X + noise_scale * jax.random.normal(key, X.shape)
+        Y = Y + noise_scale * jax.random.normal(key, Y.shape)
 
     X = jnp.asarray(X)
     Y = jnp.asarray(Y)

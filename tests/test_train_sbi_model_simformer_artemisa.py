@@ -260,8 +260,8 @@ def val_loss(vf_model, key):
 
 
 @nnx.jit
-def train_step(model, optimizer, rng):
-    loss_fn = lambda model: train_loss(model, rng)
+def train_step(model, optimizer, key):
+    loss_fn = lambda model: train_loss(model, key)
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(model, grads, value=loss)
     return loss
