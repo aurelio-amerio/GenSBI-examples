@@ -10,9 +10,20 @@ import json
 # from .utils import download_artifacts
 from .graph import faithfull_mask, min_faithfull_mask, moralize
 
+def process_joint(batch):
+    cond = batch["xs"][..., None]
+    obs = batch["thetas"][..., None]
+    data = np.concatenate((obs, cond), axis=1)
+    return data
+
+def process_conditional(batch):
+    cond = batch["xs"][..., None]
+    obs = batch["thetas"][..., None]
+    return obs, cond
+
 
 class Task:
-    def __init__(self, task_name, data_dir=None, dtype=jnp.float32):
+    def __init__(self, task_name, kind="joint"):
 
         self.repo_name = "aurelio-amerio/SBI-benchmarks"
 
@@ -48,6 +59,14 @@ class Task:
         self.dim_joint = self.dim_cond + self.dim_obs
 
         self.num_observations = len(self.observations)
+        self.kind = kind
+        
+        if kind == "joint":
+            self.process_fn = process_joint
+        elif kind == "conditional":
+            self.process_fn = process_conditional
+        else:
+            raise ValueError(f"Unknown kind: {kind}")
 
     def get_train_dataset(self, batch_size, nsamples=1e5):
         assert (
@@ -55,13 +74,9 @@ class Task:
         ), f"nsamples must be less than {self.max_samples}"
 
         df = self.dataset["train"].select(range(int(nsamples)))[:]
-        xs = df["xs"][..., None]
-        thetas = df["thetas"][..., None]
-
-        train_data = np.concatenate((thetas, xs), axis=1)
 
         dataset_grain = (
-            grain.MapDataset.source(np.array(train_data))
+            grain.MapDataset.source(df)
             .shuffle(42)
             .repeat()
             .to_iter_dataset()
@@ -74,21 +89,17 @@ class Task:
             max_buffer_size=None,
         )
 
-        dataset_batched = dataset_grain.batch(batch_size).mp_prefetch(
+        dataset_batched = dataset_grain.batch(batch_size).map(self.process_fn).mp_prefetch(
             performance_config.multiprocessing_options
         )
 
         return dataset_batched
 
-    def get_val_dataset(self):
+    def get_val_dataset(self, batch_size):
         df = self.dataset["validation"][:]
-        xs = df["xs"][..., None]
-        thetas = df["thetas"][..., None]
-
-        val_data = np.concatenate((thetas, xs), axis=1)
 
         val_dataset_grain = (
-            grain.MapDataset.source(val_data).shuffle(42).repeat().to_iter_dataset()
+            grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
         )
         performance_config = grain.experimental.pick_performance_config(
             ds=val_dataset_grain,
@@ -96,7 +107,7 @@ class Task:
             max_workers=None,
             max_buffer_size=None,
         )
-        val_dataset_grain = val_dataset_grain.batch(512).mp_prefetch(
+        val_dataset_grain = val_dataset_grain.batch(batch_size).map(self.process_fn).mp_prefetch(
             performance_config.multiprocessing_options
         )
 
@@ -169,9 +180,9 @@ class Task:
 
 
 class TwoMoons(Task):
-    def __init__(self, data_dir=None, dtype=jnp.float32):
+    def __init__(self, kind="joint"):
         task_name = "two_moons"
-        super().__init__(task_name, data_dir, dtype=dtype)
+        super().__init__(task_name, kind=kind)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -193,18 +204,18 @@ class TwoMoons(Task):
 
 
 class BernoulliGLM(Task):
-    def __init__(self, data_dir=None, dtype=jnp.float32):
+    def __init__(self, kind="joint"):
         task_name = "bernoulli_glm"
-        super().__init__(task_name, data_dir, dtype=dtype)
+        super().__init__(task_name, kind=kind)
 
     def get_base_mask_fn(self):
         raise NotImplementedError()
 
 
 class GaussianLinear(Task):
-    def __init__(self, data_dir=None, dtype=jnp.float32):
+    def __init__(self, kind="joint"):
         task_name = "gaussian_linear"
-        super().__init__(task_name, data_dir, dtype=dtype)
+        super().__init__(task_name, kind=kind)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -223,9 +234,9 @@ class GaussianLinear(Task):
 
 
 class GaussianLinearUniform(Task):
-    def __init__(self, data_dir=None, dtype=jnp.float32):
+    def __init__(self, kind="joint"):
         task_name = "gaussian_linear_uniform"
-        super().__init__(task_name, data_dir, dtype=dtype)
+        super().__init__(task_name, kind=kind)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -244,9 +255,9 @@ class GaussianLinearUniform(Task):
 
 
 class GaussianMixture(Task):
-    def __init__(self, data_dir=None, dtype=jnp.float32):
+    def __init__(self, kind="joint"):
         task_name = "gaussian_mixture"
-        super().__init__(task_name, data_dir, dtype=dtype)
+        super().__init__(task_name, kind=kind)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -268,9 +279,9 @@ class GaussianMixture(Task):
 
 
 class SLCP(Task):
-    def __init__(self, data_dir=None, dtype=jnp.float32):
+    def __init__(self, kind="joint"):
         task_name = "slcp"
-        super().__init__(task_name, data_dir, dtype=dtype)
+        super().__init__(task_name, kind=kind)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -294,22 +305,22 @@ class SLCP(Task):
         return base_mask_fn
 
 
-def get_task(task_name, dtype=jnp.float32, data_dir=None):
+def get_task(task_name, kind="joint"):
     """
     Returns a Task object based on the task name.
     """
     task_name = task_name.lower()
     if task_name == "two_moons":
-        return TwoMoons(data_dir, dtype=dtype)
+        return TwoMoons(kind=kind)
     elif task_name == "bernoulli_glm":
-        return BernoulliGLM(data_dir, dtype=dtype)
+        return BernoulliGLM(kind=kind)
     elif task_name == "gaussian_linear":
-        return GaussianLinear(data_dir, dtype=dtype)
+        return GaussianLinear(kind=kind)
     elif task_name == "gaussian_linear_uniform":
-        return GaussianLinearUniform(data_dir, dtype=dtype)
+        return GaussianLinearUniform(kind=kind)
     elif task_name == "gaussian_mixture":
-        return GaussianMixture(data_dir, dtype=dtype)
+        return GaussianMixture(kind=kind)
     elif task_name == "slcp":
-        return SLCP(data_dir, dtype=dtype)
+        return SLCP(kind=kind)
     else:
         raise ValueError(f"Unknown task: {task_name}")

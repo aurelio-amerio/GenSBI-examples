@@ -64,9 +64,6 @@ def main():
     os.makedirs(experiment_directory, exist_ok=True)
     os.chdir(experiment_directory)
 
-    # Task and dataset setup
-    task = get_task(task_name)
-
     assert model_type in [
         "simformer",
         "flux1joint",
@@ -76,6 +73,34 @@ def main():
         "flow",
         "diffusion",
     ], f"Method must be 'flow' or 'diffusion', got {method}."
+    
+    # define the appropriate pipeline
+    if model_type == "simformer" and method == "flow":
+        PipelineClass = SimformerFlowPipeline
+        kind = "joint"
+    elif model_type == "simformer" and method == "diffusion":
+        PipelineClass = SimformerDiffusionPipeline
+        kind = "joint"
+    elif model_type == "flux1joint" and method == "flow":
+        PipelineClass = Flux1JointFlowPipeline
+        kind="joint"
+    elif model_type == "flux1joint" and method == "diffusion":
+        PipelineClass = Flux1JointDiffusionPipeline
+        kind="joint"
+    elif model_type == "flux" and method == "flow":
+        PipelineClass = Flux1FlowPipeline
+        kind="conditional"
+    elif model_type == "flux" and method == "diffusion":
+        PipelineClass = Flux1DiffusionPipeline
+        kind="conditional"
+    else:
+        raise ValueError(
+            f"Invalid combination of model_type {model_type} and method {method}"
+        )
+    
+    # Task and dataset setup
+    task = get_task(task_name, kind=kind)
+
 
     # Training parameters
     train_params = config.get("training", {})
@@ -110,9 +135,9 @@ def main():
     ema_decay = opt_params.get("ema_decay", 0.99)
 
     train_dataset = task.get_train_dataset(batch_size)
-    val_dataset = task.get_val_dataset()
-    dataset_iter = iter(train_dataset)
-    val_dataset_iter = iter(val_dataset)
+    val_dataset = task.get_val_dataset(batch_size)
+    # dataset_iter = iter(train_dataset)
+    # val_dataset_iter = iter(val_dataset)
 
 
     dim_obs = task.dim_obs
@@ -151,7 +176,7 @@ def main():
             axes_dim=model_params.get("axes_dim", [10]),
             condition_dim=model_params.get("condition_dim", [4]),
             qkv_bias=model_params.get("qkv_bias", True),
-            joint_dim=dim_joint,
+            dim_joint=dim_joint,
             theta=theta,
             rngs=nnx.Rngs(default=42),
             param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
@@ -171,30 +196,14 @@ def main():
             depth_single_blocks=model_params.get("depth_single_blocks", 16),
             axes_dim=model_params.get("axes_dim", [10]),
             qkv_bias=model_params.get("qkv_bias", True),
-            obs_dim=dim_obs,
-            cond_dim=dim_cond,
+            dim_obs=dim_obs,
+            dim_cond=dim_cond,
             theta=theta,
             rngs=nnx.Rngs(default=42),
             param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
         )
 
-    # define the appropriate pipeline
-    if model_type == "simformer" and method == "flow":
-        PipelineClass = SimformerFlowPipeline
-    elif model_type == "simformer" and method == "diffusion":
-        PipelineClass = SimformerDiffusionPipeline
-    elif model_type == "flux1joint" and method == "flow":
-        PipelineClass = Flux1JointFlowPipeline
-    elif model_type == "flux1joint" and method == "diffusion":
-        PipelineClass = Flux1JointDiffusionPipeline
-    elif model_type == "flux" and method == "flow":
-        PipelineClass = Flux1FlowPipeline
-    elif model_type == "flux" and method == "diffusion":
-        PipelineClass = Flux1DiffusionPipeline
-    else:
-        raise ValueError(
-            f"Invalid combination of model_type {model_type} and method {method}"
-        )
+    
 
 
     training_config = PipelineClass._get_default_training_config()
@@ -219,10 +228,10 @@ def main():
     pipeline = PipelineClass(
         train_dataset,
         val_dataset,
-        dim_obs,
-        dim_cond,
-        params,
-        training_config,
+        dim_obs=dim_obs,
+        dim_cond=dim_cond,
+        params=params,
+        training_config=training_config,
     )
 
     # current training config

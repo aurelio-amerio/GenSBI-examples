@@ -1,7 +1,7 @@
 # %%
 import os
 
-experiment=4
+experiment=1
 
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
@@ -204,10 +204,10 @@ def main():
 
     
     # now we define the NPE pipeline
-    dim_obs = 1
-    dim_cond = 8192  
-    ch_obs = 2
-    ch_cond = 2  
+    dim_obs = 2 # dimension of the observation (theta)
+    dim_cond = 8192  # dimension of the condition (xs)
+    ch_obs = 1 # we have 1 channel for the observation (theta)
+    ch_cond = 2  # we have 2 channels for the condition (xs), that is two GW detectors
 
     # define the vae model
     encoder = ConvEmbed(dim_cond, ch_cond, rngs=nnx.Rngs(0))
@@ -229,8 +229,8 @@ def main():
         axes_dim=[
             4,
         ],
-        obs_dim=dim_obs,
-        cond_dim=dim_cond_latent,
+        dim_obs=dim_obs,
+        dim_cond=dim_cond_latent,
         theta = 10*dim_joint,
         qkv_bias=True,
         guidance_embed=False,
@@ -245,8 +245,12 @@ def main():
 
     def split_data(batch):
         obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
-        obs = obs[:, None, :]
+        # Match the notebook behavior: normalize before adding the channel axis.
+        # `thetas_mean/thetas_std` are shaped like (1, dim_obs), so broadcasting
+        # works naturally on (batch, dim_obs).
         obs = normalize(obs, thetas_mean, thetas_std)
+        obs = jnp.deg2rad(obs)
+        obs = obs.reshape(obs.shape[0], dim_obs, ch_obs)
         cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
         cond = normalize(cond, xs_mean, xs_std)
         return obs, cond
@@ -316,8 +320,9 @@ def main():
     samples = pipeline_latent.sample(
         nnx.Rngs(0).sample(), x_o, 10_000#, key=jax.random.PRNGKey(1234)
     )
-    res = samples[:, 0, :]  # shape (num_samples, 1, ch_obs) -> (num_samples, ch_obs)
 
+    res = samples[:, :, 0]  # shape (num_samples, dim_obs, 1) -> (num_samples, dim_obs)
+    
     # unnormalize the results for plotting
     res_unnorm = unnormalize(res, thetas_mean, thetas_std)
     
@@ -330,7 +335,7 @@ def main():
     
     
     # run tarp
-    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(1,2), x_shape=(8192,2))
+    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(2,1), x_shape=(8192,2))
     
     # key = jax.random.PRNGKey(1234)
 

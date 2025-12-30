@@ -197,8 +197,8 @@ def main():
         axes_dim=[
             20,
         ],
-        obs_dim=dim_obs,
-        cond_dim=dim_cond_latent,
+        dim_obs=dim_obs,
+        dim_cond=dim_cond_latent,
         qkv_bias=True,
         guidance_embed=False,
         rngs=nnx.Rngs(0),
