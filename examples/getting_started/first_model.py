@@ -49,15 +49,15 @@ def simulator(key, nsamples):
     return _simulator(sample_key, thetas)
 
 def main():
-    obs_dim = 3 # dimension of the observation (theta), that is the simulator input shape
-    cond_dim = 3 # dimension of the condition (xs), that is the simulator output shape
-    joint_dim = obs_dim + cond_dim # dimension of the joint (theta, xs), useful later
+    dim_obs = 3 # dimension of the observation (theta), that is the simulator input shape
+    dim_cond = 3 # dimension of the condition (xs), that is the simulator output shape
+    dim_joint = dim_obs + dim_cond # dimension of the joint (theta, xs), useful later
 
     train_data = jnp.asarray(simulator(jax.random.PRNGKey(0), 10_000), dtype=jnp.bfloat16)
     val_data = jnp.asarray(simulator(jax.random.PRNGKey(1), 2000), dtype=jnp.bfloat16)
 
     def split_obs_cond(data):
-        return data[:, :obs_dim], data[:, obs_dim:]  # assuming first dim_obs are obs, last dim_cond are cond
+        return data[:, :dim_obs], data[:, dim_obs:]  # assuming first dim_obs are obs, last dim_cond are cond
 
     batch_size = 1024
     
@@ -98,8 +98,8 @@ def main():
     pipeline = Flux1FlowPipeline.init_pipeline_from_config(
             train_dataset_grain,
             val_dataset_grain,
-            obs_dim,
-            cond_dim,
+            dim_obs,
+            dim_cond,
             config_path,
             checkpoint_dir,
         )
@@ -111,8 +111,8 @@ def main():
 
     new_sample = simulator(jax.random.PRNGKey(20), 1) # the observation for which we want to reconstruct the posterior
 
-    true_theta = new_sample[:, :obs_dim, :]  # The input used for the simulation, AKA the true value
-    x_o = new_sample[:, obs_dim:, :]  # The observation from the simulation for which we want to reconstruct the posterior
+    true_theta = new_sample[:, :dim_obs, :]  # The input used for the simulation, AKA the true value
+    x_o = new_sample[:, dim_obs:, :]  # The observation from the simulation for which we want to reconstruct the posterior
 
 
     samples = pipeline.sample(rngs.sample(), x_o, nsamples=100_000)
@@ -125,7 +125,7 @@ def main():
     plt.show()
 
 
-    posterior = PosteriorWrapper(pipeline, rngs=nnx.Rngs(1234))
+    posterior = PosteriorWrapper(pipeline, rngs=nnx.Rngs(1234), chunk_size=250)
 
  
     key = jax.random.PRNGKey(1234)
@@ -134,8 +134,8 @@ def main():
     test_data = simulator(jax.random.PRNGKey(1), 200)
 
     # split in thetas and xs
-    thetas = test_data[:, :obs_dim, :] # (200, 3, 1)
-    xs = test_data[:, obs_dim:, :] # (200, 3, 1)
+    thetas = test_data[:, :dim_obs, :] # (200, 3, 1)
+    xs = test_data[:, dim_obs:, :] # (200, 3, 1)
 
     # flatten the dataset. sbi expects 2D arrays of shape (num_samples, features), while our data is 3D of shape (num_samples, dim, channels).
     # we reshape a sample of size (dim, channels) into a vector of size (dim * channels)
@@ -181,8 +181,8 @@ def main():
     test_data = simulator(jax.random.PRNGKey(1), 10_000)
 
     # split in thetas and xs
-    thetas = test_data[:, :obs_dim, :] # (10_000, 3, 1)
-    xs = test_data[:, obs_dim:, :] # (10_000, 3, 1)
+    thetas = test_data[:, :dim_obs, :] # (10_000, 3, 1)
+    xs = test_data[:, dim_obs:, :] # (10_000, 3, 1)
 
     # flatten the dataset. sbi expects 2D arrays of shape (num_samples, features), while our data is 3D of shape (num_samples, dim, channels).
     # we reshape a sample of size (dim, channels) into a vector of size (dim * channels)
@@ -222,17 +222,17 @@ def main():
     key = jax.random.PRNGKey(12345)
 
     sample = simulator(key, 1)
-    theta_true = sample[:, :obs_dim, :]  
-    x_o = sample[:, obs_dim:, :]  
+    theta_true = sample[:, :dim_obs, :]  
+    x_o = sample[:, dim_obs:, :]  
 
     # Note: x_o must have a batch-dimension. I.e. `x_o.shape == (1, observation_shape)`.
     post_samples_star = pipeline.sample(rngs.sample(), x_o, nsamples=10_000) 
 
-    post_samples_star = np.array(post_samples_star.reshape(-1, obs_dim))
+    post_samples_star = np.array(post_samples_star.reshape(-1, dim_obs))
 
     # %%
-    post_samples_star_torch = torch.Tensor(np.array(post_samples_star.reshape(-1, obs_dim)))
-    x_o_torch = torch.Tensor(np.array(x_o.reshape(-1, cond_dim)))
+    post_samples_star_torch = torch.Tensor(np.array(post_samples_star.reshape(-1, dim_obs)))
+    x_o_torch = torch.Tensor(np.array(x_o.reshape(-1, dim_cond)))
 
     # %%
     probs_data, scores_data = lc2st.get_scores(

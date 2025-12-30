@@ -1,6 +1,8 @@
 # %%
 import os
 
+experiment = 5
+
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
 else:
@@ -63,25 +65,23 @@ def unnormalize(batch, mean, std):
 
 
 class GWModel(nnx.Module):
-    def __init__(self, vae, sbi_model, rngs: nnx.Rngs):
+    def __init__(self, vae, sbi_model):
         self.vae = vae
         self.sbi_model = sbi_model
-        self.rngs = rngs
-
-    def __call__(
-        self,
-        t: Array,
-        obs: Array,
-        obs_ids: Array,
-        cond: Array,
-        cond_ids: Array,
-        conditioned: bool | Array = True,
-        guidance: Array | None = None,
-    ):
-        key = self.rngs.encode()
+        
+    def __call__(self, 
+                    t: Array,
+                    obs: Array,
+                    obs_ids: Array,
+                    cond: Array,
+                    cond_ids: Array,
+                    conditioned: bool | Array = True,
+                    guidance: Array | None = None,
+                    encoder_key = None):
+        
         # first we encode the conditioning data
-        cond_latent = self.vae.encode(cond, key)
-
+        cond_latent = self.vae.encode(cond, encoder_key)
+        
         # then we pass to the sbi model
         return self.sbi_model(
             t=t,
@@ -110,11 +110,16 @@ def main():
     df_test = dataset["test"]
 
     # compute the mean of xs and thetas
-    xs_mean = np.mean(df_train["xs"], axis=(0, 1), keepdims=True)
-    thetas_mean = np.mean(df_train["thetas"], axis=0, keepdims=True)
+    # xs_mean = np.mean(df_train["xs"], axis=(0, 1), keepdims=True)
+    # thetas_mean = np.mean(df_train["thetas"], axis=0, keepdims=True)
 
-    xs_std = np.std(df_train["xs"], axis=(0, 1), keepdims=True)
-    thetas_std = np.std(df_train["thetas"], axis=0, keepdims=True)
+    # xs_std = np.std(df_train["xs"], axis=(0, 1), keepdims=True)
+    # thetas_std = np.std(df_train["thetas"], axis=0, keepdims=True)
+    xs_mean = jnp.array([[[ 0.00051776, -0.00040733]]], dtype=jnp.bfloat16) 
+    thetas_mean = jnp.array([[44.826576, 45.070328]], dtype=jnp.bfloat16) 
+
+    xs_std = jnp.array([[[60.80799, 59.33193]]], dtype=jnp.bfloat16) 
+    thetas_std = jnp.array([[20.189356, 20.16127 ]], dtype=jnp.bfloat16) 
 
     ae_params = AutoEncoderParams(
         resolution=8192,
@@ -125,18 +130,18 @@ def main():
             1,  # 8192
             2,  # 4096
             4,  # 2048
-            6,  # 1024
+            8,  # 1024
             16,  # 512
             16,  # 256
-            16,  # 128
-            16,  # 64
-            16, # 32
-            16, # 16
-            16, # 8
-            16, # 4
+            # 16,  # 128
+            # 16,  # 64
+            # 16, # 32
+            # 16, # 16
+            # 16, # 8
+            # 16, # 4
         ],
         num_res_blocks=1,
-        z_channels=512,
+        z_channels=128,
         scale_factor=0.3611,
         shift_factor=0.1159,
         rngs=nnx.Rngs(42),
@@ -152,16 +157,16 @@ def main():
     gc.collect()
 
     # now we define the NPE pipeline
-    dim_obs = 1
+    dim_obs = 2 # dimension of the observation (theta)
     dim_cond = 8192  # not used since we use a VAE for the conditionals
-    ch_obs = 2
+    ch_obs = 1 # we have 1 channel for the observation (theta)
     ch_cond = 2  # not used since we use a VAE for the conditionals
 
     # get the latent dimensions from the autoencoder
     dim_cond_latent = vae_model.latent_shape[1]
     z_ch = vae_model.latent_shape[2]
 
-    dim_joint = dim_obs + dim_cond  # not used for this script
+    dim_joint = dim_obs + dim_cond_latent  # not used for this script
 
     params_flux = Flux1Params(
         in_channels=ch_obs,
@@ -169,13 +174,14 @@ def main():
         context_in_dim=z_ch,
         mlp_ratio=4,
         num_heads=4,
-        depth=4,
-        depth_single_blocks=8,
+        depth=8,
+        depth_single_blocks=16,
         axes_dim=[
             20,
         ],
-        obs_dim=dim_obs,
-        cond_dim=dim_cond_latent,
+        dim_obs=dim_obs,
+        dim_cond=dim_cond_latent,
+        theta = 10*dim_joint,
         qkv_bias=True,
         guidance_embed=False,
         rngs=nnx.Rngs(0),
@@ -185,17 +191,19 @@ def main():
     model_sbi = Flux1(params_flux)
 
     # full model with VAE encoding the conditionals
-    model = GWModel(vae_model, model_sbi, nnx.Rngs(0))
+    model = GWModel(vae_model, model_sbi)
 
     def split_data(batch):
         obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
-        obs = obs[:, None, :]
+        obs = obs[...,None]
         obs = normalize(obs, thetas_mean, thetas_std)
         cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
         cond = normalize(cond, xs_mean, xs_std)
         return obs, cond
 
+    effective_batch_size = 4096
     batch_size = 512
+    multistep = effective_batch_size // batch_size
 
     train_dataset_npe = (
         grain.MapDataset.source(df_train)
@@ -233,7 +241,9 @@ def main():
     training_config["checkpoint_dir"] = (
         "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v2/checkpoints"
     )
-    training_config["experiment_id"] = 1
+    training_config["experiment_id"] = experiment
+    training_config["multistep"] = multistep
+    training_config["val_every"] = 100*multistep  # validate every 100 effective steps
 
     pipeline_latent = ConditionalFlowPipeline(
         model,
@@ -246,7 +256,7 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), 100, save_model=False)
+    pipeline_latent.train(nnx.Rngs(0), 60_000, save_model=True)
     # pipeline_latent.restore_model()
 
     # plot the results
@@ -257,7 +267,7 @@ def main():
     theta_true = df_test["thetas"][0]  # already unnormalized
 
     samples = pipeline_latent.sample(
-        nnx.Rngs(0).sample(), x_o, 10_000#, key=jax.random.PRNGKey(1234)
+        nnx.Rngs(0).sample(), x_o, 10_000, encoder_key=jax.random.PRNGKey(1234)
     )
     res = samples[:, 0, :]  # shape (num_samples, 1, ch_obs) -> (num_samples, ch_obs)
 
@@ -268,14 +278,13 @@ def main():
     res_unnorm = jnp.mod(res_unnorm, 360.0)
 
     plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
-    plt.savefig("gw_samples_v3.png", dpi=100, bbox_inches="tight")
+    plt.savefig("gw_samples_v2b.png", dpi=100, bbox_inches="tight")
     plt.show()
     
     
     # run tarp
-    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(1,2), x_shape=(8192,2))
-    
-    key = jax.random.PRNGKey(1234)
+    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(1,2), x_shape=(8192,2), encoder_key=jax.random.PRNGKey(1234))
+
 
     # split in thetas and xs
     thetas = np.array(df_test["thetas"])[:200] 
@@ -297,7 +306,7 @@ def main():
     
     
     plot_tarp(ecp, alpha)
-    plt.savefig("gw_tarp_v2.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig("gw_tarp_v2b.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
     plt.show()
 
 
