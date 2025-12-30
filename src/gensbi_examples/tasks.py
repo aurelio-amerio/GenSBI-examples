@@ -10,11 +10,13 @@ import json
 # from .utils import download_artifacts
 from .graph import faithfull_mask, min_faithfull_mask, moralize
 
+
 def process_joint(batch):
     cond = batch["xs"][..., None]
     obs = batch["thetas"][..., None]
     data = np.concatenate((obs, cond), axis=1)
     return data
+
 
 def process_conditional(batch):
     cond = batch["xs"][..., None]
@@ -60,7 +62,7 @@ class Task:
 
         self.num_observations = len(self.observations)
         self.kind = kind
-        
+
         if kind == "joint":
             self.process_fn = process_joint
         elif kind == "conditional":
@@ -73,13 +75,10 @@ class Task:
             nsamples < self.max_samples
         ), f"nsamples must be less than {self.max_samples}"
 
-        df = self.dataset["train"].select(range(int(nsamples)))[:]
+        df = self.dataset["train"].select(range(int(nsamples)))#[:]
 
         dataset_grain = (
-            grain.MapDataset.source(df)
-            .shuffle(42)
-            .repeat()
-            .to_iter_dataset()
+            grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
         )
 
         performance_config = grain.experimental.pick_performance_config(
@@ -89,14 +88,16 @@ class Task:
             max_buffer_size=None,
         )
 
-        dataset_batched = dataset_grain.batch(batch_size).map(self.process_fn).mp_prefetch(
-            performance_config.multiprocessing_options
+        dataset_batched = (
+            dataset_grain.batch(batch_size)
+            .map(self.process_fn)
+            .mp_prefetch(performance_config.multiprocessing_options)
         )
 
         return dataset_batched
 
     def get_val_dataset(self, batch_size):
-        df = self.dataset["validation"][:]
+        df = self.dataset["validation"]#[:]
 
         val_dataset_grain = (
             grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
@@ -107,8 +108,10 @@ class Task:
             max_workers=None,
             max_buffer_size=None,
         )
-        val_dataset_grain = val_dataset_grain.batch(batch_size).map(self.process_fn).mp_prefetch(
-            performance_config.multiprocessing_options
+        val_dataset_grain = (
+            val_dataset_grain.batch(batch_size)
+            .map(self.process_fn)
+            .mp_prefetch(performance_config.multiprocessing_options)
         )
 
         return val_dataset_grain

@@ -135,10 +135,9 @@ def main():
     ema_decay = opt_params.get("ema_decay", 0.99)
 
     train_dataset = task.get_train_dataset(batch_size)
-    val_dataset = task.get_val_dataset(batch_size)
+    val_dataset = task.get_val_dataset(512) # we are using the mean loss, so batch size does not matter
     # dataset_iter = iter(train_dataset)
     # val_dataset_iter = iter(val_dataset)
-
 
     dim_obs = task.dim_obs
     dim_cond = task.dim_cond
