@@ -1,7 +1,7 @@
 # %%
 import os
 
-experiment=1
+experiment=2
 
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
@@ -67,7 +67,7 @@ def unnormalize(batch, mean, std):
 
 # we define a CNN to embed the data
 class ConvEmbed(nnx.Module):
-    def __init__(self, dim_cond, ch_cond, *, rngs):
+    def __init__(self, dim_cond, ch_cond, dout, *, rngs):
         features = 16
         padding = "SAME"
         self.activation = jax.nn.gelu
@@ -118,16 +118,14 @@ class ConvEmbed(nnx.Module):
         dlin = dlin//2
         bn10 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
         
-        conv11 = nnx.Conv(features, 100, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 4
+        conv11 = nnx.Conv(features, features, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 4
         dlin = dlin//2
-        bn11 = nnx.BatchNorm(100, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        self.latent_shape = (1, dlin, 100)
+        bn11 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
 
         self.conv_layers = nnx.List([conv1, conv2, conv3, conv4, conv5, conv6, conv7, conv8, conv9, conv10, conv11])
         self.bn_layers = nnx.List([bn1, bn2, bn3, bn4, bn5, bn6, bn7, bn8, bn9, bn10, bn11])
 
-        # self.linear = nnx.Linear(int(dlin), dout, rngs=rngs)
+        self.linear = nnx.Linear(int(dlin)*features, dout, rngs=rngs)
     
     def __call__(self, x):
         for i in range(len(self.conv_layers)):
@@ -135,11 +133,10 @@ class ConvEmbed(nnx.Module):
             x = self.activation(x)
             x = self.bn_layers[i](x)
         
-        # #flatten x
-        # x = x.reshape(x.shape[0], -1)
-        # x = self.linear(x)
+        #flatten x
+        x = x.reshape(x.shape[0], -1)
+        x = self.linear(x)
         
-        # return x[..., None,:]
         return x
 
 
@@ -160,8 +157,18 @@ class GWModel(nnx.Module):
         guidance: Array | None = None,
     ):
         # first we encode the conditioning data
-        cond_latent = self.encoder(cond)
-
+        # cond: (B, N, 2)
+        # per-channel encoding: (B, N, 1) -> (B, 100); stack channels on axis=1 -> (B, 2, 100)
+        # cond_latent = jax.vmap(
+        #     lambda x: self.encoder(x[..., None]),
+        #     in_axes=1, # this is the axis of the channels we are mapping over
+        #     out_axes=1, # we stack the outputs on axis=1
+        # )(cond)
+        
+        cond1 = self.encoder(cond[..., 0:1])  # (B, 100)
+        cond2 = self.encoder(cond[..., 1:2])  # (B, 100)
+        cond_latent = jnp.stack([cond1, cond2], axis=1)  # (B, 2, 100)
+        
         # then we pass to the sbi model
         return self.sbi_model(
             t=t,
@@ -210,11 +217,11 @@ def main():
     ch_cond = 2  # we have 2 channels for the condition (xs), that is two GW detectors
 
     # define the vae model
-    encoder = ConvEmbed(dim_cond, ch_cond, rngs=nnx.Rngs(0))
+    encoder = ConvEmbed(dim_cond, 1, dout=100, rngs=nnx.Rngs(0))
     
     # get the latent dimensions from the autoencoder
-    dim_cond_latent = encoder.latent_shape[1]
-    z_ch = encoder.latent_shape[2]
+    dim_cond_latent = 2
+    z_ch = 100
 
     dim_joint = dim_obs + dim_cond_latent  # used to set theta for rope
 
@@ -245,18 +252,14 @@ def main():
 
     def split_data(batch):
         obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
-        # Match the notebook behavior: normalize before adding the channel axis.
-        # `thetas_mean/thetas_std` are shaped like (1, dim_obs), so broadcasting
-        # works naturally on (batch, dim_obs).
         obs = normalize(obs, thetas_mean, thetas_std)
-        obs = jnp.deg2rad(obs)
         obs = obs.reshape(obs.shape[0], dim_obs, ch_obs)
         cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
         cond = normalize(cond, xs_mean, xs_std)
         return obs, cond
 
-    effective_batch_size = 4096
-    batch_size = 2048
+    effective_batch_size = 512
+    batch_size = 512
     multistep = effective_batch_size // batch_size
 
     train_dataset_npe = (
@@ -307,8 +310,8 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), 50_000, save_model=True)
-    # pipeline_latent.restore_model()
+    # pipeline_latent.train(nnx.Rngs(0), 30_000*multistep, save_model=True)
+    pipeline_latent.restore_model()
 
     # plot the results
 
@@ -342,6 +345,9 @@ def main():
     # split in thetas and xs
     thetas = np.array(df_test["thetas"])[:200] 
     xs = np.array(df_test["xs"])[:200] 
+    
+    thetas = normalize(jnp.array(thetas, dtype=jnp.bfloat16), thetas_mean, thetas_std)
+    xs = normalize(jnp.array(xs, dtype=jnp.bfloat16), xs_mean, xs_std)
     
     thetas_ = posterior._ravel(thetas) 
     xs_ = posterior._ravel(xs) 
