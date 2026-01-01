@@ -272,7 +272,7 @@ def main():
         samples, true_param, reference_samples = get_samples(
             idx, nsamples=10_000, use_ema=False
         )
-        c2st_accuracy = c2st(reference_samples, samples)
+        c2st_accuracy = c2st(reference_samples, samples[...,0])
         c2st_accuracies.append(c2st_accuracy)
         print(f"C2ST accuracy for observation={idx}: {c2st_accuracy:.4f}\n")
 
@@ -298,7 +298,7 @@ def main():
         samples, true_param, reference_samples = get_samples(
             idx, nsamples=10_000, use_ema=True
         )
-        c2st_accuracy = c2st(reference_samples, samples)
+        c2st_accuracy = c2st(reference_samples, samples[...,0])
         c2st_accuracies_ema.append(c2st_accuracy)
         print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")
     print(

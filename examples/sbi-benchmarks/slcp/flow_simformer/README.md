@@ -1,1 +1,61 @@
-# TODO: Add README for this model variant.
+
+# Model Card: Simformer on slcp
+
+This document provides a summary of the `simformer` model trained on the `slcp` dataset.
+
+## 1. Model & Pipeline
+
+- **Model Architecture:** `simformer`
+- **Training Pipeline:** `Flow Matching`
+- **Purpose:** Reconstruct posterior distributions in a Simulation-Based Inference (SBI) context.
+
+## 2. Dataset
+
+- **Dataset:** `slcp`
+- **Description:** A synthetic benchmark dataset.
+- **Training Size:** The model was trained on 100,000 (1e5) samples.
+
+## 3. Model Architecture
+
+| Parameter | Value |
+|---|---|
+| `in_channels` | `1` |
+| `dim_value` | `40` |
+| `dim_id` | `40` |
+| `dim_condition` | `10` |
+| `fourier_features` | `128` |
+| `num_heads` | `6` |
+| `num_layers` | `8` |
+| `widening_factor` | `3` |
+| `qkv_features` | `60` |
+| `num_hidden_layers` | `1` |
+
+## 4. Training Configuration
+
+| Parameter | Value |
+|---|---|
+| `batch_size` | `4096` |
+| `nsteps` | `30000` |
+| `ema_decay` | `0.999` |
+| `multistep` | `8` |
+| `early_stopping` | `True` |
+| `val_every` | `100` |
+| `experiment_id` | `1` |
+| `restore_model` | `False` |
+| `train_model` | `True` |
+| `patience` | `10` |
+| `cooldown` | `2` |
+| `factor` | `0.5` |
+| `accumulation_size` | `100` |
+| `rtol` | `0.0001` |
+| `max_lr` | `0.001` |
+| `min_lr` | `1e-08` |
+
+## 5. Evaluation
+
+The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
+
+- **Average C2ST Accuracy:** 0.588 ± 0.070
+
+---
+*This model card was automatically generated.*
