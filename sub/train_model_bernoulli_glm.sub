@@ -23,7 +23,7 @@ config_file = $(experiment_path)/config/config_$(method)_$(model).yaml
 queue method,model, from (
     flow, flux1joint
     # flow, simformer
-    # flow, flux
+    flow, flux
     # diffusion, simformer
     # diffusion, flux1joint
     # diffusion, flux

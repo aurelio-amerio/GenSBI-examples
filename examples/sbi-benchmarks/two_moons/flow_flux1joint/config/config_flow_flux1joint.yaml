@@ -38,6 +38,6 @@ training:
   multistep: 1
   early_stopping: true
   val_every: 100
-  experiment_id: 3
+  experiment_id: 1
   restore_model: true
   train_model: false

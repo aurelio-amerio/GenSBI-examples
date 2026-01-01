@@ -19,6 +19,7 @@ This document provides a summary of the `simformer` model trained on the `two_mo
 
 | Parameter | Value |
 |---|---|
+| `in_channels` | `1` |
 | `dim_value` | `40` |
 | `dim_id` | `40` |
 | `dim_condition` | `10` |
@@ -39,7 +40,7 @@ This document provides a summary of the `simformer` model trained on the `two_mo
 | `multistep` | `1` |
 | `early_stopping` | `True` |
 | `val_every` | `100` |
-| `experiment_id` | `3` |
+| `experiment_id` | `1` |
 | `restore_model` | `True` |
 | `train_model` | `False` |
 | `patience` | `10` |
@@ -54,7 +55,7 @@ This document provides a summary of the `simformer` model trained on the `two_mo
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.526 ± 0.032
+- **Average C2ST Accuracy:** 0.528 ± 0.035
 
 ---
 *This model card was automatically generated.*

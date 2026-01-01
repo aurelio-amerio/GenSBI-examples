@@ -56,7 +56,7 @@ This document provides a summary of the `flux1joint` model trained on the `berno
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.556 ± 0.016
+- **Average C2ST Accuracy:** 0.585 ± 0.028
 
 ---
 *This model card was automatically generated.*
