@@ -1,7 +1,7 @@
 # %%
 import os
 
-experiment = 5
+experiment = 7
 
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
@@ -133,8 +133,8 @@ def main():
             8,  # 1024
             16,  # 512
             16,  # 256
-            # 16,  # 128
-            # 16,  # 64
+            16,  # 128
+            16,  # 64
             # 16, # 32
             # 16, # 16
             # 16, # 8
@@ -174,8 +174,8 @@ def main():
         context_in_dim=z_ch,
         mlp_ratio=4,
         num_heads=4,
-        depth=8,
-        depth_single_blocks=16,
+        depth=4,
+        depth_single_blocks=8,
         axes_dim=[
             20,
         ],
@@ -195,13 +195,13 @@ def main():
 
     def split_data(batch):
         obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
-        obs = obs[...,None]
         obs = normalize(obs, thetas_mean, thetas_std)
+        obs = obs.reshape(obs.shape[0], dim_obs, ch_obs)
         cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
         cond = normalize(cond, xs_mean, xs_std)
         return obs, cond
 
-    effective_batch_size = 4096
+    effective_batch_size = 512
     batch_size = 512
     multistep = effective_batch_size // batch_size
 
@@ -233,7 +233,7 @@ def main():
         .shuffle(42)
         .repeat()
         .to_iter_dataset()
-        .batch(batch_size)
+        .batch(512)
         .map(split_data)
     )
 
@@ -256,7 +256,7 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), 60_000, save_model=True)
+    pipeline_latent.train(nnx.Rngs(0), 30_000*multistep, save_model=True)
     # pipeline_latent.restore_model()
 
     # plot the results
@@ -292,6 +292,9 @@ def main():
     
     thetas_ = posterior._ravel(thetas) 
     xs_ = posterior._ravel(xs) 
+    
+    thetas = normalize(jnp.array(thetas, dtype=jnp.bfloat16), thetas_mean, thetas_std)
+    xs = normalize(jnp.array(xs, dtype=jnp.bfloat16), xs_mean, xs_std)
     
     thetas_torch = torch.Tensor(np.asarray(thetas_, dtype=np.float32))
     xs_torch = torch.Tensor(np.asarray(xs_, dtype=np.float32))
