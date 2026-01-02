@@ -1,7 +1,7 @@
 # %%
 import os
 
-experiment = 7
+experiment = 2
 
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
@@ -135,13 +135,13 @@ def main():
             16,  # 256
             16,  # 128
             16,  # 64
-            # 16, # 32
-            # 16, # 16
-            # 16, # 8
-            # 16, # 4
+            16, # 32
+            16, # 16
+            16, # 8
+            16, # 4
         ],
         num_res_blocks=1,
-        z_channels=128,
+        z_channels=512,
         scale_factor=0.3611,
         shift_factor=0.1159,
         rngs=nnx.Rngs(42),
@@ -201,7 +201,7 @@ def main():
         cond = normalize(cond, xs_mean, xs_std)
         return obs, cond
 
-    effective_batch_size = 512
+    effective_batch_size = 1024
     batch_size = 512
     multistep = effective_batch_size // batch_size
 
@@ -256,7 +256,7 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), 30_000*multistep, save_model=True)
+    pipeline_latent.train(nnx.Rngs(0), 50_000*multistep, save_model=True)
     # pipeline_latent.restore_model()
 
     # plot the results
@@ -269,32 +269,34 @@ def main():
     samples = pipeline_latent.sample(
         nnx.Rngs(0).sample(), x_o, 10_000, encoder_key=jax.random.PRNGKey(1234)
     )
-    res = samples[:, 0, :]  # shape (num_samples, 1, ch_obs) -> (num_samples, ch_obs)
-
+    print("Samples shape:", samples.shape)
+    res = samples[:, :, 0]  # shape (num_samples, 2, 1) -> (num_samples, 2)
+    print("Res shape:", res.shape)
     # unnormalize the results for plotting
     res_unnorm = unnormalize(res, thetas_mean, thetas_std)
     
     # these are degrees, we should compute the modulo 360 for better visualization
     res_unnorm = jnp.mod(res_unnorm, 360.0)
 
-    plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
-    plt.savefig("gw_samples_v2b.png", dpi=100, bbox_inches="tight")
+    # plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
+    plot_marginals(res_unnorm, true_param=theta_true, range=[(25,75),(25,75)], gridsize=30)
+    plt.savefig(f"gw_samples_v2b_conf{experiment}.png", dpi=100, bbox_inches="tight")
     plt.show()
     
     
     # run tarp
-    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(1,2), x_shape=(8192,2), encoder_key=jax.random.PRNGKey(1234))
+    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(2,1), x_shape=(8192,2), encoder_key=jax.random.PRNGKey(1234))
 
 
     # split in thetas and xs
     thetas = np.array(df_test["thetas"])[:200] 
     xs = np.array(df_test["xs"])[:200] 
     
-    thetas_ = posterior._ravel(thetas) 
-    xs_ = posterior._ravel(xs) 
-    
     thetas = normalize(jnp.array(thetas, dtype=jnp.bfloat16), thetas_mean, thetas_std)
     xs = normalize(jnp.array(xs, dtype=jnp.bfloat16), xs_mean, xs_std)
+    
+    thetas_ = posterior._ravel(thetas) 
+    xs_ = posterior._ravel(xs) 
     
     thetas_torch = torch.Tensor(np.asarray(thetas_, dtype=np.float32))
     xs_torch = torch.Tensor(np.asarray(xs_, dtype=np.float32))
@@ -309,7 +311,7 @@ def main():
     
     
     plot_tarp(ecp, alpha)
-    plt.savefig("gw_tarp_v2b.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig(f"gw_tarp_v2b_conf{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
     plt.show()
 
 
