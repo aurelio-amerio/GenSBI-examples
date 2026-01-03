@@ -1,7 +1,7 @@
 # %%
 import os
 
-experiment = 2
+experiment = 3
 
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
@@ -120,12 +120,17 @@ def main():
 
     xs_std = jnp.array([[[60.80799, 59.33193]]], dtype=jnp.bfloat16) 
     thetas_std = jnp.array([[20.189356, 20.16127 ]], dtype=jnp.bfloat16) 
+    
+    dim_obs = 2 # dimension of the observation (theta)
+    dim_cond = 8192  # not used since we use a VAE for the conditionals
+    ch_obs = 1 # we have 1 channel for the observation (theta)
+    ch_cond = 2  # not used since we use a VAE for the conditionals
 
     ae_params = AutoEncoderParams(
-        resolution=8192,
-        in_channels=2,
+        resolution=dim_cond,
+        in_channels=ch_cond,
         ch=32,
-        out_ch=2,
+        out_ch=ch_cond,
         ch_mult=[
             1,  # 8192
             2,  # 4096
@@ -137,13 +142,13 @@ def main():
             16,  # 64
             16, # 32
             16, # 16
-            16, # 8
-            16, # 4
+            # 16, # 8
+            # 16, # 4
         ],
         num_res_blocks=1,
         z_channels=512,
-        scale_factor=0.3611,
-        shift_factor=0.1159,
+        scale_factor=1.0,
+        shift_factor=0.0,
         rngs=nnx.Rngs(42),
         param_dtype=jnp.bfloat16,
     )
@@ -156,12 +161,9 @@ def main():
     # run the garbage collector to free up memory
     gc.collect()
 
-    # now we define the NPE pipeline
-    dim_obs = 2 # dimension of the observation (theta)
-    dim_cond = 8192  # not used since we use a VAE for the conditionals
-    ch_obs = 1 # we have 1 channel for the observation (theta)
-    ch_cond = 2  # not used since we use a VAE for the conditionals
+  
 
+    # now we define the NPE pipeline
     # get the latent dimensions from the autoencoder
     dim_cond_latent = vae_model.latent_shape[1]
     z_ch = vae_model.latent_shape[2]
@@ -177,7 +179,7 @@ def main():
         depth=4,
         depth_single_blocks=8,
         axes_dim=[
-            20,
+            10,
         ],
         dim_obs=dim_obs,
         dim_cond=dim_cond_latent,
@@ -201,7 +203,7 @@ def main():
         cond = normalize(cond, xs_mean, xs_std)
         return obs, cond
 
-    effective_batch_size = 1024
+    effective_batch_size = 512
     batch_size = 512
     multistep = effective_batch_size // batch_size
 
@@ -210,9 +212,6 @@ def main():
         .shuffle(42)
         .repeat()
         .to_iter_dataset()
-        # .batch(batch_size)
-        # .map(split_data)
-        # .mp_prefetch()
     )
 
     performance_config = grain.experimental.pick_performance_config(
@@ -243,7 +242,9 @@ def main():
     )
     training_config["experiment_id"] = experiment
     training_config["multistep"] = multistep
-    training_config["val_every"] = 100*multistep  # validate every 100 effective steps
+    # training_config["val_every"] = 100*multistep  # validate every 100 effective steps
+    training_config["val_every"] = 1000
+    training_config["max_lr"] = 5e-4
 
     pipeline_latent = ConditionalFlowPipeline(
         model,
@@ -256,7 +257,7 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), 50_000*multistep, save_model=True)
+    pipeline_latent.train(nnx.Rngs(0), 100_000*multistep, save_model=True)
     # pipeline_latent.restore_model()
 
     # plot the results
