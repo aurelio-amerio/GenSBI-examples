@@ -24,6 +24,13 @@ from flax import nnx
 from gensbi_examples.tasks import get_task
 from gensbi_examples.c2st import c2st
 
+from gensbi.validation import PosteriorWrapper
+
+from sbi.diagnostics import run_tarp
+from sbi.analysis.plot import plot_tarp
+
+import torch
+
 from gensbi.models import SimformerParams, Flux1JointParams, Flux1Params
 from gensbi.recipes import (
     SimformerFlowPipeline,
@@ -33,6 +40,12 @@ from gensbi.recipes import (
     Flux1FlowPipeline,
     Flux1DiffusionPipeline,
 )
+
+from gensbi.validation import PosteriorWrapper
+
+
+from gensbi.utils.plotting import plot_marginals
+import matplotlib.pyplot as plt
 
 # %%
 def main():
@@ -245,10 +258,9 @@ def main():
         pipeline.train(nnx.Rngs(0))
         print("Training complete.")
 
-    # --------- C2ST TEST ---------
 
-
-    def get_samples(idx, nsamples=10_000, use_ema=False, key=None):
+    # --------- Define sampling function ----------
+    def get_samples(idx, nsamples=10_000, use_ema=True, key=None):
         observation, reference_samples = task.get_reference(idx)
         true_param = jnp.array(task.get_true_parameters(idx))
 
@@ -257,7 +269,21 @@ def main():
 
         samples = pipeline.sample(key, observation, nsamples, use_ema=use_ema)
         return samples, true_param, reference_samples
+        
+    # make plots
+    img_dir = os.path.join(os.getcwd(), "imgs")
+    os.makedirs(img_dir, exist_ok=True)
+    
+    # --------- Sampling ----------
+    samples, true_param, _ = get_samples(
+            8, nsamples=100_000, use_ema=True
+        )
 
+    plot_marginals(samples[...,0], plot_levels=False, backend="seaborn", gridsize=50, range =[(-1., 0), (0, 1.)])
+    plt.savefig(f"{img_dir}/marginals_ema.png", dpi=300, bbox_inches='tight')
+    plt.show()
+
+    # --------- C2ST TEST ---------
 
     # Run C2ST
     print("Running C2ST tests...")
@@ -334,6 +360,37 @@ def main():
         f.write(markdown)   
 
     print("Model card generated as README.md")
+
+    print("Running TARP diagnostic...")
+
+    posterior = PosteriorWrapper(pipeline, rngs=nnx.Rngs(42))
+
+    data = task.dataset["test"].with_format("jax")[:200]
+    xs = data["xs"]
+    thetas = data["thetas"]
+
+    # flatten the dataset. sbi expects 2D arrays of shape (num_samples, features), while our data is 3D of shape (num_samples, dim, channels).
+    # we reshape a sample of size (dim, channels) into a vector of size (dim * channels)
+    thetas = posterior._ravel(thetas) # (200, 3)
+    xs = posterior._ravel(xs) # (200, 3)
+
+    # convert to torch tensors
+    thetas = torch.Tensor(np.array(thetas))
+    xs = torch.Tensor(np.array(xs))
+
+    ecp, alpha = run_tarp(
+        thetas,
+        xs,
+        posterior,
+        references=None,  # will be calculated automatically.
+        num_posterior_samples=10_000,
+    )
+
+    plot_tarp(ecp, alpha)
+    plt.savefig(f"{img_dir}/tarp.png", dpi=300, bbox_inches='tight')
+    plt.show()
+
+    print("TARP diagnostic complete.")
 
 if __name__ == "__main__":
     main()
