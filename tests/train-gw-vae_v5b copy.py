@@ -1,7 +1,7 @@
-# %% using CNN
+# %%
 import os
 
-experiment=3
+experiment=2
 
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
@@ -61,14 +61,14 @@ def unnormalize(batch, mean, std):
     return batch * std + mean
 
 
-effective_batch_size = 1024
-batch_size = 1024
+effective_batch_size = 256
+batch_size = 256
 
 # max_lr = scale_lr(1e-4, effective_batch_size, 256)
 # min_lr = scale_lr(1e-6, effective_batch_size, 256)
-max_lr = 4e-4
-min_lr = 4e-6
-z_ch = 512
+max_lr = 1e-4
+min_lr = 1e-6
+z_ch = 100
 
 
 # we define a CNN to embed the data
@@ -236,8 +236,8 @@ def main():
         context_in_dim=z_ch,
         mlp_ratio=3,
         num_heads=4,
-        depth=8,
-        depth_single_blocks=16,
+        depth=4,
+        depth_single_blocks=8,
         axes_dim=[
             20,
         ],
@@ -304,7 +304,6 @@ def main():
     training_config["val_every"] = 100*multistep  # validate every 100 effective steps
     training_config["max_lr"] = max_lr
     training_config["min_lr"] = min_lr
-    training_config["early_stopping"] = False
 
     pipeline_latent = ConditionalFlowPipeline(
         model,

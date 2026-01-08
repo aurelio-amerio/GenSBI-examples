@@ -1,7 +1,7 @@
-# %% using CNN
+# %% using VAE encoder
 import os
 
-experiment=3
+experiment = 1
 
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
@@ -22,8 +22,11 @@ import numpy as np
 
 from flax import nnx
 
-from gensbi.utils.misc import scale_lr
-
+from gensbi.experimental.models.autoencoders import (
+    AutoEncoder1D,
+    AutoEncoderParams,
+    vae_loss_fn,
+)
 from gensbi.experimental.models.autoencoders.commons import Loss
 
 from gensbi.utils.plotting import plot_marginals
@@ -61,119 +64,25 @@ def unnormalize(batch, mean, std):
     return batch * std + mean
 
 
-effective_batch_size = 1024
-batch_size = 1024
-
-# max_lr = scale_lr(1e-4, effective_batch_size, 256)
-# min_lr = scale_lr(1e-6, effective_batch_size, 256)
-max_lr = 4e-4
-min_lr = 4e-6
-z_ch = 512
-
-
-# we define a CNN to embed the data
-class ConvEmbed(nnx.Module):
-    def __init__(self, dim_cond, ch_cond, dout, *, rngs):
-        features = 16
-        padding = "SAME"
-        self.activation = jax.nn.gelu
-        
-        dlin = dim_cond
-        conv1 = nnx.Conv(ch_cond, features, kernel_size=(9,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 4096
-        dlin = dlin//2
-        bn1 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv2 = nnx.Conv(features, features*2, kernel_size=(6,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 2048
-        dlin = dlin//2
-        features *= 2 # 32
-        bn2 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv3 = nnx.Conv(features, features*2, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 1024
-        dlin = dlin//2
-        features *= 2 # 64
-        bn3 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv4 = nnx.Conv(features, features*2, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 512
-        dlin = dlin//2
-        features *= 2 # 128
-        bn4 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv5 = nnx.Conv(features, features*2, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 256
-        dlin = dlin//2
-        features *= 2 # 256
-        bn5 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv6 = nnx.Conv(features, features*2, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 128
-        dlin = dlin//2
-        features *= 2 # 512
-        bn6 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv7 = nnx.Conv(features, features, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 64
-        dlin = dlin//2
-        bn7 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv8 = nnx.Conv(features, features, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 32
-        dlin = dlin//2
-        bn8 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv9 = nnx.Conv(features, features, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 16
-        dlin = dlin//2
-        bn9 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv10 = nnx.Conv(features, features, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 8
-        dlin = dlin//2
-        bn10 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-        
-        conv11 = nnx.Conv(features, features, kernel_size=(3,), strides=2, padding=padding, rngs=rngs, param_dtype=jnp.bfloat16) # 4
-        dlin = dlin//2
-        bn11 = nnx.BatchNorm(features, rngs=rngs, param_dtype=jnp.bfloat16)
-
-        self.conv_layers = nnx.List([conv1, conv2, conv3, conv4, conv5, conv6, conv7, conv8, conv9, conv10, conv11])
-        self.bn_layers = nnx.List([bn1, bn2, bn3, bn4, bn5, bn6, bn7, bn8, bn9, bn10, bn11])
-
-        self.linear = nnx.Linear(int(dlin)*features, dout, rngs=rngs)
-    
-    def __call__(self, x):
-        for i in range(len(self.conv_layers)):
-            x = self.conv_layers[i](x)
-            x = self.activation(x)
-            x = self.bn_layers[i](x)
-        
-        #flatten x
-        x = x.reshape(x.shape[0], -1)
-        x = self.linear(x)
-        
-        return x
-
-
-
 class GWModel(nnx.Module):
-    def __init__(self, encoder, sbi_model):
-        self.encoder = encoder
+    def __init__(self, vae, sbi_model):
+        self.vae = vae
         self.sbi_model = sbi_model
-
-    def __call__(
-        self,
-        t: Array,
-        obs: Array,
-        obs_ids: Array,
-        cond: Array,
-        cond_ids: Array,
-        conditioned: bool | Array = True,
-        guidance: Array | None = None,
-    ):
-        # first we encode the conditioning data
-        # cond: (B, N, 2)
-        # per-channel encoding: (B, N, 1) -> (B, 100); stack channels on axis=1 -> (B, 2, 100)
-        # cond_latent = jax.vmap(
-        #     lambda x: self.encoder(x[..., None]),
-        #     in_axes=1, # this is the axis of the channels we are mapping over
-        #     out_axes=1, # we stack the outputs on axis=1
-        # )(cond)
         
-        cond1 = self.encoder(cond[..., 0:1])  # (B, 100)
-        cond2 = self.encoder(cond[..., 1:2])  # (B, 100)
-        cond_latent = jnp.stack([cond1, cond2], axis=1)  # (B, 2, 100)
+    def __call__(self, 
+                    t: Array,
+                    obs: Array,
+                    obs_ids: Array,
+                    cond: Array,
+                    cond_ids: Array,
+                    conditioned: bool | Array = True,
+                    guidance: Array | None = None,
+                    encoder_key = None):
+        
+        # first we encode the conditioning data
+        cond1 = self.vae.encode(cond[..., 0:1], encoder_key)  # (B, 100)
+        cond2 = self.vae.encode(cond[..., 1:2], encoder_key)  # (B, 100)
+        cond_latent = jnp.concatenate([cond1, cond2], axis=1)  # (B, 2, 100)
         
         # then we pass to the sbi model
         return self.sbi_model(
@@ -186,6 +95,18 @@ class GWModel(nnx.Module):
             guidance=guidance,
         )
 
+dim_obs = 2 # dimension of the observation (theta)
+dim_cond = 8192  # not used since we use a VAE for the conditionals
+ch_obs = 1 # we have 1 channel for the observation (theta)
+ch_cond = 1  # not used since we use a VAE for the conditionals
+
+z_ch = 128
+
+effective_batch_size = 256
+batch_size = 256
+
+max_lr = 1e-4
+min_lr = 1e-6
 
 def main():
     repo_name = "aurelio-amerio/SBI-benchmarks"
@@ -208,45 +129,73 @@ def main():
 
     # xs_std = np.std(df_train["xs"], axis=(0, 1), keepdims=True)
     # thetas_std = np.std(df_train["thetas"], axis=0, keepdims=True)
-    # compute the mean of xs and thetas
     xs_mean = jnp.array([[[ 0.00051776, -0.00040733]]], dtype=jnp.bfloat16) 
     thetas_mean = jnp.array([[44.826576, 45.070328]], dtype=jnp.bfloat16) 
 
     xs_std = jnp.array([[[60.80799, 59.33193]]], dtype=jnp.bfloat16) 
     thetas_std = jnp.array([[20.189356, 20.16127 ]], dtype=jnp.bfloat16) 
 
-    
-    # now we define the NPE pipeline
-    dim_obs = 2 # dimension of the observation (theta)
-    dim_cond = 8192  # dimension of the condition (xs)
-    ch_obs = 1 # we have 1 channel for the observation (theta)
-    ch_cond = 2  # we have 2 channels for the condition (xs), that is two GW detectors
+
+    ae_params = AutoEncoderParams(
+        resolution=dim_cond,
+        in_channels=ch_cond,
+        ch=32,
+        out_ch=ch_cond,
+        ch_mult=[
+            1,  # 8192
+            2,  # 4096
+            4,  # 2048
+            8,  # 1024
+            16,  # 512
+            16,  # 256
+            16,  # 128
+            16,  # 64
+            16, # 32
+            16, # 16
+            # 16, # 8
+            # 16, # 4
+        ],
+        num_res_blocks=1,
+        z_channels=z_ch,
+        # scale_factor=0.3611,
+        # shift_factor=0.1159,
+        scale_factor=1.0,
+        shift_factor=0.0,
+        rngs=nnx.Rngs(42),
+        param_dtype=jnp.bfloat16,
+    )
 
     # define the vae model
-    encoder = ConvEmbed(dim_cond, 1, dout=z_ch, rngs=nnx.Rngs(0))
-    
-    # get the latent dimensions from the autoencoder
-    dim_cond_latent = 2
+    vae_model = AutoEncoder1D(ae_params)
 
-    dim_joint = dim_obs + dim_cond_latent  # used to set theta for rope
+    # for the sake of the NPE, we delete the decoder model as it is not needed
+    vae_model.Decoder1D = None
+    # run the garbage collector to free up memory
+    gc.collect()
+
+    # now we define the NPE pipeline
+    # get the latent dimensions from the autoencoder
+    dim_cond_latent = vae_model.latent_shape[1]*2 # we have 2 latent vectors (one for each channel)
+
+    # dim_joint = dim_obs + dim_cond_latent  # not used for this script
 
     params_flux = Flux1Params(
         in_channels=ch_obs,
         vec_in_dim=None,
         context_in_dim=z_ch,
-        mlp_ratio=3,
+        mlp_ratio=4,
         num_heads=4,
-        depth=8,
-        depth_single_blocks=16,
+        depth=4,
+        depth_single_blocks=8,
         axes_dim=[
             20,
         ],
         dim_obs=dim_obs,
         dim_cond=dim_cond_latent,
-        theta = 10*dim_joint,
-        id_embedding_kind=("absolute", "absolute"),
+        theta = 10*dim_cond_latent,
         qkv_bias=True,
         guidance_embed=False,
+        id_embedding_kind=("absolute", "pos1dd"),
         rngs=nnx.Rngs(0),
         param_dtype=jnp.bfloat16,
     )
@@ -254,7 +203,7 @@ def main():
     model_sbi = Flux1(params_flux)
 
     # full model with VAE encoding the conditionals
-    model = GWModel(encoder, model_sbi)
+    model = GWModel(vae_model, model_sbi)
 
     def split_data(batch):
         obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
@@ -291,20 +240,20 @@ def main():
         .shuffle(42)
         .repeat()
         .to_iter_dataset()
-        .batch(batch_size)
+        .batch(512)
         .map(split_data)
     )
 
     training_config = ConditionalFlowPipeline._get_default_training_config()
     training_config["checkpoint_dir"] = (
-        "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v5b/checkpoints"
+        "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v7/checkpoints"
     )
     training_config["experiment_id"] = experiment
     training_config["multistep"] = multistep
     training_config["val_every"] = 100*multistep  # validate every 100 effective steps
     training_config["max_lr"] = max_lr
     training_config["min_lr"] = min_lr
-    training_config["early_stopping"] = False
+    training_config["early_stopping"] = True
 
     pipeline_latent = ConditionalFlowPipeline(
         model,
@@ -328,26 +277,26 @@ def main():
     theta_true = df_test["thetas"][0]  # already unnormalized
 
     samples = pipeline_latent.sample(
-        nnx.Rngs(0).sample(), x_o, 10_000#, key=jax.random.PRNGKey(1234)
+        nnx.Rngs(0).sample(), x_o, 10_000, encoder_key=jax.random.PRNGKey(1234)
     )
-
-    res = samples[:, :, 0]  # shape (num_samples, dim_obs, 1) -> (num_samples, dim_obs)
-    
+    print("Samples shape:", samples.shape)
+    res = samples[:, :, 0]  # shape (num_samples, 2, 1) -> (num_samples, 2)
+    print("Res shape:", res.shape)
     # unnormalize the results for plotting
     res_unnorm = unnormalize(res, thetas_mean, thetas_std)
     
     # these are degrees, we should compute the modulo 360 for better visualization
     res_unnorm = jnp.mod(res_unnorm, 360.0)
 
-    plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
-    plt.savefig(f"gw_samples_v5b_conf_{experiment}.png", dpi=100, bbox_inches="tight")
+    # plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
+    plot_marginals(res_unnorm, true_param=theta_true, range=[(25,75),(25,75)], gridsize=30)
+    plt.savefig(f"gw_samples_v7_conf{experiment}.png", dpi=100, bbox_inches="tight")
     plt.show()
     
     
     # run tarp
-    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(2,1), x_shape=(8192,2))
-    
-    # key = jax.random.PRNGKey(1234)
+    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(2,1), x_shape=(8192,2), encoder_key=jax.random.PRNGKey(1234))
+
 
     # split in thetas and xs
     thetas = np.array(df_test["thetas"])[:200] 
@@ -370,9 +319,8 @@ def main():
         num_posterior_samples=1000, # reduce this number to 1000 if you go OOM
     )
     
-    
     plot_tarp(ecp, alpha)
-    plt.savefig(f"gw_tarp_v5b_conf_{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig(f"gw_tarp_v7_conf{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
     plt.show()
 
 
