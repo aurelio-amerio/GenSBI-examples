@@ -75,7 +75,7 @@ class Task:
             nsamples < self.max_samples
         ), f"nsamples must be less than {self.max_samples}"
 
-        df = self.dataset["train"].select(range(int(nsamples)))#[:]
+        df = self.dataset["train"].select(range(int(nsamples)))  # [:]
 
         dataset_grain = (
             grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
@@ -97,7 +97,7 @@ class Task:
         return dataset_batched
 
     def get_val_dataset(self, batch_size):
-        df = self.dataset["validation"]#[:]
+        df = self.dataset["validation"]  # [:]
 
         val_dataset_grain = (
             grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
@@ -112,6 +112,20 @@ class Task:
             val_dataset_grain.batch(batch_size)
             .map(self.process_fn)
             .mp_prefetch(performance_config.multiprocessing_options)
+        )
+
+        return val_dataset_grain
+
+    def get_test_dataset(self, batch_size):
+        df = self.dataset["test"]  # [:]
+
+        val_dataset_grain = (
+            grain.MapDataset.source(df)
+            .shuffle(42)
+            .repeat()
+            .to_iter_dataset()
+            .batch(batch_size)
+            .map(self.process_fn)
         )
 
         return val_dataset_grain
