@@ -1,7 +1,7 @@
-# %%
+# %% using CNN
 import os
 
-experiment=1
+experiment=3
 
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
@@ -22,11 +22,8 @@ import numpy as np
 
 from flax import nnx
 
-from gensbi.experimental.models.autoencoders import (
-    AutoEncoder1D,
-    AutoEncoderParams,
-    vae_loss_fn,
-)
+from gensbi.utils.misc import scale_lr
+
 from gensbi.experimental.models.autoencoders.commons import Loss
 
 from gensbi.utils.plotting import plot_marginals
@@ -63,6 +60,15 @@ def unnormalize(batch, mean, std):
     std = jnp.asarray(std, dtype=batch.dtype)
     return batch * std + mean
 
+
+effective_batch_size = 1024
+batch_size = 1024
+
+# max_lr = scale_lr(1e-4, effective_batch_size, 256)
+# min_lr = scale_lr(1e-6, effective_batch_size, 256)
+max_lr = 4e-4
+min_lr = 4e-6
+z_ch = 512
 
 
 # we define a CNN to embed the data
@@ -217,11 +223,10 @@ def main():
     ch_cond = 2  # we have 2 channels for the condition (xs), that is two GW detectors
 
     # define the vae model
-    encoder = ConvEmbed(dim_cond, 1, dout=100, rngs=nnx.Rngs(0))
+    encoder = ConvEmbed(dim_cond, 1, dout=z_ch, rngs=nnx.Rngs(0))
     
     # get the latent dimensions from the autoencoder
     dim_cond_latent = 2
-    z_ch = 100
 
     dim_joint = dim_obs + dim_cond_latent  # used to set theta for rope
 
@@ -231,8 +236,8 @@ def main():
         context_in_dim=z_ch,
         mlp_ratio=3,
         num_heads=4,
-        depth=4,
-        depth_single_blocks=8,
+        depth=8,
+        depth_single_blocks=16,
         axes_dim=[
             20,
         ],
@@ -259,8 +264,6 @@ def main():
         cond = normalize(cond, xs_mean, xs_std)
         return obs, cond
 
-    effective_batch_size = 256
-    batch_size = 256
     multistep = effective_batch_size // batch_size
 
     train_dataset_npe = (
@@ -299,6 +302,9 @@ def main():
     training_config["experiment_id"] = experiment
     training_config["multistep"] = multistep
     training_config["val_every"] = 100*multistep  # validate every 100 effective steps
+    training_config["max_lr"] = max_lr
+    training_config["min_lr"] = min_lr
+    training_config["early_stopping"] = False
 
     pipeline_latent = ConditionalFlowPipeline(
         model,
@@ -311,7 +317,7 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), 30_000*multistep, save_model=True)
+    pipeline_latent.train(nnx.Rngs(0), 50_000*multistep, save_model=True)
     # pipeline_latent.restore_model()
 
     # plot the results
@@ -334,7 +340,7 @@ def main():
     res_unnorm = jnp.mod(res_unnorm, 360.0)
 
     plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
-    plt.savefig("gw_samples_v5b.png", dpi=100, bbox_inches="tight")
+    plt.savefig(f"gw_samples_v5b_conf_{experiment}.png", dpi=100, bbox_inches="tight")
     plt.show()
     
     
@@ -366,7 +372,7 @@ def main():
     
     
     plot_tarp(ecp, alpha)
-    plt.savefig("gw_tarp_v5b.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig(f"gw_tarp_v5b_conf_{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
     plt.show()
 
 
