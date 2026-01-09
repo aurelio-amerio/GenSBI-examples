@@ -24,7 +24,7 @@ from flax import nnx
 from gensbi_examples.tasks import get_task
 from gensbi_examples.c2st import c2st
 
-from gensbi.validation import PosteriorWrapper
+from gensbi.diagnostics import PosteriorWrapper
 
 from sbi.diagnostics import run_tarp
 from sbi.analysis.plot import plot_tarp
@@ -41,7 +41,7 @@ from gensbi.recipes import (
     Flux1DiffusionPipeline,
 )
 
-from gensbi.validation import PosteriorWrapper
+from gensbi.diagnostics import PosteriorWrapper
 
 
 from gensbi.utils.plotting import plot_marginals
