@@ -45,9 +45,6 @@ from gensbi.models import Flux1Params, Flux1
 from gensbi.recipes import ConditionalFlowPipeline
 
 # imports
-# from gensbi_validation import PosteriorWrapper
-# from sbi.diagnostics import run_tarp
-# from sbi.analysis.plot import plot_tarp
 from gensbi.diagnostics import run_tarp, plot_tarp
 from gensbi.diagnostics import run_sbc, sbc_rank_plot
 from gensbi.diagnostics import LC2ST, plot_lc2st

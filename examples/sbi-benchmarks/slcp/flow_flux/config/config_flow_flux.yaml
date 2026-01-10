@@ -3,16 +3,15 @@
 
 # note: yaml can't resolve 1e-3 as 0.001, so write float numbers explicitly
 
-task_name: two_moons
+task_name: slcp
 
 strategy:
-  method: "diffusion"
+  method: "flow"
   model: "flux"
 
 optimizer:
   warmup_steps: 500
   decay_transition: 0.60
-  rtol: 1.0e-4
   max_lr: 4.0e-4
   min_lr: 4.0e-6
 
@@ -26,7 +25,6 @@ model:
   depth_single_blocks: 16
   axes_dim: [10]
   qkv_bias: true
-  theta: 40
   params_dtype: "bfloat16"
   id_embedding_kind: ["absolute", "absolute"]
 
@@ -39,5 +37,5 @@ training:
   early_stopping: true
   val_every: 100
   experiment_id: 1
-  restore_model: true
-  train_model: false
+  restore_model: false
+  train_model: true
