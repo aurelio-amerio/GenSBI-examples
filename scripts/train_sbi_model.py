@@ -24,12 +24,9 @@ from flax import nnx
 from gensbi_examples.tasks import get_task
 from gensbi_examples.c2st import c2st
 
-from gensbi.diagnostics import PosteriorWrapper
-
-from sbi.diagnostics import run_tarp
-from sbi.analysis.plot import plot_tarp
-
-import torch
+from gensbi.diagnostics import run_tarp, plot_tarp
+from gensbi.diagnostics import run_sbc, sbc_rank_plot
+from gensbi.diagnostics import LC2ST, plot_lc2st
 
 from gensbi.models import SimformerParams, Flux1JointParams, Flux1Params
 from gensbi.recipes import (
@@ -40,8 +37,6 @@ from gensbi.recipes import (
     Flux1FlowPipeline,
     Flux1DiffusionPipeline,
 )
-
-from gensbi.diagnostics import PosteriorWrapper
 
 
 from gensbi.utils.plotting import plot_marginals
@@ -279,7 +274,7 @@ def main():
             8, nsamples=100_000, use_ema=True
         )
 
-    plot_marginals(samples[...,0], plot_levels=False, backend="seaborn", gridsize=50, range =[(-1., 0), (0, 1.)])
+    plot_marginals(samples[...,0], plot_levels=False, backend="seaborn", gridsize=50)
     plt.savefig(f"{img_dir}/marginals_ema.png", dpi=300, bbox_inches='tight')
     plt.show()
 
@@ -363,27 +358,25 @@ def main():
 
     print("Running TARP diagnostic...")
 
-    posterior = PosteriorWrapper(pipeline, rngs=nnx.Rngs(42))
 
-    data = task.dataset["test"].with_format("jax")[:200]
-    xs = data["xs"]
-    thetas = data["thetas"]
 
-    # flatten the dataset. sbi expects 2D arrays of shape (num_samples, features), while our data is 3D of shape (num_samples, dim, channels).
-    # we reshape a sample of size (dim, channels) into a vector of size (dim * channels)
-    thetas = posterior._ravel(thetas) # (200, 3)
-    xs = posterior._ravel(xs) # (200, 3)
+    data = task.dataset["test"].with_format("jax")[:500]
+    xs = jnp.asarray(data["xs"][:],dtype=jnp.bfloat16)
+    thetas = jnp.asarray(data["thetas"][:],dtype=jnp.bfloat16)
 
-    # convert to torch tensors
-    thetas = torch.Tensor(np.array(thetas))
-    xs = torch.Tensor(np.array(xs))
+    num_posterior_samples = 1_000
+
+    posterior_samples = pipeline.sample_batched(jax.random.PRNGKey(12345), xs, num_posterior_samples, use_ema=True)
+
+    # reshape 
+    xs = xs.reshape((xs.shape[0], -1))
+    thetas = thetas.reshape((thetas.shape[0], -1))
+    posterior_samples = posterior_samples.reshape((posterior_samples.shape[0], posterior_samples.shape[1], -1))
 
     ecp, alpha = run_tarp(
         thetas,
-        xs,
-        posterior,
+        posterior_samples,
         references=None,  # will be calculated automatically.
-        num_posterior_samples=10_000,
     )
 
     plot_tarp(ecp, alpha)
@@ -391,6 +384,54 @@ def main():
     plt.show()
 
     print("TARP diagnostic complete.")
+    print("Running SBC diagnostic...")
+
+    ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
+
+    f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
+    plt.savefig(f"{img_dir}/sbc.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.show()
+
+        # LC2ST diagnostic
+    data = task.dataset["test"].with_format("jax")[:10_00]
+    xs_ = jnp.asarray(data["xs"][:],dtype=jnp.bfloat16)
+    thetas_ = jnp.asarray(data["thetas"][:],dtype=jnp.bfloat16)
+
+    num_posterior_samples = 1
+
+    posterior_samples_ = pipeline.sample(jax.random.PRNGKey(42), x_o=xs_, nsamples=xs_.shape[0])
+
+    thetas = thetas_.reshape(thetas_.shape[0], -1)  
+    xs = xs_.reshape(xs_.shape[0], -1)  
+    posterior_samples = posterior_samples_.reshape(posterior_samples_.shape[0], -1)  
+
+    # Train the L-C2ST classifier.
+    lc2st = LC2ST(
+        thetas=thetas[:-1],
+        xs=xs[:-1],
+        posterior_samples=posterior_samples[:-1],
+        classifier="mlp",
+        num_ensemble=1,
+    )
+
+    _ = lc2st.train_under_null_hypothesis()
+    _ = lc2st.train_on_observed_data()
+
+    x_o = xs_[-1 : ]  # Take the last observation as observed data.
+    theta_o = thetas_[-1 : ]  # True parameter for the observed data.
+
+    post_samples_star = pipeline.sample(jax.random.PRNGKey(42), x_o, nsamples=10_000) 
+
+    x_o = x_o.reshape(1,-1)  
+    post_samples_star = np.array(post_samples_star.reshape(post_samples_star.shape[0], -1))  
+
+    fig,ax = plot_lc2st(
+        lc2st,
+        post_samples_star,
+        x_o,
+    )
+    plt.savefig(f"{img_dir}/lc2st.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.show()
 
 if __name__ == "__main__":
     main()

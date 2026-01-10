@@ -1,17 +1,17 @@
 
-# Model Card: Flux on two_moons
+# Model Card: Flux1joint on slcp
 
-This document provides a summary of the `flux` model trained on the `two_moons` dataset.
+This document provides a summary of the `flux1joint` model trained on the `slcp` dataset.
 
 ## 1. Model & Pipeline
 
-- **Model Architecture:** `flux`
-- **Training Pipeline:** `Diffusion`
+- **Model Architecture:** `flux1joint`
+- **Training Pipeline:** `Flow Matching`
 - **Purpose:** Reconstruct posterior distributions in a Simulation-Based Inference (SBI) context.
 
 ## 2. Dataset
 
-- **Dataset:** `two_moons`
+- **Dataset:** `slcp`
 - **Description:** A synthetic benchmark dataset.
 - **Training Size:** The model was trained on 100,000 (1e5) samples.
 
@@ -23,39 +23,40 @@ This document provides a summary of the `flux` model trained on the `two_moons` 
 | `vec_in_dim` | `None` |
 | `context_in_dim` | `1` |
 | `mlp_ratio` | `4` |
-| `num_heads` | `4` |
-| `depth` | `8` |
+| `num_heads` | `6` |
 | `depth_single_blocks` | `16` |
 | `axes_dim` | `[10]` |
+| `condition_dim` | `[4]` |
 | `qkv_bias` | `True` |
-| `theta` | `40` |
-| `params_dtype` | `bfloat16` |
-| `id_embedding_kind` | `['absolute', 'absolute']` |
+| `theta` | `60` |
+| `params_dtype` | `float32` |
 
 ## 4. Training Configuration
 
 | Parameter | Value |
 |---|---|
 | `batch_size` | `4096` |
-| `nsteps` | `50000` |
+| `nsteps` | `30000` |
 | `ema_decay` | `0.999` |
-| `multistep` | `1` |
+| `multistep` | `8` |
 | `early_stopping` | `True` |
 | `val_every` | `100` |
-| `experiment_id` | `1` |
-| `restore_model` | `True` |
-| `train_model` | `False` |
-| `warmup_steps` | `500` |
-| `decay_transition` | `0.6` |
+| `experiment_id` | `3` |
+| `restore_model` | `False` |
+| `train_model` | `True` |
+| `patience` | `10` |
+| `cooldown` | `2` |
+| `factor` | `0.5` |
+| `accumulation_size` | `100` |
 | `rtol` | `0.0001` |
-| `max_lr` | `0.0004` |
-| `min_lr` | `4e-06` |
+| `max_lr` | `0.001` |
+| `min_lr` | `1e-08` |
 
 ## 5. Evaluation
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.566 ± 0.028
+- **Average C2ST Accuracy:** 0.579 ± 0.035
 
 ---
 *This model card was automatically generated.*

@@ -45,13 +45,10 @@ from gensbi.models import Flux1Params, Flux1
 from gensbi.recipes import ConditionalFlowPipeline
 
 # imports
-# from gensbi_validation import PosteriorWrapper
-# from sbi.diagnostics import run_tarp
-# from sbi.analysis.plot import plot_tarp
 from gensbi.diagnostics import run_tarp, plot_tarp
 from gensbi.diagnostics import run_sbc, sbc_rank_plot
+from gensbi.diagnostics import LC2ST, plot_lc2st
 
-import torch
 
 config_path = "./config/gw_config_6c.yaml"
 
@@ -265,10 +262,12 @@ def main():
     thetas_ = normalize(jnp.array(thetas_, dtype=jnp.bfloat16), thetas_mean, thetas_std)
     xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
 
+    num_posterior_samples = 1000
+
     posterior_samples_ = pipeline_latent.sample_batched(
         jax.random.PRNGKey(42),
         xs_,
-        5_000,
+        num_posterior_samples,
         chunk_size=20,
         encoder_key=jax.random.PRNGKey(1234),
     )
@@ -294,8 +293,51 @@ def main():
     
     ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
 
-    f, ax = sbc_rank_plot(ranks, 1_000, plot_type="hist", num_bins=20)
+    f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
     plt.savefig(f"gw_sbc_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.show()
+
+    # LC2ST diagnostic
+    thetas_ = np.array(df_test["thetas"])[:10_000]
+    xs_ = np.array(df_test["xs"])[:10_000]
+
+    thetas_ = normalize(jnp.array(thetas_, dtype=jnp.bfloat16), thetas_mean, thetas_std)
+    xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
+
+    num_posterior_samples = 1
+
+    posterior_samples_ = pipeline_latent.sample(jax.random.PRNGKey(42), x_o=xs_, nsamples=xs_.shape[0])
+
+    thetas = thetas_.reshape(thetas_.shape[0], -1)  # (10_000, 3)
+    xs = xs_.reshape(xs_.shape[0], -1)  # (10_000, 3)
+    posterior_samples = posterior_samples_.reshape(posterior_samples_.shape[0], -1)  # (10_000, 3)
+
+    # Train the L-C2ST classifier.
+    lc2st = LC2ST(
+        thetas=thetas[:-1],
+        xs=xs[:-1],
+        posterior_samples=posterior_samples[:-1],
+        classifier="mlp",
+        num_ensemble=1,
+    )
+
+    _ = lc2st.train_under_null_hypothesis()
+    _ = lc2st.train_on_observed_data()
+
+    x_o = xs_[-1 : ]  # Take the last observation as observed data.
+    theta_o = thetas_[-1 : ]  # True parameter for the observed data.
+
+    post_samples_star = pipeline_latent.sample(jax.random.PRNGKey(42), x_o, nsamples=10_000) 
+
+    x_o = x_o.reshape(1,-1)  
+    post_samples_star = np.array(post_samples_star.reshape(post_samples_star.shape[0], -1))  
+
+    fig,ax = plot_lc2st(
+        lc2st,
+        post_samples_star,
+        x_o,
+    )
+    plt.savefig(f"gw_lc2st_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
     plt.show()
 
 
