@@ -10,10 +10,8 @@ strategy:
   model: "flux"
 
 optimizer:
-  patience: 10
-  cooldown: 2
-  factor: 0.5
-  accumulation_size: 100
+  warmup_steps: 500
+  decay_transition: 0.60
   rtol: 1.0e-4
   max_lr: 4.0e-4
   min_lr: 4.0e-6
@@ -29,7 +27,7 @@ model:
   axes_dim: [10]
   qkv_bias: true
   theta: 40
-  params_dtype: "float32"
+  params_dtype: "bfloat16"
   id_embedding_kind: ["absolute", "absolute"]
 
 

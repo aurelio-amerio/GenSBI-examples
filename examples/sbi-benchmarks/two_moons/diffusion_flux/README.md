@@ -29,7 +29,7 @@ This document provides a summary of the `flux` model trained on the `two_moons` 
 | `axes_dim` | `[10]` |
 | `qkv_bias` | `True` |
 | `theta` | `40` |
-| `params_dtype` | `float32` |
+| `params_dtype` | `bfloat16` |
 | `id_embedding_kind` | `['absolute', 'absolute']` |
 
 ## 4. Training Configuration
@@ -45,10 +45,8 @@ This document provides a summary of the `flux` model trained on the `two_moons` 
 | `experiment_id` | `1` |
 | `restore_model` | `True` |
 | `train_model` | `False` |
-| `patience` | `10` |
-| `cooldown` | `2` |
-| `factor` | `0.5` |
-| `accumulation_size` | `100` |
+| `warmup_steps` | `500` |
+| `decay_transition` | `0.6` |
 | `rtol` | `0.0001` |
 | `max_lr` | `0.0004` |
 | `min_lr` | `4e-06` |
@@ -57,7 +55,7 @@ This document provides a summary of the `flux` model trained on the `two_moons` 
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.583 ± 0.023
+- **Average C2ST Accuracy:** 0.566 ± 0.028
 
 ---
 *This model card was automatically generated.*
