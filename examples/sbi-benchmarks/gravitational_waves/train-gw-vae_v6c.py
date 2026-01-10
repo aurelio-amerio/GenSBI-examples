@@ -45,9 +45,11 @@ from gensbi.models import Flux1Params, Flux1
 from gensbi.recipes import ConditionalFlowPipeline
 
 # imports
-from gensbi_validation import PosteriorWrapper
-from sbi.diagnostics import run_tarp
-from sbi.analysis.plot import plot_tarp
+# from gensbi_validation import PosteriorWrapper
+# from sbi.diagnostics import run_tarp
+# from sbi.analysis.plot import plot_tarp
+from gensbi.diagnostics import run_tarp, plot_tarp
+from gensbi.diagnostics import run_sbc, sbc_rank_plot
 
 import torch
 
@@ -164,15 +166,15 @@ def main():
 
     # full model with VAE encoding the conditionals
     model = GWModel(vae_model, model_sbi)
-    
+
     training_config = parse_training_config(config_path)
-    
-    with open(config_path, 'r') as f:
+
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-        batch_size = config["training"]['batch_size']
-        nsteps = config["training"]['nsteps']
-        multistep = config["training"]['multistep']
-        experiment = config["training"]['experiment_id']
+        batch_size = config["training"]["batch_size"]
+        nsteps = config["training"]["nsteps"]
+        multistep = config["training"]["multistep"]
+        experiment = config["training"]["experiment_id"]
 
     def split_data(batch):
         obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
@@ -212,7 +214,6 @@ def main():
         "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v6c/checkpoints"
     )
 
-
     pipeline_latent = ConditionalFlowPipeline(
         model,
         train_dataset_npe,
@@ -224,73 +225,77 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
-    # pipeline_latent.restore_model()
+    # pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
+    pipeline_latent.restore_model()
 
     # plot the results
 
-    x_o = df_test["xs"][0][None, ...]
-    x_o = normalize(jnp.array(x_o, dtype=jnp.bfloat16), xs_mean, xs_std)
+    # x_o = df_test["xs"][0][None, ...]
+    # x_o = normalize(jnp.array(x_o, dtype=jnp.bfloat16), xs_mean, xs_std)
 
-    theta_true = df_test["thetas"][0]  # already unnormalized
+    # theta_true = df_test["thetas"][0]  # already unnormalized
 
-    samples = pipeline_latent.sample_batched(
-        nnx.Rngs(0).sample(),
-        x_o,
-        100_000,
-        chunk_size=10_000,
-        encoder_key=jax.random.PRNGKey(1234),
-    )
-    print("Samples shape:", samples.shape)
-    res = samples[:, 0, :, 0]  # shape (num_samples, 1, 2, 1) -> (num_samples, 2)
-    print("Res shape:", res.shape)
-    # unnormalize the results for plotting
-    res_unnorm = unnormalize(res, thetas_mean, thetas_std)
+    # samples = pipeline_latent.sample_batched(
+    #     nnx.Rngs(0).sample(),
+    #     x_o,
+    #     100_000,
+    #     chunk_size=10_000,
+    #     encoder_key=jax.random.PRNGKey(1234),
+    # )
+    # print("Samples shape:", samples.shape)
+    # res = samples[:, 0, :, 0]  # shape (num_samples, 1, 2, 1) -> (num_samples, 2)
+    # print("Res shape:", res.shape)
+    # # unnormalize the results for plotting
+    # res_unnorm = unnormalize(res, thetas_mean, thetas_std)
 
-    # these are degrees, we should compute the modulo 360 for better visualization
-    res_unnorm = jnp.mod(res_unnorm, 360.0)
+    # # these are degrees, we should compute the modulo 360 for better visualization
+    # res_unnorm = jnp.mod(res_unnorm, 360.0)
 
-    # plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
-    plot_marginals(
-        res_unnorm, true_param=theta_true, range=[(25, 75), (25, 75)], gridsize=30
-    )
-    plt.savefig(f"gw_samples_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight")
-    plt.show()
-
-    # run tarp
-    posterior = PosteriorWrapper(
-        pipeline_latent,
-        rngs=nnx.Rngs(1234),
-        theta_shape=(2, 1),
-        x_shape=(8192, 2),
-        encoder_key=jax.random.PRNGKey(1234),
-    )
+    # # plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
+    # plot_marginals(
+    #     res_unnorm, true_param=theta_true, range=[(25, 75), (25, 75)], gridsize=30
+    # )
+    # plt.savefig(f"gw_samples_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight")
+    # plt.show()
 
     # split in thetas and xs
-    thetas = np.array(df_test["thetas"])[:200]
-    xs = np.array(df_test["xs"])[:200]
+    thetas_ = np.array(df_test["thetas"])[:500]
+    xs_ = np.array(df_test["xs"])[:500]
 
-    thetas = normalize(jnp.array(thetas, dtype=jnp.bfloat16), thetas_mean, thetas_std)
-    xs = normalize(jnp.array(xs, dtype=jnp.bfloat16), xs_mean, xs_std)
+    thetas_ = normalize(jnp.array(thetas_, dtype=jnp.bfloat16), thetas_mean, thetas_std)
+    xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
 
-    thetas_ = posterior._ravel(thetas)
-    xs_ = posterior._ravel(xs)
+    posterior_samples_ = pipeline_latent.sample_batched(
+        jax.random.PRNGKey(42),
+        xs_,
+        10_000,
+        chunk_size=20,
+        encoder_key=jax.random.PRNGKey(1234),
+    )
 
-    thetas_torch = torch.Tensor(np.asarray(thetas_, dtype=np.float32))
-    xs_torch = torch.Tensor(np.asarray(xs_, dtype=np.float32))
+    thetas = thetas_.reshape(thetas_.shape[0], -1)
+    xs = xs_.reshape(xs_.shape[0], -1)
+
+    posterior_samples = posterior_samples_.reshape(
+        posterior_samples_.shape[0], posterior_samples_.shape[1], -1
+    )
 
     ecp, alpha = run_tarp(
-        thetas_torch,
-        xs_torch,
-        posterior,
+        thetas,
+        posterior_samples,
         references=None,  # will be calculated automatically.
-        num_posterior_samples=1000,  # reduce this number to 1000 if you go OOM
     )
 
     plot_tarp(ecp, alpha)
     plt.savefig(
         f"gw_tarp_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
+    plt.show()
+    
+    ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
+
+    f, ax = sbc_rank_plot(ranks, 1_000, plot_type="hist", num_bins=20)
+    plt.savefig(f"gw_sbc_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
     plt.show()
 
 
