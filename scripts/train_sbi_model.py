@@ -274,7 +274,7 @@ def main():
             8, nsamples=100_000, use_ema=True
         )
 
-    plot_marginals(samples[...,0], plot_levels=False, backend="seaborn", gridsize=50, range =[(-1., 0), (0, 1.)])
+    plot_marginals(samples[...,0], plot_levels=False, backend="seaborn", gridsize=50)
     plt.savefig(f"{img_dir}/marginals_ema.png", dpi=300, bbox_inches='tight')
     plt.show()
 
