@@ -259,8 +259,8 @@ def main():
     # plt.show()
 
     # split in thetas and xs
-    thetas_ = np.array(df_test["thetas"])[:500]
-    xs_ = np.array(df_test["xs"])[:500]
+    thetas_ = np.array(df_test["thetas"])[:200]
+    xs_ = np.array(df_test["xs"])[:200]
 
     thetas_ = normalize(jnp.array(thetas_, dtype=jnp.bfloat16), thetas_mean, thetas_std)
     xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
@@ -268,7 +268,7 @@ def main():
     posterior_samples_ = pipeline_latent.sample_batched(
         jax.random.PRNGKey(42),
         xs_,
-        10_000,
+        5_000,
         chunk_size=20,
         encoder_key=jax.random.PRNGKey(1234),
     )
