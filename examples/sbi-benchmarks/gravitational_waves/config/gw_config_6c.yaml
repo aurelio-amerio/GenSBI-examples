@@ -19,15 +19,16 @@ optimizer:
 model:
   in_channels: 1
   vec_in_dim: null
-  context_in_dim: 128
+  context_in_dim: 512
   mlp_ratio: 4
   num_heads: 4
   depth: 8
   depth_single_blocks: 16
-  axes_dim: [20]
+  axes_dim: [16,4]
+  theta: 500
   qkv_bias: true
   params_dtype: "bfloat16"
-  id_embedding_kind: ["absolute", "pos1d"]
+  id_embedding_kind: ["absolute", "rope"]
 
 vae_model:
   resolution: 8192
@@ -43,13 +44,13 @@ vae_model:
             16,  # 256
             16,  # 128
             16,  # 64
-            # 16, # 32
-            # 16, # 16
+            16, # 32
+            16, # 16
             # 16, # 8
             # 16, # 4
         ]
   num_res_blocks: 1
-  z_channels: 128
+  z_channels: 512
   scale_factor: 1.0
   shift_factor: 0.0
   params_dtype: "bfloat16"
@@ -61,6 +62,6 @@ training:
   multistep: 1
   early_stopping: false
   val_every: 100
-  experiment_id: 1
-  restore_model: true
-  train_model: false
+  experiment_id: 3
+  restore_model: false
+  train_model: true

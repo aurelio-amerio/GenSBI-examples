@@ -392,7 +392,7 @@ def main():
     plt.savefig(f"{img_dir}/sbc.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
     plt.show()
 
-        # LC2ST diagnostic
+    # LC2ST diagnostic
     data = task.dataset["test"].with_format("jax")[:10_00]
     xs_ = jnp.asarray(data["xs"][:],dtype=jnp.bfloat16)
     thetas_ = jnp.asarray(data["thetas"][:],dtype=jnp.bfloat16)

@@ -222,38 +222,38 @@ def main():
         training_config=training_config,
     )
 
-    # pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
-    pipeline_latent.restore_model()
+    pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
+    # pipeline_latent.restore_model()
 
     # plot the results
 
-    # x_o = df_test["xs"][0][None, ...]
-    # x_o = normalize(jnp.array(x_o, dtype=jnp.bfloat16), xs_mean, xs_std)
+    x_o = df_test["xs"][0][None, ...]
+    x_o = normalize(jnp.array(x_o, dtype=jnp.bfloat16), xs_mean, xs_std)
 
-    # theta_true = df_test["thetas"][0]  # already unnormalized
+    theta_true = df_test["thetas"][0]  # already unnormalized
 
-    # samples = pipeline_latent.sample_batched(
-    #     nnx.Rngs(0).sample(),
-    #     x_o,
-    #     100_000,
-    #     chunk_size=10_000,
-    #     encoder_key=jax.random.PRNGKey(1234),
-    # )
-    # print("Samples shape:", samples.shape)
-    # res = samples[:, 0, :, 0]  # shape (num_samples, 1, 2, 1) -> (num_samples, 2)
-    # print("Res shape:", res.shape)
-    # # unnormalize the results for plotting
-    # res_unnorm = unnormalize(res, thetas_mean, thetas_std)
+    samples = pipeline_latent.sample_batched(
+        nnx.Rngs(0).sample(),
+        x_o,
+        100_000,
+        chunk_size=10_000,
+        encoder_key=jax.random.PRNGKey(1234),
+    )
+    print("Samples shape:", samples.shape)
+    res = samples[:, 0, :, 0]  # shape (num_samples, 1, 2, 1) -> (num_samples, 2)
+    print("Res shape:", res.shape)
+    # unnormalize the results for plotting
+    res_unnorm = unnormalize(res, thetas_mean, thetas_std)
 
-    # # these are degrees, we should compute the modulo 360 for better visualization
-    # res_unnorm = jnp.mod(res_unnorm, 360.0)
+    # these are degrees, we should compute the modulo 360 for better visualization
+    res_unnorm = jnp.mod(res_unnorm, 360.0)
 
-    # # plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
-    # plot_marginals(
-    #     res_unnorm, true_param=theta_true, range=[(25, 75), (25, 75)], gridsize=30
-    # )
-    # plt.savefig(f"gw_samples_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight")
-    # plt.show()
+    # plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
+    plot_marginals(
+        res_unnorm, true_param=theta_true, range=[(25, 75), (25, 75)], gridsize=30
+    )
+    plt.savefig(f"gw_samples_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight")
+    plt.show()
 
     # split in thetas and xs
     thetas_ = np.array(df_test["thetas"])[:200]
