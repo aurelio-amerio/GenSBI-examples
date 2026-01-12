@@ -6,13 +6,11 @@ strategy:
   model: "flux"
 
 optimizer:
-  patience: 10
-  cooldown: 2
-  factor: 0.5
-  accumulation_size: 100
+  warmup_steps: 500
+  decay_transition: 0.80
   rtol: 1.0e-4
-  max_lr: 1.0e-3
-  min_lr: 1.0e-8
+  max_lr: 2.0e-4
+  min_lr: 2.0e-6
 
 model:
   in_channels: 1
@@ -26,14 +24,15 @@ model:
   qkv_bias: true
   theta: 60
   params_dtype: "bfloat16"
+  id_embedding_kind: ["absolute", "absolute"]
 
 training:
   batch_size: 1024
-  nsteps: 50000
+  nsteps: 10000
   ema_decay: 0.999
   multistep: 1
-  early_stopping: true
+  early_stopping: false
   val_every: 100
   experiment_id: 2
-  restore_model: true
-  train_model: false
+  restore_model: false
+  train_model: true
