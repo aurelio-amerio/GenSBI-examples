@@ -19,12 +19,9 @@ from gensbi.recipes import Flux1FlowPipeline
 from gensbi.utils.plotting import plot_marginals
 import matplotlib.pyplot as plt
 
-from gensbi_validation import PosteriorWrapper
-from sbi.analysis.plot import sbc_rank_plot
-from sbi.diagnostics import check_sbc, check_tarp, run_sbc, run_tarp
-from sbi.analysis.plot import plot_tarp
-
-import torch
+from gensbi.diagnostics import check_tarp, run_tarp, plot_tarp
+from gensbi.diagnostics import check_sbc, run_sbc, sbc_rank_plot
+from gensbi.diagnostics import LC2ST, plot_lc2st
 
 def _simulator(key, thetas):
 
@@ -125,28 +122,24 @@ def main():
     plt.show()
 
 
-    posterior = PosteriorWrapper(pipeline, rngs=nnx.Rngs(1234), chunk_size=250)
-
- 
     key = jax.random.PRNGKey(1234)
     
     # sample the dataset
     test_data = simulator(jax.random.PRNGKey(1), 200)
 
     # split in thetas and xs
-    thetas = test_data[:, :dim_obs, :] # (200, 3, 1)
-    xs = test_data[:, dim_obs:, :] # (200, 3, 1)
+    thetas_ = test_data[:, :dim_obs, :] # (200, 3, 1)
+    xs_ = test_data[:, dim_obs:, :] # (200, 3, 1)
+
+    posterior_samples_ = pipeline.sample_batched(jax.random.PRNGKey(0), xs_, nsamples=1000)
 
     # flatten the dataset. sbi expects 2D arrays of shape (num_samples, features), while our data is 3D of shape (num_samples, dim, channels).
     # we reshape a sample of size (dim, channels) into a vector of size (dim * channels)
-    thetas = posterior._ravel(thetas) # (200, 3)
-    xs = posterior._ravel(xs) # (200, 3)
+    thetas = thetas_.reshape(thetas_.shape[0], -1) 
+    xs = xs_.reshape(xs_.shape[0], -1) 
+    posterior_samples = posterior_samples_.reshape(posterior_samples_.shape[0], posterior_samples_.shape[1], -1)
 
-    # convert to torch tensors
-    thetas = torch.Tensor(np.array(thetas))
-    xs = torch.Tensor(np.array(xs))
-
-    ranks, dap_samples = run_sbc(thetas, xs, posterior)
+    ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
     check_stats = check_sbc(ranks, thetas, dap_samples, 1_000)
 
     # %%
@@ -160,10 +153,8 @@ def main():
     # %%
     ecp, alpha = run_tarp(
         thetas,
-        xs,
-        posterior,
+        posterior_samples,
         references=None,  # will be calculated automatically.
-        num_posterior_samples=1_000,
     )
 
     # %%
@@ -181,32 +172,20 @@ def main():
     test_data = simulator(jax.random.PRNGKey(1), 10_000)
 
     # split in thetas and xs
-    thetas = test_data[:, :dim_obs, :] # (10_000, 3, 1)
-    xs = test_data[:, dim_obs:, :] # (10_000, 3, 1)
+    thetas_ = test_data[:, :dim_obs, :] # (10_000, 3, 1)
+    xs_ = test_data[:, dim_obs:, :] # (10_000, 3, 1)
+
+    # Generate one posterior sample for every prior predictive.
+    posterior_samples_ = pipeline.sample(key, x_o=xs_, nsamples=xs_.shape[0])
 
     # flatten the dataset. sbi expects 2D arrays of shape (num_samples, features), while our data is 3D of shape (num_samples, dim, channels).
     # we reshape a sample of size (dim, channels) into a vector of size (dim * channels)
-    thetas = posterior._ravel(thetas) # (10_000, 3)
-    xs = posterior._ravel(xs) # (10_000, 3)
-
-    # convert to torch tensors
-    thetas = torch.Tensor(np.array(thetas))
-    xs = torch.Tensor(np.array(xs))
+    thetas = thetas_.reshape(thetas_.shape[0], -1) 
+    xs = xs_.reshape(xs_.shape[0], -1) 
+    posterior_samples = posterior_samples_.reshape(posterior_samples_.shape[0], -1)
 
     # %%
-    # Generate one posterior sample for every prior predictive.
-    posterior_samples = posterior.sample_batched(
-        (1,),
-        x=xs,
-    )[0]
-
-    # %%
-    posterior_samples.shape
-
-    # %%
-    from sbi.diagnostics.lc2st import LC2ST
-
-
+    
     # Train the L-C2ST classifier.
     lc2st = LC2ST(
         thetas=thetas,
@@ -222,45 +201,39 @@ def main():
     key = jax.random.PRNGKey(12345)
 
     sample = simulator(key, 1)
-    theta_true = sample[:, :dim_obs, :]  
-    x_o = sample[:, dim_obs:, :]  
+    # theta_true_ = sample[:, :dim_obs, :]  
+    x_o_ = sample[:, dim_obs:, :]  
 
     # Note: x_o must have a batch-dimension. I.e. `x_o.shape == (1, observation_shape)`.
-    post_samples_star = pipeline.sample(rngs.sample(), x_o, nsamples=10_000) 
+    post_samples_star_ = pipeline.sample(rngs.sample(), x_o_, nsamples=10_000) 
 
-    post_samples_star = np.array(post_samples_star.reshape(-1, dim_obs))
-
-    # %%
-    post_samples_star_torch = torch.Tensor(np.array(post_samples_star.reshape(-1, dim_obs)))
-    x_o_torch = torch.Tensor(np.array(x_o.reshape(-1, dim_cond)))
+    # theta_true = theta_true_.reshape(-1)  # (3,)
+    x_o = x_o_.reshape(1,-1)  # (3,)
+    post_samples_star = np.array(post_samples_star_.reshape(post_samples_star_.shape[0], -1))
 
     # %%
     probs_data, scores_data = lc2st.get_scores(
-        theta_o=post_samples_star_torch,
-        x_o=x_o_torch,
+        theta_o=post_samples_star,
+        x_o=x_o,
         return_probs=True,
         trained_clfs=lc2st.trained_clfs
     )
     probs_null, scores_null = lc2st.get_statistics_under_null_hypothesis(
-        theta_o=post_samples_star_torch,
-        x_o=x_o_torch,
+        theta_o=post_samples_star,
+        x_o=x_o,
         return_probs=True,
     )
 
     # %%
     conf_alpha = 0.05
-    p_value = lc2st.p_value(post_samples_star_torch, x_o_torch)
-    reject = lc2st.reject_test(post_samples_star_torch, x_o_torch, alpha=conf_alpha)
+    p_value = lc2st.p_value(post_samples_star, x_o)
+    reject = lc2st.reject_test(post_samples_star, x_o, alpha=conf_alpha)
 
-    fig, ax = plt.subplots(1, 1, figsize=(5, 3))
-    quantiles = np.quantile(scores_null, [0, 1-conf_alpha])
-    ax.hist(scores_null, bins=50, density=True, alpha=0.5, label="Null")
-    ax.axvline(scores_data, color="red", label="Observed")
-    ax.axvline(quantiles[0], color="black", linestyle="--", label="95% CI")
-    ax.axvline(quantiles[1], color="black", linestyle="--")
-    ax.set_xlabel("Test statistic")
-    ax.set_ylabel("Density")
-    ax.set_title(f"p-value = {p_value:.3f}, reject = {reject}")
+    fig, ax = plot_lc2st(
+        lc2st,
+        post_samples_star,
+        x_o,
+    )
     plt.savefig("flux1_flow_pipeline_lc2st_2.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
     plt.show()
 
