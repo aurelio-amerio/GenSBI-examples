@@ -109,8 +109,11 @@ def main():
     task_name = "gravitational_waves"
 
     # dataset = load_dataset(repo_name, task_name).with_format("numpy")
+    # dataset = load_dataset(
+    #     repo_name, task_name, cache_dir="/data/users/.cache"
+    # ).with_format("numpy")
     dataset = load_dataset(
-        repo_name, task_name, cache_dir="/data/users/.cache"
+        repo_name, task_name
     ).with_format("numpy")
 
     # %%
@@ -208,7 +211,7 @@ def main():
     )
 
     training_config["checkpoint_dir"] = (
-        "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v6c/checkpoints"
+        "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/gravitational_waves/gw_npe_v6c/checkpoints"
     )
 
     pipeline_latent = ConditionalFlowPipeline(

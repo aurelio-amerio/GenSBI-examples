@@ -1,0 +1,25 @@
+experiment_name = gw
+version = 6c    
+workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/gravitational_waves
+script_path = train-gw-vae_v6c.py
+
+universe = vanilla
+
+request_memory = 64 GB
+request_cpus = 8
+
+executable = train_model.sh
+arguments = "$(workdir) $(script_path)"
+getenv = True
+request_gpus = 1
+
+log                     = condor_logs/logs_$(experiment_name)_$(version).log
+output                  = condor_logs/outfile_$(experiment_name)_$(version).out
+error                   = condor_logs/errors_$(experiment_name)_$(version).err
+
+#########
+
+queue 
+
+
+

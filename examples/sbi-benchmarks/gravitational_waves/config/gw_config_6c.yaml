@@ -11,24 +11,22 @@ strategy:
 
 optimizer:
   warmup_steps: 500
-  decay_transition: 0.60
-  rtol: 1.0e-4
+  decay_transition: 0.80
   max_lr: 1.0e-4
   min_lr: 1.0e-6
 
 model:
   in_channels: 1
   vec_in_dim: null
-  context_in_dim: 512
+  context_in_dim: 128
   mlp_ratio: 4
   num_heads: 4
   depth: 8
   depth_single_blocks: 16
-  axes_dim: [16,4]
-  theta: 500
+  axes_dim: [10]
   qkv_bias: true
   params_dtype: "bfloat16"
-  id_embedding_kind: ["absolute", "rope"]
+  id_embedding_kind: ["absolute", "pos1d"]
 
 vae_model:
   resolution: 8192
@@ -44,24 +42,24 @@ vae_model:
             16,  # 256
             16,  # 128
             16,  # 64
-            16, # 32
-            16, # 16
+            # 16, # 32
+            # 16, # 16
             # 16, # 8
             # 16, # 4
         ]
   num_res_blocks: 1
-  z_channels: 512
+  z_channels: 128
   scale_factor: 1.0
   shift_factor: 0.0
   params_dtype: "bfloat16"
 
 training:
   batch_size: 256
-  nsteps: 50000
+  nsteps: 10000
   ema_decay: 0.999
   multistep: 1
   early_stopping: false
   val_every: 100
-  experiment_id: 3
+  experiment_id: 4
   restore_model: false
   train_model: true
