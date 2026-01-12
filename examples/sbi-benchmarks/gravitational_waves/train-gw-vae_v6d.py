@@ -293,8 +293,11 @@ def main():
     task_name = "gravitational_waves"
 
     # dataset = load_dataset(repo_name, task_name).with_format("numpy")
+    # dataset = load_dataset(
+    #     repo_name, task_name, cache_dir="/data/users/.cache"
+    # ).with_format("numpy")
     dataset = load_dataset(
-        repo_name, task_name, cache_dir="/data/users/.cache"
+        repo_name, task_name
     ).with_format("numpy")
 
     # %%
@@ -380,7 +383,7 @@ def main():
     )
 
     training_config["checkpoint_dir"] = (
-        "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v6d/checkpoints"
+        "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/gravitational_waves/gw_npe_v6d/checkpoints"
     )
 
     pipeline_latent = ConditionalFlowPipeline(
@@ -394,8 +397,8 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
-    # pipeline_latent.restore_model()
+    # pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
+    pipeline_latent.restore_model()
 
     # plot the results
 
@@ -421,8 +424,11 @@ def main():
     res_unnorm = jnp.mod(res_unnorm, 360.0)
 
     # plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
+    # plot_marginals(
+    #     res_unnorm, true_param=theta_true, range=[(25, 75), (25, 75)], gridsize=30
+    # )
     plot_marginals(
-        res_unnorm, true_param=theta_true, range=[(25, 75), (25, 75)], gridsize=30
+        res_unnorm, true_param=theta_true, gridsize=30
     )
     plt.savefig(f"gw_samples_v6d_conf{experiment}.png", dpi=100, bbox_inches="tight")
     plt.show()
