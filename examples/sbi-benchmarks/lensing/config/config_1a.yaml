@@ -15,13 +15,13 @@ optimizer:
 model:
   in_channels: 1
   vec_in_dim: null
-  context_in_dim: 128
+  context_in_dim: 64
   mlp_ratio: 4
   num_heads: 4
   depth: 8
   depth_single_blocks: 16
   axes_dim: [4,4,2]
-  theta: 10000
+  theta: 1000
   qkv_bias: true
   params_dtype: "bfloat16"
   id_embedding_kind: ["absolute", "rope2d"]
@@ -37,7 +37,7 @@ vae_model:
             4,  # 8
         ]
   num_res_blocks: 1
-  z_channels: 128
+  z_channels: 16
   scale_factor: 1.0
   shift_factor: 0.0
   params_dtype: "bfloat16"
