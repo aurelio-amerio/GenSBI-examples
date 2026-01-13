@@ -61,7 +61,7 @@ def unnormalize(batch, mean, std):
     return batch * std + mean
 
 
-class GWModel(nnx.Module):
+class LensingModel(nnx.Module):
     def __init__(self, vae, sbi_model):
         self.vae = vae
         self.sbi_model = sbi_model
@@ -158,7 +158,7 @@ def main():
 
     model_sbi = Flux1(params_flux)
 
-    model = GWModel(vae_model, model_sbi)
+    model = LensingModel(vae_model, model_sbi)
 
     training_config = parse_training_config(config_path)
 
@@ -223,8 +223,8 @@ def main():
         id_embedding_strategy=("absolute", "rope2d"),
     )
 
-    pipeline_latent.train(nnx.Rngs(0), save_model=True)
-    # pipeline_latent.restore_model()
+    # pipeline_latent.train(nnx.Rngs(0), save_model=True)
+    pipeline_latent.restore_model()
 
     # plot the results
 
@@ -252,104 +252,104 @@ def main():
     plt.show()
 
     # # split in thetas and xs
-    # thetas_ = np.array(df_test["thetas"])[:200]
-    # xs_ = np.array(df_test["xs"])[:200]
+    thetas_ = np.array(df_test["thetas"])[:200]
+    xs_ = np.array(df_test["xs"])[:200]
 
-    # thetas_ = normalize(jnp.array(thetas_, dtype=jnp.bfloat16), thetas_mean, thetas_std)
-    # xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
+    thetas_ = normalize(jnp.array(thetas_, dtype=jnp.bfloat16), thetas_mean, thetas_std)
+    xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
+    xs_ = xs_[..., None]
 
-    # num_posterior_samples = 1000
+    num_posterior_samples = 1000
 
-    # posterior_samples_ = pipeline_latent.sample_batched(
-    #     jax.random.PRNGKey(42),
-    #     xs_,
-    #     num_posterior_samples,
-    #     chunk_size=20,
-    #     encoder_key=jax.random.PRNGKey(1234),
-    # )
+    posterior_samples_ = pipeline_latent.sample_batched(
+        jax.random.PRNGKey(42),
+        xs_,
+        num_posterior_samples,
+        chunk_size=20,
+        encoder_key=jax.random.PRNGKey(1234),
+    )
 
-    # thetas = thetas_.reshape(thetas_.shape[0], -1)
-    # xs = xs_.reshape(xs_.shape[0], -1)
+    thetas = thetas_.reshape(thetas_.shape[0], -1)
+    xs = xs_.reshape(xs_.shape[0], -1)
 
-    # posterior_samples = posterior_samples_.reshape(
-    #     posterior_samples_.shape[0], posterior_samples_.shape[1], -1
-    # )
+    posterior_samples = posterior_samples_.reshape(
+        posterior_samples_.shape[0], posterior_samples_.shape[1], -1
+    )
 
-    # ecp, alpha = run_tarp(
-    #     thetas,
-    #     posterior_samples,
-    #     references=None,  # will be calculated automatically.
-    # )
+    ecp, alpha = run_tarp(
+        thetas,
+        posterior_samples,
+        references=None,  # will be calculated automatically.
+    )
 
-    # plot_tarp(ecp, alpha)
-    # plt.savefig(
-    #     f"gw_tarp_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
-    # )  # uncomment to save the figure
-    # plt.show()
+    plot_tarp(ecp, alpha)
+    plt.savefig(
+        f"lensing_tarp_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
+    plt.show()
 
-    # ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
+    ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
 
-    # f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
-    # plt.savefig(
-    #     f"gw_sbc_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
-    # )  # uncomment to save the figure
-    # plt.show()
+    f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
+    plt.savefig(
+        f"lensing_sbc_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
+    plt.show()
 
-    # # LC2ST diagnostic
-    # thetas_ = np.array(df_test["thetas"])[:10_000]
-    # xs_ = np.array(df_test["xs"])[:10_000]
+    # LC2ST diagnostic
+    thetas_ = np.array(df_test["thetas"])[:10_000]
+    xs_ = np.array(df_test["xs"])[:10_000]
 
-    # thetas_ = normalize(jnp.array(thetas_, dtype=jnp.bfloat16), thetas_mean, thetas_std)
-    # xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
+    thetas_ = normalize(jnp.array(thetas_, dtype=jnp.bfloat16), thetas_mean, thetas_std)
+    xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
+    xs_ = xs_[..., None]
 
-    # num_posterior_samples = 1
+    num_posterior_samples = 1
 
-    # posterior_samples_ = pipeline_latent.sample(
-    #     jax.random.PRNGKey(42),
-    #     x_o=xs_,
-    #     nsamples=xs_.shape[0],
-    #     encoder_key=jax.random.PRNGKey(1234),
-    # )
+    posterior_samples_ = pipeline_latent.sample(
+        jax.random.PRNGKey(42),
+        x_o=xs_,
+        nsamples=xs_.shape[0],
+        encoder_key=jax.random.PRNGKey(1234),
+    )
 
-    # thetas = thetas_.reshape(thetas_.shape[0], -1)  # (10_000, 3)
-    # xs = xs_.reshape(xs_.shape[0], -1)  # (10_000, 3)
-    # posterior_samples = posterior_samples_.reshape(
-    #     posterior_samples_.shape[0], -1
-    # )  # (10_000, 3)
+    thetas = thetas_.reshape(thetas_.shape[0], -1)
+    xs = xs_.reshape(xs_.shape[0], -1)
+    posterior_samples = posterior_samples_.reshape(posterior_samples_.shape[0], -1)
 
-    # # Train the L-C2ST classifier.
-    # lc2st = LC2ST(
-    #     thetas=thetas[:-1],
-    #     xs=xs[:-1],
-    #     posterior_samples=posterior_samples[:-1],
-    #     classifier="mlp",
-    #     num_ensemble=1,
-    # )
+    # Train the L-C2ST classifier.
+    lc2st = LC2ST(
+        thetas=thetas[:-1],
+        xs=xs[:-1],
+        posterior_samples=posterior_samples[:-1],
+        classifier="mlp",
+        num_ensemble=1,
+    )
 
-    # _ = lc2st.train_under_null_hypothesis()
-    # _ = lc2st.train_on_observed_data()
+    _ = lc2st.train_under_null_hypothesis()
+    _ = lc2st.train_on_observed_data()
 
-    # x_o = xs_[-1:]  # Take the last observation as observed data.
-    # theta_o = thetas_[-1:]  # True parameter for the observed data.
+    x_o = xs_[-1:]  # Take the last observation as observed data.
+    theta_o = thetas_[-1:]  # True parameter for the observed data.
 
-    # post_samples_star = pipeline_latent.sample(
-    #     jax.random.PRNGKey(42), x_o, nsamples=10_000
-    # )
+    post_samples_star = pipeline_latent.sample(
+        jax.random.PRNGKey(42), x_o, nsamples=10_000
+    )
 
-    # x_o = x_o.reshape(1, -1)
-    # post_samples_star = np.array(
-    #     post_samples_star.reshape(post_samples_star.shape[0], -1)
-    # )
+    x_o = x_o.reshape(1, -1)
+    post_samples_star = np.array(
+        post_samples_star.reshape(post_samples_star.shape[0], -1)
+    )
 
-    # fig, ax = plot_lc2st(
-    #     lc2st,
-    #     post_samples_star,
-    #     x_o,
-    # )
-    # plt.savefig(
-    #     f"gw_lc2st_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
-    # )  # uncomment to save the figure
-    # plt.show()
+    fig, ax = plot_lc2st(
+        lc2st,
+        post_samples_star,
+        x_o,
+    )
+    plt.savefig(
+        f"lensing_lc2st_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
+    plt.show()
 
 
 if __name__ == "__main__":
