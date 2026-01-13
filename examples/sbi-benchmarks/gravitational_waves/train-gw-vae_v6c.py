@@ -221,6 +221,7 @@ def main():
         ch_obs=ch_obs,
         ch_cond=z_ch,  # conditioning is now in the latent space
         training_config=training_config,
+        id_embedding_strategy = ("absolute", "rope1d")
     )
 
     pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
