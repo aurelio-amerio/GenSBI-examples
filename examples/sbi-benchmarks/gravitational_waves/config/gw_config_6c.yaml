@@ -23,10 +23,11 @@ model:
   num_heads: 4
   depth: 8
   depth_single_blocks: 16
-  axes_dim: [10]
+  axes_dim: [8,2]
+  theta: 500
   qkv_bias: true
   params_dtype: "bfloat16"
-  id_embedding_kind: ["absolute", "pos1d"]
+  id_embedding_kind: ["absolute", "rope1d"]
 
 vae_model:
   resolution: 8192
@@ -60,6 +61,6 @@ training:
   multistep: 1
   early_stopping: false
   val_every: 100
-  experiment_id: 4
+  experiment_id: 5
   restore_model: false
   train_model: true
