@@ -112,9 +112,7 @@ def main():
     # dataset = load_dataset(
     #     repo_name, task_name, cache_dir="/data/users/.cache"
     # ).with_format("numpy")
-    dataset = load_dataset(
-        repo_name, task_name
-    ).with_format("numpy")
+    dataset = load_dataset(repo_name, task_name).with_format("numpy")
 
     # %%
     df_train = dataset["train"]
@@ -293,11 +291,13 @@ def main():
         f"gw_tarp_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
-    
+
     ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
 
     f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
-    plt.savefig(f"gw_sbc_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig(
+        f"gw_sbc_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
     plt.show()
 
     # LC2ST diagnostic
@@ -309,11 +309,18 @@ def main():
 
     num_posterior_samples = 1
 
-    posterior_samples_ = pipeline_latent.sample(jax.random.PRNGKey(42), x_o=xs_, nsamples=xs_.shape[0])
+    posterior_samples_ = pipeline_latent.sample(
+        jax.random.PRNGKey(42),
+        x_o=xs_,
+        nsamples=xs_.shape[0],
+        encoder_key=jax.random.PRNGKey(1234),
+    )
 
     thetas = thetas_.reshape(thetas_.shape[0], -1)  # (10_000, 3)
     xs = xs_.reshape(xs_.shape[0], -1)  # (10_000, 3)
-    posterior_samples = posterior_samples_.reshape(posterior_samples_.shape[0], -1)  # (10_000, 3)
+    posterior_samples = posterior_samples_.reshape(
+        posterior_samples_.shape[0], -1
+    )  # (10_000, 3)
 
     # Train the L-C2ST classifier.
     lc2st = LC2ST(
@@ -327,20 +334,26 @@ def main():
     _ = lc2st.train_under_null_hypothesis()
     _ = lc2st.train_on_observed_data()
 
-    x_o = xs_[-1 : ]  # Take the last observation as observed data.
-    theta_o = thetas_[-1 : ]  # True parameter for the observed data.
+    x_o = xs_[-1:]  # Take the last observation as observed data.
+    theta_o = thetas_[-1:]  # True parameter for the observed data.
 
-    post_samples_star = pipeline_latent.sample(jax.random.PRNGKey(42), x_o, nsamples=10_000) 
+    post_samples_star = pipeline_latent.sample(
+        jax.random.PRNGKey(42), x_o, nsamples=10_000
+    )
 
-    x_o = x_o.reshape(1,-1)  
-    post_samples_star = np.array(post_samples_star.reshape(post_samples_star.shape[0], -1))  
+    x_o = x_o.reshape(1, -1)
+    post_samples_star = np.array(
+        post_samples_star.reshape(post_samples_star.shape[0], -1)
+    )
 
-    fig,ax = plot_lc2st(
+    fig, ax = plot_lc2st(
         lc2st,
         post_samples_star,
         x_o,
     )
-    plt.savefig(f"gw_lc2st_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig(
+        f"gw_lc2st_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
     plt.show()
 
 
