@@ -27,7 +27,7 @@ model:
   theta: 500
   qkv_bias: true
   params_dtype: "bfloat16"
-  id_embedding_kind: ["absolute", "rope1d"]
+  id_embedding_strategy: ["absolute", "rope1d"]
 
 vae_model:
   resolution: 8192

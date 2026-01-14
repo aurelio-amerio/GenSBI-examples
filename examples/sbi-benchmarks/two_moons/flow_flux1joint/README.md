@@ -30,7 +30,7 @@ This document provides a summary of the `flux1joint` model trained on the `two_m
 | `qkv_bias` | `True` |
 | `theta` | `40` |
 | `params_dtype` | `bfloat16` |
-| `id_embedding_kind` | `absolute` |
+| `id_embedding_strategy` | `absolute` |
 
 ## 4. Training Configuration
 

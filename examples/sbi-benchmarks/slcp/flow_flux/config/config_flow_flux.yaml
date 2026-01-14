@@ -26,7 +26,7 @@ model:
   axes_dim: [10]
   qkv_bias: true
   params_dtype: "bfloat16"
-  id_embedding_kind: ["absolute", "absolute"]
+  id_embedding_strategy: ["absolute", "absolute"]
 
 
 training:
