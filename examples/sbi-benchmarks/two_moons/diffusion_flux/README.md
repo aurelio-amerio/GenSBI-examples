@@ -30,7 +30,7 @@ This document provides a summary of the `flux` model trained on the `two_moons` 
 | `qkv_bias` | `True` |
 | `theta` | `40` |
 | `params_dtype` | `bfloat16` |
-| `id_embedding_kind` | `['absolute', 'absolute']` |
+| `id_embedding_strategy` | `['absolute', 'absolute']` |
 
 ## 4. Training Configuration
 

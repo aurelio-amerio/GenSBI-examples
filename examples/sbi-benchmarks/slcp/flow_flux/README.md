@@ -29,7 +29,7 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 | `axes_dim` | `[10]` |
 | `qkv_bias` | `True` |
 | `params_dtype` | `bfloat16` |
-| `id_embedding_kind` | `['absolute', 'absolute']` |
+| `id_embedding_strategy` | `['absolute', 'absolute']` |
 
 ## 4. Training Configuration
 

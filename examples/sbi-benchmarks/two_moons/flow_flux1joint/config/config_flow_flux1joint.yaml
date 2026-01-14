@@ -28,7 +28,7 @@ model:
   qkv_bias: true
   theta: 40
   params_dtype: "bfloat16"
-  id_embedding_kind: "absolute"
+  id_embedding_strategy: "absolute"
 
 training:
   batch_size: 4096
