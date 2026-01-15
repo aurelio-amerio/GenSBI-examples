@@ -19,7 +19,11 @@ import numpy as np
 
 from flax import nnx
 
-from gensbi.experimental.models.autoencoders import AutoEncoder1D, AutoEncoderParams, vae_loss_fn
+from gensbi.experimental.models.autoencoders import (
+    AutoEncoder1D,
+    AutoEncoderParams,
+    vae_loss_fn,
+)
 from gensbi.experimental.models.autoencoders.commons import Loss
 
 from gensbi.utils.plotting import plot_marginals
@@ -41,6 +45,7 @@ def normalize(batch, mean, std):
     std = jnp.asarray(std, dtype=batch.dtype)
     return (batch - mean) / std
 
+
 def unnormalize(batch, mean, std):
     mean = jnp.asarray(mean, dtype=batch.dtype)
     std = jnp.asarray(std, dtype=batch.dtype)
@@ -61,12 +66,12 @@ def main():
     df_train = dataset["train"]
     df_val = dataset["validation"]
     df_test = dataset["test"]
-    
+
     # compute the mean of xs and thetas
-    xs_mean = np.mean(df_train["xs"], axis=(0,1), keepdims=True)
+    xs_mean = np.mean(df_train["xs"], axis=(0, 1), keepdims=True)
     thetas_mean = np.mean(df_train["thetas"], axis=0, keepdims=True)
 
-    xs_std = np.std(df_train["xs"], axis=(0,1), keepdims=True)
+    xs_std = np.std(df_train["xs"], axis=(0, 1), keepdims=True)
     thetas_std = np.std(df_train["thetas"], axis=0, keepdims=True)
 
     # %%
@@ -74,7 +79,7 @@ def main():
 
     # %%
     def get_obs(batch):
-        xs = jnp.array(batch["xs"],dtype=jnp.bfloat16)
+        xs = jnp.array(batch["xs"], dtype=jnp.bfloat16)
         return normalize(xs, xs_mean, xs_std)
 
     # %%
@@ -117,9 +122,9 @@ def main():
             4,  # 2048
             6,  # 1024
             16,  # 512
-            16, # 256
-            16, # 128
-            16, # 64
+            16,  # 256
+            16,  # 128
+            16,  # 64
             # 16, # 32
             # 16, # 16
             # 16, # 8
@@ -132,11 +137,13 @@ def main():
         rngs=nnx.Rngs(42),
         param_dtype=jnp.bfloat16,
     )
-    
-    training_config = VAE1DPipeline._get_default_training_config()
-    training_config["checkpoint_dir"] = "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_vae/checkpoints"
+
+    training_config = VAE1DPipeline.get_default_training_config()
+    training_config["checkpoint_dir"] = (
+        "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_vae/checkpoints"
+    )
     training_config["experiment_id"] = 3
-    
+
     # %%
     pipeline = VAE1DPipeline(
         train_dataset=train_dataset,
@@ -150,8 +157,8 @@ def main():
     # pipeline.restore_model()
 
     # an observation for testing
-    x_o = df_test["xs"][0][None,...]
-    x_o = normalize(jnp.array(x_o,dtype=jnp.bfloat16), xs_mean, xs_std)
+    x_o = df_test["xs"][0][None, ...]
+    x_o = normalize(jnp.array(x_o, dtype=jnp.bfloat16), xs_mean, xs_std)
 
     # %%
     pred = pipeline.model(x_o)
@@ -167,25 +174,24 @@ def main():
         "gw_test.png", dpi=300, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
-    
-    
+
     # for the sake of the NPE, we delete the decoder model as it is not needed
     pipeline.model.Decoder1D = None
     # run the garbage collector to free up memory
     gc.collect()
-    
+
     # now we define the NPE pipeline
     dim_obs = 1
-    dim_cond = 8192 # not used since we use a VAE for the conditionals
+    dim_cond = 8192  # not used since we use a VAE for the conditionals
     ch_obs = 2
-    ch_cond = 2 # not used since we use a VAE for the conditionals
-    
+    ch_cond = 2  # not used since we use a VAE for the conditionals
+
     # get the latent dimensions from the autoencoder
     dim_cond_latent = pipeline.model.latent_shape[1]
     z_ch = pipeline.model.latent_shape[2]
-    
-    dim_joint = dim_obs + dim_cond # not used for this script
-    
+
+    dim_joint = dim_obs + dim_cond  # not used for this script
+
     params_flux = Flux1Params(
         in_channels=ch_obs,
         vec_in_dim=None,
@@ -204,34 +210,34 @@ def main():
         rngs=nnx.Rngs(0),
         param_dtype=jnp.bfloat16,
     )
-    
+
     def split_data(batch):
-        obs = jnp.array(batch["thetas"],dtype=jnp.bfloat16)
-        obs = obs[:,None,:]
+        obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
+        obs = obs[:, None, :]
         obs = normalize(obs, thetas_mean, thetas_std)
-        cond = jnp.array(batch["xs"],dtype=jnp.bfloat16)
+        cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
         cond = normalize(cond, xs_mean, xs_std)
         return obs, cond
-    
+
     batch_size = 1024
-    
+
     train_dataset_npe = (
-            grain.MapDataset.source(df_train)
-            .shuffle(42)
-            .repeat()
-            .to_iter_dataset()
-            # .batch(batch_size)
-            # .map(split_data)
-            # .mp_prefetch()
-        )
-    
+        grain.MapDataset.source(df_train)
+        .shuffle(42)
+        .repeat()
+        .to_iter_dataset()
+        # .batch(batch_size)
+        # .map(split_data)
+        # .mp_prefetch()
+    )
+
     performance_config = grain.experimental.pick_performance_config(
         ds=train_dataset_npe,
         ram_budget_mb=1024 * 8,
         max_workers=None,
         max_buffer_size=None,
     )
-    
+
     train_dataset_npe = (
         train_dataset_npe.batch(batch_size)
         .map(split_data)
@@ -239,48 +245,49 @@ def main():
     )
 
     val_dataset_npe = (
-                grain.MapDataset.source(df_val)
-                .shuffle(42)
-                .repeat()
-                .to_iter_dataset()
-                .batch(batch_size)
-                .map(split_data)
-            )
-    
-    training_config = Flux1FlowPipeline._get_default_training_config()
-    training_config["checkpoint_dir"] = "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe/checkpoints"
+        grain.MapDataset.source(df_val)
+        .shuffle(42)
+        .repeat()
+        .to_iter_dataset()
+        .batch(batch_size)
+        .map(split_data)
+    )
+
+    training_config = Flux1FlowPipeline.get_default_training_config()
+    training_config["checkpoint_dir"] = (
+        "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe/checkpoints"
+    )
     training_config["experiment_id"] = 3
-    
+
     pipeline_latent = Flux1FlowPipeline(
-                train_dataset_npe,
-                val_dataset_npe,
-                dim_obs,
-                dim_cond,
-                vae_obs=None,
-                vae_cond=pipeline.model,
-                params=params_flux,
-                training_config=training_config,
-            )
-    
+        train_dataset_npe,
+        val_dataset_npe,
+        dim_obs,
+        dim_cond,
+        vae_obs=None,
+        vae_cond=pipeline.model,
+        params=params_flux,
+        training_config=training_config,
+    )
+
     pipeline_latent.train(nnx.Rngs(0), save_model=True)
-    
+
     # plot the results
-    
-    x_o = df_test["xs"][0][None,...]
-    x_o = normalize(jnp.array(x_o,dtype=jnp.bfloat16), xs_mean, xs_std)
-    
-    theta_true = df_test["thetas"][0] # already unnormalized
-    
+
+    x_o = df_test["xs"][0][None, ...]
+    x_o = normalize(jnp.array(x_o, dtype=jnp.bfloat16), xs_mean, xs_std)
+
+    theta_true = df_test["thetas"][0]  # already unnormalized
+
     samples = pipeline_latent.sample(nnx.Rngs(0).sample(), x_o, 10_000)
-    res = samples[:,0,:] # shape (num_samples, 1, ch_obs) -> (num_samples, ch_obs)
-    
+    res = samples[:, 0, :]  # shape (num_samples, 1, ch_obs) -> (num_samples, ch_obs)
+
     # unnormalize the results for plotting
     res_unnorm = unnormalize(res, thetas_mean, thetas_std)
-    
+
     plot_marginals(res_unnorm, true_param=theta_true)
     plt.savefig("gw_samples.png", dpi=100, bbox_inches="tight")
     plt.show()
-
 
 
 if __name__ == "__main__":

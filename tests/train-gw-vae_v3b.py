@@ -253,7 +253,8 @@ class ConvEmbed(nnx.Module):
         # return x[..., None,:]
         return x
 
-#%%
+
+# %%
 class GWModel(nnx.Module):
     def __init__(self, encoder, sbi_model):
         self.encoder = encoder
@@ -292,10 +293,11 @@ class GWModel(nnx.Module):
         )
 
         # return only the obs part
-        return res[:, : 2, :]
+        return res[:, :2, :]
         # return res
 
-#%%
+
+# %%
 def main():
     repo_name = "aurelio-amerio/SBI-benchmarks"
 
@@ -399,7 +401,7 @@ def main():
         .map(split_data)
     )
 
-    training_config = ConditionalFlowPipeline._get_default_training_config()
+    training_config = ConditionalFlowPipeline.get_default_training_config()
     training_config["checkpoint_dir"] = (
         "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v3b/checkpoints"
     )
@@ -455,7 +457,7 @@ def main():
     # split in thetas and xs
     thetas = np.array(df_test["thetas"])[:200]
     xs = np.array(df_test["xs"])[:200]
-    
+
     thetas = normalize(jnp.array(thetas, dtype=jnp.bfloat16), thetas_mean, thetas_std)
     xs = normalize(jnp.array(xs, dtype=jnp.bfloat16), xs_mean, xs_std)
 
