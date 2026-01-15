@@ -1,0 +1,36 @@
+version = 1a    
+workdir = /lhome/ific/a/aamerio/data/github/GenSBI/docs/examples
+
+universe = vanilla
+
+request_memory = 64 GB
+request_cpus = 8
+
+executable = train_model.sh
+arguments = "$(workdir) $(script_path)"
+getenv = True
+request_gpus = 1
+
+log                     = condor_logs/examples/logs_$(experiment_name)_$(version).log
+output                  = condor_logs/examples/outfile_$(experiment_name)_$(version).out
+error                   = condor_logs/examples/errors_$(experiment_name)_$(version).err
+
+#########
+
+queue experiment_name, script_path, from (
+    (cond_diff, conditional_diffusion_pipeline.py)
+    (cond_flow, conditional_flow_pipeline.py)
+    (flux1_diff, flux1_diffusion_pipeline.py)
+    (flux1_flow, flux1_flow_pipeline.py)
+    (flux1joint_diff, flux1joint_diffusion_pipeline.py)
+    (flux1joint_flow, flux1joint_flow_pipeline.py)
+    (joint_diff, joint_diffusion_pipeline.py)
+    (joint_flow, joint_flow_pipeline.py)
+    (uncond_diff, unconditional_diffusion_pipeline.py)
+    (uncond_flow, unconditional_flow_pipeline.py)
+    (simformer_diff, simformer_diffusion_pipeline.py)
+    (simformer_flow, simformer_flow_pipeline.py)
+)
+
+
+

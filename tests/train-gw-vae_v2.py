@@ -6,7 +6,7 @@ experiment = 3
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
 else:
-    os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".90" # use 90% of GPU memory
+    os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".90"  # use 90% of GPU memory
     os.environ["JAX_PLATFORMS"] = "cuda"  # change to 'cpu' if no GPU is available
 
 import gc
@@ -68,20 +68,22 @@ class GWModel(nnx.Module):
     def __init__(self, vae, sbi_model):
         self.vae = vae
         self.sbi_model = sbi_model
-        
-    def __call__(self, 
-                    t: Array,
-                    obs: Array,
-                    obs_ids: Array,
-                    cond: Array,
-                    cond_ids: Array,
-                    conditioned: bool | Array = True,
-                    guidance: Array | None = None,
-                    encoder_key = None):
-        
+
+    def __call__(
+        self,
+        t: Array,
+        obs: Array,
+        obs_ids: Array,
+        cond: Array,
+        cond_ids: Array,
+        conditioned: bool | Array = True,
+        guidance: Array | None = None,
+        encoder_key=None,
+    ):
+
         # first we encode the conditioning data
         cond_latent = self.vae.encode(cond, encoder_key)
-        
+
         # then we pass to the sbi model
         return self.sbi_model(
             t=t,
@@ -115,15 +117,15 @@ def main():
 
     # xs_std = np.std(df_train["xs"], axis=(0, 1), keepdims=True)
     # thetas_std = np.std(df_train["thetas"], axis=0, keepdims=True)
-    xs_mean = jnp.array([[[ 0.00051776, -0.00040733]]], dtype=jnp.bfloat16) 
-    thetas_mean = jnp.array([[44.826576, 45.070328]], dtype=jnp.bfloat16) 
+    xs_mean = jnp.array([[[0.00051776, -0.00040733]]], dtype=jnp.bfloat16)
+    thetas_mean = jnp.array([[44.826576, 45.070328]], dtype=jnp.bfloat16)
 
-    xs_std = jnp.array([[[60.80799, 59.33193]]], dtype=jnp.bfloat16) 
-    thetas_std = jnp.array([[20.189356, 20.16127 ]], dtype=jnp.bfloat16) 
-    
-    dim_obs = 2 # dimension of the observation (theta)
+    xs_std = jnp.array([[[60.80799, 59.33193]]], dtype=jnp.bfloat16)
+    thetas_std = jnp.array([[20.189356, 20.16127]], dtype=jnp.bfloat16)
+
+    dim_obs = 2  # dimension of the observation (theta)
     dim_cond = 8192  # not used since we use a VAE for the conditionals
-    ch_obs = 1 # we have 1 channel for the observation (theta)
+    ch_obs = 1  # we have 1 channel for the observation (theta)
     ch_cond = 2  # not used since we use a VAE for the conditionals
 
     ae_params = AutoEncoderParams(
@@ -140,8 +142,8 @@ def main():
             16,  # 256
             16,  # 128
             16,  # 64
-            16, # 32
-            16, # 16
+            16,  # 32
+            16,  # 16
             # 16, # 8
             # 16, # 4
         ],
@@ -160,8 +162,6 @@ def main():
     vae_model.Decoder1D = None
     # run the garbage collector to free up memory
     gc.collect()
-
-  
 
     # now we define the NPE pipeline
     # get the latent dimensions from the autoencoder
@@ -183,7 +183,7 @@ def main():
         ],
         dim_obs=dim_obs,
         dim_cond=dim_cond_latent,
-        theta = 10*dim_joint,
+        theta=10 * dim_joint,
         qkv_bias=True,
         guidance_embed=False,
         rngs=nnx.Rngs(0),
@@ -208,10 +208,7 @@ def main():
     multistep = effective_batch_size // batch_size
 
     train_dataset_npe = (
-        grain.MapDataset.source(df_train)
-        .shuffle(42)
-        .repeat()
-        .to_iter_dataset()
+        grain.MapDataset.source(df_train).shuffle(42).repeat().to_iter_dataset()
     )
 
     performance_config = grain.experimental.pick_performance_config(
@@ -236,7 +233,7 @@ def main():
         .map(split_data)
     )
 
-    training_config = ConditionalFlowPipeline._get_default_training_config()
+    training_config = ConditionalFlowPipeline.get_default_training_config()
     training_config["checkpoint_dir"] = (
         "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v2/checkpoints"
     )
@@ -257,7 +254,7 @@ def main():
         training_config=training_config,
     )
 
-    pipeline_latent.train(nnx.Rngs(0), 100_000*multistep, save_model=True)
+    pipeline_latent.train(nnx.Rngs(0), 100_000 * multistep, save_model=True)
     # pipeline_latent.restore_model()
 
     # plot the results
@@ -275,44 +272,51 @@ def main():
     print("Res shape:", res.shape)
     # unnormalize the results for plotting
     res_unnorm = unnormalize(res, thetas_mean, thetas_std)
-    
+
     # these are degrees, we should compute the modulo 360 for better visualization
     res_unnorm = jnp.mod(res_unnorm, 360.0)
 
     # plot_marginals(res_unnorm, true_param=theta_true, range=[(0,120),(0,120)], gridsize=20)
-    plot_marginals(res_unnorm, true_param=theta_true, range=[(25,75),(25,75)], gridsize=30)
+    plot_marginals(
+        res_unnorm, true_param=theta_true, range=[(25, 75), (25, 75)], gridsize=30
+    )
     plt.savefig(f"gw_samples_v2b_conf{experiment}.png", dpi=100, bbox_inches="tight")
     plt.show()
-    
-    
-    # run tarp
-    posterior = PosteriorWrapper(pipeline_latent, rngs=nnx.Rngs(1234), theta_shape=(2,1), x_shape=(8192,2), encoder_key=jax.random.PRNGKey(1234))
 
+    # run tarp
+    posterior = PosteriorWrapper(
+        pipeline_latent,
+        rngs=nnx.Rngs(1234),
+        theta_shape=(2, 1),
+        x_shape=(8192, 2),
+        encoder_key=jax.random.PRNGKey(1234),
+    )
 
     # split in thetas and xs
-    thetas = np.array(df_test["thetas"])[:200] 
-    xs = np.array(df_test["xs"])[:200] 
-    
+    thetas = np.array(df_test["thetas"])[:200]
+    xs = np.array(df_test["xs"])[:200]
+
     thetas = normalize(jnp.array(thetas, dtype=jnp.bfloat16), thetas_mean, thetas_std)
     xs = normalize(jnp.array(xs, dtype=jnp.bfloat16), xs_mean, xs_std)
-    
-    thetas_ = posterior._ravel(thetas) 
-    xs_ = posterior._ravel(xs) 
-    
+
+    thetas_ = posterior._ravel(thetas)
+    xs_ = posterior._ravel(xs)
+
     thetas_torch = torch.Tensor(np.asarray(thetas_, dtype=np.float32))
     xs_torch = torch.Tensor(np.asarray(xs_, dtype=np.float32))
-    
+
     ecp, alpha = run_tarp(
         thetas_torch,
         xs_torch,
         posterior,
         references=None,  # will be calculated automatically.
-        num_posterior_samples=1000, # reduce this number to 1000 if you go OOM
+        num_posterior_samples=1000,  # reduce this number to 1000 if you go OOM
     )
-    
-    
+
     plot_tarp(ecp, alpha)
-    plt.savefig(f"gw_tarp_v2b_conf{experiment}.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig(
+        f"gw_tarp_v2b_conf{experiment}.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
     plt.show()
 
 

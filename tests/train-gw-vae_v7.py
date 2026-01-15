@@ -246,7 +246,7 @@ def main():
         .map(split_data)
     )
 
-    training_config = ConditionalFlowPipeline._get_default_training_config()
+    training_config = ConditionalFlowPipeline.get_default_training_config()
     training_config["checkpoint_dir"] = (
         "/home/zaldivar/symlinks/aure/Github/GenSBI-examples/tests/gw_npe_v7/checkpoints"
     )

@@ -464,7 +464,7 @@ jax.profiler.stop_trace()
 #         self.model.train()
 
 #         if nsteps is None:
-#             nsteps = self.training_config["num_steps"]
+#             nsteps = self.training_config["nsteps"]
 #         early_stopping = self.training_config["early_stopping"]
 #         val_every = self.training_config["val_every"]
 

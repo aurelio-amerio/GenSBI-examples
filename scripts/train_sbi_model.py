@@ -2,7 +2,10 @@
 # %%
 
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf.runtime_version")
+
+warnings.filterwarnings(
+    "ignore", category=UserWarning, module="google.protobuf.runtime_version"
+)
 
 import os
 
@@ -41,6 +44,7 @@ from gensbi.recipes import (
 
 from gensbi.utils.plotting import plot_marginals
 import matplotlib.pyplot as plt
+
 
 # %%
 def main():
@@ -81,7 +85,7 @@ def main():
         "flow",
         "diffusion",
     ], f"Method must be 'flow' or 'diffusion', got {method}."
-    
+
     # define the appropriate pipeline
     if model_type == "simformer" and method == "flow":
         PipelineClass = SimformerFlowPipeline
@@ -91,24 +95,23 @@ def main():
         kind = "joint"
     elif model_type == "flux1joint" and method == "flow":
         PipelineClass = Flux1JointFlowPipeline
-        kind="joint"
+        kind = "joint"
     elif model_type == "flux1joint" and method == "diffusion":
         PipelineClass = Flux1JointDiffusionPipeline
-        kind="joint"
+        kind = "joint"
     elif model_type == "flux" and method == "flow":
         PipelineClass = Flux1FlowPipeline
-        kind="conditional"
+        kind = "conditional"
     elif model_type == "flux" and method == "diffusion":
         PipelineClass = Flux1DiffusionPipeline
-        kind="conditional"
+        kind = "conditional"
     else:
         raise ValueError(
             f"Invalid combination of model_type {model_type} and method {method}"
         )
-    
+
     # Task and dataset setup
     task = get_task(task_name, kind=kind)
-
 
     # Training parameters
     train_params = config.get("training", {})
@@ -121,13 +124,11 @@ def main():
     nsteps = train_params.get("nsteps", 30000) * multistep
     val_every = train_params.get("val_every", 100) * multistep
 
-
     # Set checkpoint directory (new structure)
     checkpoint_dir = os.path.join(os.getcwd(), "checkpoints")
     checkpoint_dir_ema = os.path.join(checkpoint_dir, "ema")
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(checkpoint_dir_ema, exist_ok=True)
-
 
     # Optimizer parameters
     opt_params = config.get("optimizer", {})
@@ -143,14 +144,15 @@ def main():
     ema_decay = opt_params.get("ema_decay", 0.99)
 
     train_dataset = task.get_train_dataset(batch_size)
-    val_dataset = task.get_val_dataset(512) # we are using the mean loss, so batch size does not matter
+    val_dataset = task.get_val_dataset(
+        512
+    )  # we are using the mean loss, so batch size does not matter
     # dataset_iter = iter(train_dataset)
     # val_dataset_iter = iter(val_dataset)
 
     dim_obs = task.dim_obs
     dim_cond = task.dim_cond
     dim_joint = task.dim_joint
-
 
     # Model parameters from config
     model_params = config.get("model", {})
@@ -210,12 +212,9 @@ def main():
             param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
         )
 
-    
-
-
-    training_config = PipelineClass._get_default_training_config()
+    training_config = PipelineClass.get_default_training_config()
     # overwrite the defaults with the config file values
-    training_config["num_steps"] = nsteps
+    training_config["nsteps"] = nsteps
     training_config["ema_decay"] = ema_decay
     training_config["patience"] = PATIENCE
     training_config["cooldown"] = COOLDOWN
@@ -231,7 +230,6 @@ def main():
     training_config["multistep"] = multistep
     training_config["checkpoint_dir"] = checkpoint_dir
 
-
     pipeline = PipelineClass(
         train_dataset,
         val_dataset,
@@ -243,7 +241,6 @@ def main():
 
     # current training config
 
-
     if restore_model:
         print("Restoring model from checkpoint...")
         pipeline.restore_model()
@@ -252,7 +249,6 @@ def main():
         print("Starting training...")
         pipeline.train(nnx.Rngs(0))
         print("Training complete.")
-
 
     # --------- Define sampling function ----------
     def get_samples(idx, nsamples=10_000, use_ema=True, key=None):
@@ -264,25 +260,22 @@ def main():
 
         samples = pipeline.sample(key, observation, nsamples, use_ema=use_ema)
         return samples, true_param, reference_samples
-        
+
     # make plots
     img_dir = os.path.join(os.getcwd(), "imgs")
     os.makedirs(img_dir, exist_ok=True)
-    
-    # --------- Sampling ----------
-    samples, true_param, _ = get_samples(
-            8, nsamples=100_000, use_ema=True
-        )
 
-    plot_marginals(samples[...,0], plot_levels=False, backend="seaborn", gridsize=50)
-    plt.savefig(f"{img_dir}/marginals_ema.png", dpi=300, bbox_inches='tight')
+    # --------- Sampling ----------
+    samples, true_param, _ = get_samples(8, nsamples=100_000, use_ema=True)
+
+    plot_marginals(samples[..., 0], plot_levels=False, backend="seaborn", gridsize=50)
+    plt.savefig(f"{img_dir}/marginals_ema.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     # --------- C2ST TEST ---------
 
     # Run C2ST
     print("Running C2ST tests...")
-
 
     # Set c2st_results directory (new structure)
     c2st_dir = os.path.join(os.getcwd(), "c2st_results")
@@ -293,7 +286,7 @@ def main():
         samples, true_param, reference_samples = get_samples(
             idx, nsamples=10_000, use_ema=False
         )
-        c2st_accuracy = c2st(reference_samples, samples[...,0])
+        c2st_accuracy = c2st(reference_samples, samples[..., 0])
         c2st_accuracies.append(c2st_accuracy)
         print(f"C2ST accuracy for observation={idx}: {c2st_accuracy:.4f}\n")
 
@@ -319,7 +312,7 @@ def main():
         samples, true_param, reference_samples = get_samples(
             idx, nsamples=10_000, use_ema=True
         )
-        c2st_accuracy = c2st(reference_samples, samples[...,0])
+        c2st_accuracy = c2st(reference_samples, samples[..., 0])
         c2st_accuracies_ema.append(c2st_accuracy)
         print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")
     print(
@@ -345,33 +338,38 @@ def main():
 
     # parse config and results
     config_data = parse_config(args.config)
-    results_data = {"mean_accuracy": float(np.mean(c2st_accuracies_ema)), "std_dev": float(np.std(c2st_accuracies_ema))}
+    results_data = {
+        "mean_accuracy": float(np.mean(c2st_accuracies_ema)),
+        "std_dev": float(np.std(c2st_accuracies_ema)),
+    }
 
     markdown = create_markdown_content(config_data, results_data)
 
     # save the model card
 
     with open("README.md", "w") as f:
-        f.write(markdown)   
+        f.write(markdown)
 
     print("Model card generated as README.md")
 
     print("Running TARP diagnostic...")
 
-
-
     data = task.dataset["test"].with_format("jax")[:500]
-    xs = jnp.asarray(data["xs"][:],dtype=jnp.bfloat16)
-    thetas = jnp.asarray(data["thetas"][:],dtype=jnp.bfloat16)
+    xs = jnp.asarray(data["xs"][:], dtype=jnp.bfloat16)
+    thetas = jnp.asarray(data["thetas"][:], dtype=jnp.bfloat16)
 
     num_posterior_samples = 1_000
 
-    posterior_samples = pipeline.sample_batched(jax.random.PRNGKey(12345), xs, num_posterior_samples, use_ema=True)
+    posterior_samples = pipeline.sample_batched(
+        jax.random.PRNGKey(12345), xs, num_posterior_samples, use_ema=True
+    )
 
-    # reshape 
+    # reshape
     xs = xs.reshape((xs.shape[0], -1))
     thetas = thetas.reshape((thetas.shape[0], -1))
-    posterior_samples = posterior_samples.reshape((posterior_samples.shape[0], posterior_samples.shape[1], -1))
+    posterior_samples = posterior_samples.reshape(
+        (posterior_samples.shape[0], posterior_samples.shape[1], -1)
+    )
 
     ecp, alpha = run_tarp(
         thetas,
@@ -380,7 +378,7 @@ def main():
     )
 
     plot_tarp(ecp, alpha)
-    plt.savefig(f"{img_dir}/tarp.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{img_dir}/tarp.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     print("TARP diagnostic complete.")
@@ -389,21 +387,25 @@ def main():
     ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
 
     f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
-    plt.savefig(f"{img_dir}/sbc.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig(
+        f"{img_dir}/sbc.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
     plt.show()
 
     # LC2ST diagnostic
     data = task.dataset["test"].with_format("jax")[:10_00]
-    xs_ = jnp.asarray(data["xs"][:],dtype=jnp.bfloat16)
-    thetas_ = jnp.asarray(data["thetas"][:],dtype=jnp.bfloat16)
+    xs_ = jnp.asarray(data["xs"][:], dtype=jnp.bfloat16)
+    thetas_ = jnp.asarray(data["thetas"][:], dtype=jnp.bfloat16)
 
     num_posterior_samples = 1
 
-    posterior_samples_ = pipeline.sample(jax.random.PRNGKey(42), x_o=xs_, nsamples=xs_.shape[0])
+    posterior_samples_ = pipeline.sample(
+        jax.random.PRNGKey(42), x_o=xs_, nsamples=xs_.shape[0]
+    )
 
-    thetas = thetas_.reshape(thetas_.shape[0], -1)  
-    xs = xs_.reshape(xs_.shape[0], -1)  
-    posterior_samples = posterior_samples_.reshape(posterior_samples_.shape[0], -1)  
+    thetas = thetas_.reshape(thetas_.shape[0], -1)
+    xs = xs_.reshape(xs_.shape[0], -1)
+    posterior_samples = posterior_samples_.reshape(posterior_samples_.shape[0], -1)
 
     # Train the L-C2ST classifier.
     lc2st = LC2ST(
@@ -417,21 +419,26 @@ def main():
     _ = lc2st.train_under_null_hypothesis()
     _ = lc2st.train_on_observed_data()
 
-    x_o = xs_[-1 : ]  # Take the last observation as observed data.
-    theta_o = thetas_[-1 : ]  # True parameter for the observed data.
+    x_o = xs_[-1:]  # Take the last observation as observed data.
+    theta_o = thetas_[-1:]  # True parameter for the observed data.
 
-    post_samples_star = pipeline.sample(jax.random.PRNGKey(42), x_o, nsamples=10_000) 
+    post_samples_star = pipeline.sample(jax.random.PRNGKey(42), x_o, nsamples=10_000)
 
-    x_o = x_o.reshape(1,-1)  
-    post_samples_star = np.array(post_samples_star.reshape(post_samples_star.shape[0], -1))  
+    x_o = x_o.reshape(1, -1)
+    post_samples_star = np.array(
+        post_samples_star.reshape(post_samples_star.shape[0], -1)
+    )
 
-    fig,ax = plot_lc2st(
+    fig, ax = plot_lc2st(
         lc2st,
         post_samples_star,
         x_o,
     )
-    plt.savefig(f"{img_dir}/lc2st.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+    plt.savefig(
+        f"{img_dir}/lc2st.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
     plt.show()
+
 
 if __name__ == "__main__":
     main()
