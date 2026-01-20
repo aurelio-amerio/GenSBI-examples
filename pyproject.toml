@@ -1,5 +1,5 @@
 [project]
-name = "GenSBI-examples"
+name = "gensbi-examples"
 version = "0.0.1"
 description = "Examples for the GenSBI library"
 authors = [{ name = "Aurelio Amerio", email = "aure.amerio@gmail.com" }]
@@ -8,7 +8,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 
 dependencies = [
-    # "gensbi @ git+https://github.com/aurelio-amerio/GenSBI.git",
     "scikit-learn>=1.7.0",
     "datasets",
     "huggingface_hub",
