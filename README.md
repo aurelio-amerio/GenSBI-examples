@@ -1,20 +1,40 @@
-# GenSBI-examples
+# GenSBI Examples
 
-In order to run the examples, you need to install the GenSBI package. You can do this by running:
+This repository contains a collection of examples, tutorials, and recipes for **GenSBI**, a JAX-based library for Simulation-Based Inference using generative models.
+
+These examples demonstrate how to use GenSBI for various tasks, including:
+
+- Defining and running inference pipelines.
+- Using different embedding networks (MLP, ResNet, etc.).
+- Handling various data types (1D signals, 2D images).
+
+## Installation
+
+### Prerequisites
+
+You need to have **GenSBI** installed.
+
+**With CUDA 12 support (Recommended):**
 
 ```bash
-pip install "gensbi[cuda12]@git+https://github.com/aurelio-amerio/GenSBI.git"
+pip install gensbi[cuda12]
 ```
 
-or if you don't have a CUDA compatible device, you can use:
+**CPU-only:**
 
 ```bash
-pip install "git+https://github.com/aurelio-amerio/GenSBI.git"
+pip install gensbi
 ```
 
-Make sure you also install this package:
+### Install Examples Package
+
+To run the examples and ensure all dependencies are met, install this package:
 
 ```bash
-pip install -e .
+pip install gensbi-examples
 ```
 
+## Structure
+
+- `examples/`: Contains standalone example scripts and notebooks.
+- `src/gensbi_examples`: Helper utilities for the examples.
