@@ -1,6 +1,6 @@
 [project]
 name = "gensbi-examples"
-version = "0.0.1"
+version = "0.0.2"
 description = "Examples for the GenSBI library"
 authors = [{ name = "Aurelio Amerio", email = "aure.amerio@gmail.com" }]
 license = { file = "LICENSE" }
@@ -31,3 +31,10 @@ allow-direct-references = true
 
 [tool.hatch.build]
 sources = ["src"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+]
