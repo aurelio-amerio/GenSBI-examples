@@ -50,7 +50,7 @@ from einops import rearrange
 
 class ModelWrapper_old(nnx.Module):
     """
-    This class is used to wrap around another model. We define a call method which returns the model output. 
+    This class is used to wrap around another model. We define a call method which returns the model output.
     Furthermore, we define a vector_field method which computes the vector field of the model,
     and a divergence method which computes the divergence of the model, in a form useful for diffrax.
     This is useful for ODE solvers that require the vector field and divergence of the model.
@@ -74,7 +74,7 @@ class ModelWrapper_old(nnx.Module):
         Returns:
             Array: model output.
         """
-        return self.model(x, t, args=args, **kwargs) # type: ignore
+        return self.model(x, t, args=args, **kwargs)  # type: ignore
 
     def __call__(self, x: Array, t: Array, args=None, **kwargs) -> Array:
         r"""
@@ -111,14 +111,15 @@ class ModelWrapper_old(nnx.Module):
         Returns:
             Array: vector field of the model.
         """
+
         def vf(t, x, args):
             vf = self._call_model(x, t, args, **kwargs)
             # squeeze the first dimension of the vector field if it is 1
             if vf.shape[0] == 1:
                 vf = jnp.squeeze(vf, axis=0)
             return vf
+
         return vf
-    
 
     def get_divergence(self, **kwargs) -> Callable:
         r"""Compute the divergence of the model.
@@ -132,6 +133,7 @@ class ModelWrapper_old(nnx.Module):
             Array: divergence of the model.
         """
         vf = self.get_vector_field(**kwargs)
+
         def div_(t, x, args):
             div = divergence(vf, t, x, args)
             # squeeze the first dimension of the divergence if it is 1
@@ -139,9 +141,8 @@ class ModelWrapper_old(nnx.Module):
                 div = jnp.squeeze(div, axis=0)
             return div
 
-        
         return div_
-        
+
 
 class SimformerConditioner_old(nnx.Module):
     """
@@ -150,18 +151,19 @@ class SimformerConditioner_old(nnx.Module):
     Args:
         model (Simformer): Simformer model instance.
     """
+
     def __init__(self, model: Simformer, dim_joint):
         self.model = model
         self.dim_joint = dim_joint
 
     def conditioned(
-        self, 
-        obs: Array, 
-        obs_ids: Array, 
-        cond: Array, 
-        cond_ids: Array, 
-        t: Array, 
-        edge_mask: Optional[Array] = None
+        self,
+        obs: Array,
+        obs_ids: Array,
+        cond: Array,
+        cond_ids: Array,
+        t: Array,
+        edge_mask: Optional[Array] = None,
     ) -> Array:
         """
         Perform conditioned inference.
@@ -188,11 +190,9 @@ class SimformerConditioner_old(nnx.Module):
             cond = rearrange(
                 cond, "... -> 1 ... 1" if cond.ndim == 1 else "... -> ... 1"
             )
-        
+
         # repeat cond on the first dimension to match obs
-        cond = jnp.broadcast_to(
-            cond, (obs.shape[0], *cond.shape[1:])
-        )
+        cond = jnp.broadcast_to(cond, (obs.shape[0], *cond.shape[1:]))
 
         condition_mask_dim = len(obs_ids) + len(cond_ids)
 
@@ -215,16 +215,12 @@ class SimformerConditioner_old(nnx.Module):
             edge_mask=edge_mask,
         )
         # now return only the values on which we are not conditioning
-        res = res[:, :len(obs_ids)]
+        res = res[:, : len(obs_ids)]
         # res = jnp.take_along_axis(res, obs_ids, axis=1)
         return res
 
     def unconditioned(
-        self, 
-        obs: Array, 
-        obs_ids: Array, 
-        t: Array, 
-        edge_mask: Optional[Array] = None
+        self, obs: Array, obs_ids: Array, t: Array, edge_mask: Optional[Array] = None
     ) -> Array:
         """
         Perform unconditioned inference.
@@ -259,14 +255,14 @@ class SimformerConditioner_old(nnx.Module):
         return res
 
     def __call__(
-        self, 
-        obs: Array, 
-        obs_ids: Array, 
-        cond: Array, 
-        cond_ids: Array, 
-        t: Array, 
-        conditioned: bool = True, 
-        edge_mask: Optional[Array] = None
+        self,
+        obs: Array,
+        obs_ids: Array,
+        cond: Array,
+        cond_ids: Array,
+        t: Array,
+        conditioned: bool = True,
+        edge_mask: Optional[Array] = None,
     ) -> Array:
         """
         Perform inference based on conditioning.
@@ -299,7 +295,8 @@ class JointWrapper_old(ModelWrapper_old):
     def _call_model(self, x, t, args, **kwargs):
         return self.model(obs=x, t=t, **kwargs)
 
-#%% 
+
+# %%
 
 ######## new ema cod
 
@@ -307,11 +304,8 @@ class JointWrapper_old(ModelWrapper_old):
 task = get_task("two_moons")
 
 
-
-
 train_dataset = task.get_train_dataset(32)
 val_dataset = task.get_val_dataset()
-
 
 
 # %% define all model parameters and training settings
@@ -324,9 +318,9 @@ dim_joint = task.dim_joint
 
 params = SimformerParams(
     rngs=nnx.Rngs(0),
-    dim_value=10,
-    dim_id=10,
-    dim_condition=10,
+    value_emb_dim=10,
+    id_emb_dim=10,
+    cond_emb_dim=10,
     dim_joint=dim_joint,
     fourier_features=128,
     num_heads=2,
@@ -340,12 +334,12 @@ params = SimformerParams(
 pipeline = SimformerFlowPipeline(train_dataset, val_dataset, 2, 2, params=params)
 # %%
 rngs = nnx.Rngs(0)
-pipeline.train(rngs,nsteps=30,save_model=False)
+pipeline.train(rngs, nsteps=30, save_model=False)
 # %%
 pipeline._wrap_model()
-#%%
+# %%
 vf_model_wrapped = pipeline.model_wrapped
-#%% get the old wrapped model
+# %% get the old wrapped model
 
 vf_model_wrapped_old = JointWrapper_old(pipeline.model, dim_joint)
 # %%
@@ -359,17 +353,17 @@ vf_model_wrapped_old = JointWrapper_old(pipeline.model, dim_joint)
 # }
 
 batch_size = 5
-obs = jax.random.normal(jax.random.PRNGKey(0), (batch_size, dim_obs, 1))*2
-cond = jax.random.normal(jax.random.PRNGKey(1), (batch_size, dim_cond, 1))*2
+obs = jax.random.normal(jax.random.PRNGKey(0), (batch_size, dim_obs, 1)) * 2
+cond = jax.random.normal(jax.random.PRNGKey(1), (batch_size, dim_cond, 1)) * 2
 t = jax.random.uniform(jax.random.PRNGKey(2), (batch_size,), minval=0.0, maxval=1.0)
 
 
 model_extras = {
-            "cond": cond,
-            "obs_ids": pipeline.obs_ids,
-            "cond_ids": pipeline.cond_ids,
-            "edge_mask": None,
-        }
+    "cond": cond,
+    "obs_ids": pipeline.obs_ids,
+    "cond_ids": pipeline.cond_ids,
+    "edge_mask": None,
+}
 # %%
 
 res = vf_model_wrapped(t, obs, **model_extras)
@@ -380,7 +374,7 @@ res_old = vf_old(t, obs, None)
 # %%
 
 res
-#%%
+# %%
 res_old
 # %%
 jnp.isclose(res, res_old, atol=1e-1).all()

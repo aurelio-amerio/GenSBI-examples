@@ -20,9 +20,9 @@ This document provides a summary of the `simformer` model trained on the `two_mo
 | Parameter | Value |
 |---|---|
 | `in_channels` | `1` |
-| `dim_value` | `40` |
-| `dim_id` | `40` |
-| `dim_condition` | `10` |
+| `value_emb_dim` | `40` |
+| `id_emb_dim` | `40` |
+| `cond_emb_dim` | `10` |
 | `fourier_features` | `128` |
 | `num_heads` | `6` |
 | `num_layers` | `8` |

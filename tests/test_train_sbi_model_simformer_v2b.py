@@ -64,7 +64,9 @@ class ModelEMA(nnx.Optimizer):
 
 root_dir = "/home/aure/Documents/GitHub/GenSBI-examples"
 
-config = f"{root_dir}/examples/sbi-benchmarks/two_moons/config/config_flow_simformer_2.yaml"
+config = (
+    f"{root_dir}/examples/sbi-benchmarks/two_moons/config/config_flow_simformer_2.yaml"
+)
 
 # Load config
 with open(config, "r") as f:
@@ -87,7 +89,7 @@ experiment_id = train_params.get("experiment_id", 3)
 restore_model = train_params.get("restore_model", False)
 train_model = train_params.get("train_model", True)
 batch_size = train_params.get("batch_size", 4096)
-nsteps = 1000 #train_params.get("nsteps", 10000)
+nsteps = 1000  # train_params.get("nsteps", 10000)
 nepochs = train_params.get("nepochs", 3)
 multistep = train_params.get("multistep", 1)
 early_stopping = train_params.get("early_stopping", True)
@@ -95,7 +97,9 @@ print_every = train_params.get("print_every", 100)
 
 # Set checkpoint directory
 notebook_path = os.getcwd()
-checkpoint_dir = f"{root_dir}/examples/sbi-benchmarks/two_moons/checkpoints/two_moons_flow_simformer"
+checkpoint_dir = (
+    f"{root_dir}/examples/sbi-benchmarks/two_moons/checkpoints/two_moons_flow_simformer"
+)
 checkpoint_dir_ema = f"{root_dir}/examples/sbi-benchmarks/two_moons/checkpoints/two_moons_flow_simformer/ema"
 os.makedirs(checkpoint_dir, exist_ok=True)
 os.makedirs(checkpoint_dir_ema, exist_ok=True)
@@ -145,9 +149,9 @@ cond_ids = jnp.arange(dim_obs, dim_joint)  # conditional ids
 model_params = config.get("model", {})
 params = SimformerParams(
     rngs=nnx.Rngs(0),
-    dim_value=model_params.get("dim_value", 40),
-    dim_id=model_params.get("dim_id", 40),
-    dim_condition=model_params.get("dim_condition", 10),
+    value_emb_dim=model_params.get("value_emb_dim", 40),
+    id_emb_dim=model_params.get("id_emb_dim", 40),
+    cond_emb_dim=model_params.get("cond_emb_dim", 10),
     dim_joint=dim_joint,
     fourier_features=model_params.get("fourier_features", 128),
     num_heads=model_params.get("num_heads", 6),
@@ -209,7 +213,6 @@ def sample_structured_conditional_mask(
     return condition_mask
 
 
-
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     batch_size = x_1.shape[0]
     rng_x0, rng_t, rng_condition, rng_edge_mask1, rng_edge_mask2 = jax.random.split(
@@ -237,7 +240,6 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
         condition_mask=condition_mask,
     )
     return loss
-
 
 
 @nnx.jit
@@ -308,14 +310,13 @@ rngs = nnx.Rngs(0)
 best_state = nnx.state(vf_model)
 best_state_ema = nnx.state(ema_model)
 
-min_val = loss_fn_(vf_model, next(val_dataset_iter),jax.random.PRNGKey(0))
+min_val = loss_fn_(vf_model, next(val_dataset_iter), jax.random.PRNGKey(0))
 val_error_ratio = 1.1
 counter = 0
 cmax = 10
 
 loss_array = []
 val_loss_array = []
-
 
 
 if train_model:
@@ -365,7 +366,7 @@ if train_model:
 
     print("Manual training complete in {:.2f} seconds".format(time() - t0))
 
-#%%
+# %%
 # define the pipeline
 pipeline = SimformerFlowPipeline(train_dataset, val_dataset, 2, 2, params=params)
 

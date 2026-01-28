@@ -27,6 +27,7 @@ from gensbi_examples.c2st import c2st
 
 ######## new ema code
 
+
 class ModelEMA(nnx.Optimizer):
 
     def __init__(
@@ -35,7 +36,6 @@ class ModelEMA(nnx.Optimizer):
         tx: optax.GradientTransformation,
     ):
         super().__init__(model, tx, wrt=[nnx.Param, nnx.BatchStat])
-
 
     def update(self, model, model_orginal: nnx.Module):
         params = nnx.state(model_orginal, self.wrt)
@@ -122,7 +122,6 @@ from functools import partial
 # from gensbi_examples.mask import get_condition_mask_fn
 
 
-
 # def marginalize(key: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None):
 #     if marginal_ids is None:
 #         marginal_ids = jnp.arange(edge_mask.shape[0])
@@ -156,9 +155,9 @@ model_params = config.get("model", {})
 params = SimformerParams(
     rngs=nnx.Rngs(0),
     in_channels=model_params.get("in_channels", 1),
-    dim_value=model_params.get("dim_value", 40),
-    dim_id=model_params.get("dim_id", 40),
-    dim_condition=model_params.get("dim_condition", 10),
+    value_emb_dim=model_params.get("value_emb_dim", 40),
+    id_emb_dim=model_params.get("id_emb_dim", 40),
+    cond_emb_dim=model_params.get("cond_emb_dim", 10),
     dim_joint=dim_joint,
     fourier_features=model_params.get("fourier_features", 128),
     num_heads=model_params.get("num_heads", 6),
@@ -173,7 +172,7 @@ loss_fn_cfm = JointCFMLoss(path)
 undirected_edge_mask = jnp.ones((dim_joint, dim_joint), dtype=jnp.bool_)
 
 p0_dist_model = dist.Independent(
-    dist.Normal(loc=jnp.zeros((dim_joint,1)), scale=jnp.ones((dim_joint,1))),
+    dist.Normal(loc=jnp.zeros((dim_joint, 1)), scale=jnp.ones((dim_joint, 1))),
     reinterpreted_batch_ndims=1,
 )
 
@@ -267,6 +266,7 @@ def train_step(model, optimizer, key):
     optimizer.update(model, grads, value=loss)
     return loss
 
+
 @nnx.jit
 def ema_step(ema_model, model, ema_optimizer: nnx.Optimizer):
     ema_optimizer.update(ema_model, model)
@@ -334,7 +334,7 @@ if train_model:
     vf_model.train()
 
     for ep in range(nepochs):
-        pbar = tqdm(range(nsteps)) # todo fixme
+        pbar = tqdm(range(nsteps))  # todo fixme
         # pbar = tqdm(range(total_number_steps))
         l_train = None
 
@@ -349,7 +349,6 @@ if train_model:
             loss = train_step(vf_model, optimizer, rngs.train_step())
             # update the parameters ema
             ema_step(ema_model, vf_model, ema_optimizer)  # Update the EMA model.
-
 
             if j == 0:
                 l_train = loss
@@ -377,10 +376,9 @@ if train_model:
                     min_val = l_val
                     best_state = nnx.state(vf_model)
                     best_state_ema = nnx.state(ema_model)
-                
+
                 l_val = 0
                 l_train = 0
-
 
     vf_model.eval()
     # Save the model
@@ -398,15 +396,15 @@ if train_model:
     )
     checkpoint_manager.close()
 
-    # now we create the ema model and save it 
+    # now we create the ema model and save it
     ema_state = nnx.state(ema_model)
 
-    #save the ema model
+    # save the ema model
     checkpoint_manager_ema = ocp.CheckpointManager(
         checkpoint_dir_ema,
         options=ocp.CheckpointManagerOptions(
             max_to_keep=None,
-            keep_checkpoints_without_metrics=True,      
+            keep_checkpoints_without_metrics=True,
             create=True,
         ),
     )
@@ -414,7 +412,7 @@ if train_model:
     checkpoint_manager_ema.save(
         experiment_id, args=ocp.args.Composite(state=ocp.args.PyTreeSave(ema_state))
     )
-    checkpoint_manager_ema.close()  
+    checkpoint_manager_ema.close()
     print("Training complete and model saved.")
 
 # --------- C2ST TEST ---------
@@ -492,13 +490,13 @@ for idx in range(1, 11):
     )
     c2st_accuracy = c2st(reference_samples, samples)
     c2st_accuracies_ema.append(c2st_accuracy)
-    print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")    
+    print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")
 print(
     f"Average C2ST accuracy EMA: {np.mean(c2st_accuracies_ema):.4f} +- {np.std(c2st_accuracies_ema):.4f}"
 )
-# Save C2ST results in a txt file   
+# Save C2ST results in a txt file
 c2st_results_file_ema = f"{notebook_path}/c2st_results_ema_{experiment_id}.txt"
-with open(c2st_results_file_ema, "w") as f: 
+with open(c2st_results_file_ema, "w") as f:
     for idx, accuracy in enumerate(c2st_accuracies_ema, start=1):
         f.write(f"C2ST accuracy EMA for observation={idx}: {accuracy:.4f}\n")
 
