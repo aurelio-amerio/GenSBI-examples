@@ -344,9 +344,9 @@ def main():
     params_simformer = SimformerParams(
         rngs=nnx.Rngs(0),
         in_channels=ch_obs,
-        dim_value=z_ch,
-        dim_id=40,
-        dim_condition=10,
+        value_emb_dim=z_ch,
+        id_emb_dim=40,
+        cond_emb_dim=10,
         dim_joint=dim_joint,
         fourier_features=256,
         num_heads=4,

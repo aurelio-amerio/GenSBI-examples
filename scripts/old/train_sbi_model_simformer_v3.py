@@ -140,9 +140,9 @@ model_params = config.get("model", {})
 params = SimformerParams(
     rngs=nnx.Rngs(0),
     in_channels=model_params.get("in_channels", 1),
-    dim_value=model_params.get("dim_value", 40),
-    dim_id=model_params.get("dim_id", 40),
-    dim_condition=model_params.get("dim_condition", 10),
+    value_emb_dim=model_params.get("value_emb_dim", 40),
+    id_emb_dim=model_params.get("id_emb_dim", 40),
+    cond_emb_dim=model_params.get("cond_emb_dim", 10),
     dim_joint=dim_joint,
     fourier_features=model_params.get("fourier_features", 128),
     num_heads=model_params.get("num_heads", 6),
@@ -200,19 +200,25 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
 
     condition_mask = get_random_condition_mask(rng_condition, batch_size)
 
-    # undirected_edge_mask 
-    undirected_edge_mask_ = jnp.repeat(undirected_edge_mask[None,...], 3*batch_size, axis=0) # Dense default mask
-    
+    # undirected_edge_mask
+    undirected_edge_mask_ = jnp.repeat(
+        undirected_edge_mask[None, ...], 3 * batch_size, axis=0
+    )  # Dense default mask
+
     # faithfull posterior mask
     # faithfull_edge_mask_ = jnp.repeat(posterior_faithfull[None,...], 3*batch_size, axis=0) # Dense default mask
-    
+
     # Include marginal consistency by generating edge masks that marginalize out random nodes.
     # This allows the model to learn arbitrary marginal distributions.
-    marginal_mask = jax.vmap(marginalize, in_axes=(0,None))(jax.random.split(rng_edge_mask1, (batch_size,)), undirected_edge_mask)
+    marginal_mask = jax.vmap(marginalize, in_axes=(0, None))(
+        jax.random.split(rng_edge_mask1, (batch_size,)), undirected_edge_mask
+    )
     # edge_masks = jnp.concatenate([undirected_edge_mask_, faithfull_edge_mask_, marginal_mask], axis=0)
     edge_masks = jnp.concatenate([undirected_edge_mask_, marginal_mask], axis=0)
     # Randomly choose between dense, posterior, and marginal edge masks for each batch element.
-    edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0) # Randomly choose between dense and marginal mask
+    edge_masks = jax.random.choice(
+        rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0
+    )  # Randomly choose between dense and marginal mask
 
     # edge_masks = jnp.repeat(undirected_edge_mask[None, ...], batch_size, axis=0)
 

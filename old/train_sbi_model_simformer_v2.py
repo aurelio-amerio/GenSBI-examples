@@ -1,4 +1,3 @@
-
 # -------------------
 # 1. Imports and Config Loading
 # -------------------
@@ -102,9 +101,7 @@ def marginalize(key: jax.random.PRNGKey, edge_mask: jax.Array, marginal_ids=None
     if marginal_ids is None:
         marginal_ids = jnp.arange(edge_mask.shape[0])
 
-    idx = jax.random.choice(
-        key, marginal_ids, shape=(1,), replace=False
-    )
+    idx = jax.random.choice(key, marginal_ids, shape=(1,), replace=False)
     edge_mask = edge_mask.at[idx, :].set(False)
     edge_mask = edge_mask.at[:, idx].set(False)
     edge_mask = edge_mask.at[idx, idx].set(True)
@@ -133,9 +130,9 @@ model_params = config.get("model", {})
 params = SimformerParams(
     rngs=nnx.Rngs(0),
     in_channels=model_params.get("in_channels", 1),
-    dim_value=model_params.get("dim_value", 40),
-    dim_id=model_params.get("dim_id", 40),
-    dim_condition=model_params.get("dim_condition", 10),
+    value_emb_dim=model_params.get("value_emb_dim", 40),
+    id_emb_dim=model_params.get("id_emb_dim", 40),
+    cond_emb_dim=model_params.get("cond_emb_dim", 10),
     dim_joint=dim_joint,
     fourier_features=model_params.get("fourier_features", 128),
     num_heads=model_params.get("num_heads", 6),
@@ -170,6 +167,7 @@ condition_mask_posterior_fn = get_condition_mask_fn(
     name="posterior", theta_dim=dim_obs.item(), x_dim=dim_cond.item()
 )
 
+
 def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     batch_size = x_1.shape[0]
     rng_x0, rng_t, rng_condition, rng_edge_mask1, rng_edge_mask2 = jax.random.split(
@@ -187,19 +185,21 @@ def loss_fn_(vf_model, x_1, key: jax.random.PRNGKey, mask="structured_random"):
     condition_mask = condition_mask_fn(key=rng_condition, num_samples=batch_size)
 
     undirected_edge_mask_ = jnp.repeat(
-        undirected_edge_mask[None, ...], 4*batch_size//5, axis=0
+        undirected_edge_mask[None, ...], 4 * batch_size // 5, axis=0
     )
     # faithfull_edge_mask_ = jnp.repeat(
     #     posterior_faithfull[None, ...], 3 * batch_size, axis=0
     # )
     marginal_mask = jax.vmap(marginalize, in_axes=(0, None, None))(
-        jax.random.split(rng_edge_mask1, (batch_size//5,)), undirected_edge_mask, obs_ids
+        jax.random.split(rng_edge_mask1, (batch_size // 5,)),
+        undirected_edge_mask,
+        obs_ids,
     )
-    edge_masks = jnp.concatenate(
-        [undirected_edge_mask_, marginal_mask], axis=0
-    )
+    edge_masks = jnp.concatenate([undirected_edge_mask_, marginal_mask], axis=0)
 
-    edge_masks = jax.random.choice(rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0) # Randomly choose between dense and marginal mask
+    edge_masks = jax.random.choice(
+        rng_edge_mask2, edge_masks, shape=(batch_size,), axis=0
+    )  # Randomly choose between dense and marginal mask
 
     loss = loss_fn_cfm(
         vf_model,
@@ -247,16 +247,14 @@ if restore_model:
     print("Restored model from checkpoint")
 
 
-# optimizer setup 
+# optimizer setup
 schedule = optax.linear_schedule(
     MAX_LR,
     MIN_LR,
     total_number_steps // 2,
     total_number_steps // 2,
 )
-opt = optax.chain(
-    optax.adaptive_grad_clip(10.0), optax.adam(schedule)
-)
+opt = optax.chain(optax.adaptive_grad_clip(10.0), optax.adam(schedule))
 
 optimizer = nnx.Optimizer(vf_model, opt)
 
