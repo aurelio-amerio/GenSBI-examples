@@ -19,7 +19,7 @@ from gensbi.flow_matching.path.scheduler import CondOTScheduler
 from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
 from gensbi.models import Flux1, Flux1Params, ConditionalCFMLoss, ConditionalWrapper
-from gensbi_examples.c2st import c2st
+from gensbi.diagnostics.metrics import c2st
 from gensbi.flow_matching.solver import ODESolver
 
 # Argument parser for config file
@@ -87,11 +87,14 @@ val_dataset = task.get_val_dataset()
 dataset_iter = iter(train_dataset)
 val_dataset_iter = iter(val_dataset)
 
+
 def next_batch():
     return next(dataset_iter)
 
+
 def next_val_batch():
     return next(val_dataset_iter)
+
 
 # Model definition
 path = AffineProbPath(scheduler=CondOTScheduler())
@@ -129,6 +132,7 @@ p0_dist_model = dist.Independent(
     reinterpreted_batch_ndims=1,
 )
 
+
 def loss_fn_(vf_model, batch, key: jax.random.PRNGKey):
     obs = batch[:, :dim_obs][..., None]
     cond = batch[:, dim_obs:][..., None]
@@ -144,15 +148,18 @@ def loss_fn_(vf_model, batch, key: jax.random.PRNGKey):
     loss = loss_fn_cfm(vf_model, batch, cond, obs_ids, cond_ids)
     return loss
 
+
 @nnx.jit
 def train_loss(vf_model, key: jax.random.PRNGKey):
     x_1 = next_batch()
     return loss_fn_(vf_model, x_1, key)
 
+
 @nnx.jit
 def val_loss(vf_model, key):
     x_1 = next_val_batch()
     return loss_fn_(vf_model, x_1, key)
+
 
 @nnx.jit
 def train_step(model, optimizer, key):
@@ -160,6 +167,7 @@ def train_step(model, optimizer, key):
     loss, grads = nnx.value_and_grad(loss_fn)(model)
     optimizer.update(grads, value=loss)
     return loss
+
 
 vf_model = Flux1(params)
 
@@ -212,12 +220,12 @@ if train_model:
                 graphdef, abstract_state = nnx.split(vf_model)
                 vf_model = nnx.merge(graphdef, best_state)
                 break
-                
+
             loss = train_step(vf_model, optimizer, rngs.train_step())
             l += loss.item()
             v_loss = val_loss(vf_model, rngs.val_step())
             v_l += v_loss.item()
-            
+
             if j > 0 and j % val_every == 0:
                 loss_ = l / val_every
                 val_ = v_l / val_every
@@ -244,7 +252,7 @@ if train_model:
                 l = 0
                 v_l = 0
     vf_model.eval()
-    
+
     # Save the model
     checkpoint_manager = ocp.CheckpointManager(
         checkpoint_dir,
@@ -265,6 +273,7 @@ if train_model:
 
 # Wrap the trained model for conditional sampling
 vf_wrapped = ConditionalWrapper(vf_model)
+
 
 def get_samples(vf_wrapped, idx, nsamples=10_000):
     observation, reference_samples = task.get_reference(idx)
@@ -287,6 +296,7 @@ def get_samples(vf_wrapped, idx, nsamples=10_000):
     )
     samples = sampler_(x_init)
     return samples, true_param, reference_samples
+
 
 # Run C2ST
 c2st_accuracies = []

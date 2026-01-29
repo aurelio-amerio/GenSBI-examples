@@ -22,7 +22,7 @@ from gensbi.flow_matching.path.scheduler import CondOTScheduler
 from gensbi.flow_matching.path import AffineProbPath
 from gensbi_examples.tasks import get_task
 from gensbi.models import Simformer, SimformerParams, JointCFMLoss, JointWrapper
-from gensbi_examples.c2st import c2st
+from gensbi.diagnostics.metrics import c2st
 
 
 ######## new ema code
