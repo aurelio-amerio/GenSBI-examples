@@ -1,6 +1,6 @@
 [project]
 name = "gensbi-examples"
-version = "0.0.2"
+version = "0.0.3"
 description = "Examples for the GenSBI library"
 authors = [{ name = "Aurelio Amerio", email = "aure.amerio@gmail.com" }]
 license = { file = "LICENSE" }

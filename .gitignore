@@ -215,3 +215,5 @@ condor_logs/
 
 #some test traces
 tests/tmp/*
+
+.vscode/
