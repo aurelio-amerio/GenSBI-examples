@@ -12,6 +12,7 @@ executable = train_model.sh
 arguments = "$(workdir) $(script_path)"
 getenv = True
 request_gpus = 1
+requirements = (Machine != "mlwn11.ific.uv.es")
 
 log                     = condor_logs/logs_$(experiment_name)_$(version).log
 output                  = condor_logs/outfile_$(experiment_name)_$(version).out
