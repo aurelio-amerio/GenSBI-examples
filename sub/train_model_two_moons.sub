@@ -11,6 +11,7 @@ executable = start_training.sh
 arguments = "$(config_file)"
 getenv = True
 request_gpus = 1
+requirements = (Machine != "mlwn11.ific.uv.es")
 
 log                     = condor_logs/logs_$(experiment_name)_$(method)_$(model).log
 output                  = condor_logs/outfile_$(experiment_name)_$(method)_$(model).out
