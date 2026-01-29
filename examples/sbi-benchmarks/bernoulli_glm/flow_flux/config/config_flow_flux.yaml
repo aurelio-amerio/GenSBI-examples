@@ -1,7 +1,3 @@
-# Simformer Training Configuration
-
-# note: yaml can't resolve 1e-3 as 0.001, so write float numbers explicitly
-
 task_name: bernoulli_glm
 
 strategy:
@@ -9,13 +5,11 @@ strategy:
   model: "flux"
 
 optimizer:
-  patience: 10
-  cooldown: 2
-  factor: 0.5
-  accumulation_size: 100
+  warmup_steps: 500
+  decay_transition: 0.60
   rtol: 1.0e-4
-  max_lr: 1.0e-3
-  min_lr: 1.0e-8
+  max_lr: 4.0e-4
+  min_lr: 4.0e-6
 
 model:
   in_channels: 1
@@ -27,8 +21,9 @@ model:
   depth_single_blocks: 16
   axes_dim: [10]
   qkv_bias: true
-  theta: -1
-  params_dtype: "float32"
+  theta: 40
+  params_dtype: "bfloat16"
+  id_embedding_strategy: ["absolute", "absolute"]
 
 training:
   batch_size: 4096
