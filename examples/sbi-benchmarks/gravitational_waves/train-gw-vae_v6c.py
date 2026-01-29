@@ -208,9 +208,10 @@ def main():
         .map(split_data)
     )
 
-    training_config["checkpoint_dir"] = (
-        "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/gravitational_waves/gw_npe_v6c/checkpoints"
-    )
+    current_dir = os.getcwd()
+    checkpoint_dir = os.path.join(current_dir, "checkpoints")
+
+    training_config["checkpoint_dir"] = checkpoint_dir
 
     pipeline_latent = ConditionalFlowPipeline(
         model,
@@ -221,7 +222,7 @@ def main():
         ch_obs=ch_obs,
         ch_cond=z_ch,  # conditioning is now in the latent space
         training_config=training_config,
-        id_embedding_strategy = ("absolute", "rope1d")
+        id_embedding_strategy=("absolute", "rope1d"),
     )
 
     pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
