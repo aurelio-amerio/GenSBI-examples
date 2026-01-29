@@ -25,7 +25,7 @@ import jax.numpy as jnp
 from flax import nnx
 
 from gensbi_examples.tasks import get_task
-from gensbi_examples.c2st import c2st
+from gensbi.diagnostics.metrics import c2st
 
 from gensbi.diagnostics import run_tarp, plot_tarp
 from gensbi.diagnostics import run_sbc, sbc_rank_plot
