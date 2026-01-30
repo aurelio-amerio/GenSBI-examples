@@ -15,10 +15,10 @@ model:
   vec_in_dim: null
   context_in_dim: 1
   mlp_ratio: 4
-  num_heads: 8
+  num_heads: 6
   depth: 8
   depth_single_blocks: 16
-  axes_dim: [20]
+  axes_dim: [10]
   qkv_bias: true
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]

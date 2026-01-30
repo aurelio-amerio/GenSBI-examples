@@ -23,10 +23,10 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 | `vec_in_dim` | `None` |
 | `context_in_dim` | `1` |
 | `mlp_ratio` | `4` |
-| `num_heads` | `4` |
+| `num_heads` | `6` |
 | `depth` | `8` |
 | `depth_single_blocks` | `16` |
-| `axes_dim` | `[20]` |
+| `axes_dim` | `[10]` |
 | `qkv_bias` | `True` |
 | `params_dtype` | `bfloat16` |
 | `id_embedding_strategy` | `['absolute', 'absolute']` |
@@ -42,8 +42,8 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 | `early_stopping` | `True` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
-| `restore_model` | `True` |
-| `train_model` | `False` |
+| `restore_model` | `False` |
+| `train_model` | `True` |
 | `warmup_steps` | `500` |
 | `decay_transition` | `0.6` |
 | `max_lr` | `0.0004` |
@@ -53,7 +53,7 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.825 ± 0.079
+- **Average C2ST Accuracy:** 0.790 ± 0.054
 
 ---
 *This model card was automatically generated.*
