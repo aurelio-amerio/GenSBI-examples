@@ -16,10 +16,10 @@ model:
   vec_in_dim: null
   context_in_dim: 1
   mlp_ratio: 4
-  num_heads: 4
+  num_heads: 6
   depth: 8
   depth_single_blocks: 16
-  axes_dim: [10]
+  axes_dim: [20]
   qkv_bias: true
   theta: 40
   params_dtype: "bfloat16"
@@ -33,5 +33,5 @@ training:
   early_stopping: true
   val_every: 100
   experiment_id: 1
-  restore_model: true
-  train_model: false
+  restore_model: false
+  train_model: true
