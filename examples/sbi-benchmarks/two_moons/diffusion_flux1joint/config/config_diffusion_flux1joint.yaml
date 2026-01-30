@@ -2,7 +2,7 @@ task_name: two_moons
 
 strategy:
   method: "diffusion"
-  model: "flux"
+  model: "flux1joint"
 
 optimizer:
   warmup_steps: 500
