@@ -6,29 +6,31 @@ strategy:
 
 optimizer:
   warmup_steps: 500
-  decay_transition: 0.60
-  max_lr: 4.0e-4
-  min_lr: 4.0e-6
+  decay_transition: 0.80
+  rtol: 1.0e-4
+  max_lr: 1.0e-4
+  min_lr: 1.0e-6
 
 model:
   in_channels: 1
   vec_in_dim: null
   context_in_dim: 1
   mlp_ratio: 4
-  num_heads: 6
-  depth: 8
-  depth_single_blocks: 16
+  num_heads: 4
+  depth: 4
+  depth_single_blocks: 8
   axes_dim: [10]
   qkv_bias: true
+  theta: -1
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
 
 training:
-  batch_size: 4096
-  nsteps: 50000
+  batch_size: 256
+  nsteps: 10000
   ema_decay: 0.999
   multistep: 1
-  early_stopping: true
+  early_stopping: false
   val_every: 100
   experiment_id: 1
   restore_model: false
