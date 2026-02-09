@@ -17,8 +17,8 @@ model:
   context_in_dim: 1
   mlp_ratio: 4
   num_heads: 4
-  depth: 4
-  depth_single_blocks: 8
+  depth: 8
+  depth_single_blocks: 16
   axes_dim: [10]
   qkv_bias: true
   theta: -1

@@ -23,12 +23,12 @@ This document provides a summary of the `flux` model trained on the `gaussian_li
 | `vec_in_dim` | `None` |
 | `context_in_dim` | `1` |
 | `mlp_ratio` | `4` |
-| `num_heads` | `6` |
-| `depth` | `8` |
-| `depth_single_blocks` | `16` |
+| `num_heads` | `4` |
+| `depth` | `4` |
+| `depth_single_blocks` | `8` |
 | `axes_dim` | `[10]` |
 | `qkv_bias` | `True` |
-| `theta` | `40` |
+| `theta` | `-1` |
 | `params_dtype` | `bfloat16` |
 | `id_embedding_strategy` | `['absolute', 'absolute']` |
 
@@ -36,26 +36,26 @@ This document provides a summary of the `flux` model trained on the `gaussian_li
 
 | Parameter | Value |
 |---|---|
-| `batch_size` | `4096` |
-| `nsteps` | `50000` |
+| `batch_size` | `256` |
+| `nsteps` | `10000` |
 | `ema_decay` | `0.999` |
 | `multistep` | `1` |
-| `early_stopping` | `True` |
+| `early_stopping` | `False` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
 | `restore_model` | `False` |
 | `train_model` | `True` |
 | `warmup_steps` | `500` |
-| `decay_transition` | `0.6` |
+| `decay_transition` | `0.8` |
 | `rtol` | `0.0001` |
-| `max_lr` | `0.0004` |
-| `min_lr` | `4e-06` |
+| `max_lr` | `0.0001` |
+| `min_lr` | `1e-06` |
 
 ## 5. Evaluation
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.780 ± 0.130
+- **Average C2ST Accuracy:** 0.507 ± 0.008
 
 ---
 *This model card was automatically generated.*
