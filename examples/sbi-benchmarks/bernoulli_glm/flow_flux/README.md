@@ -1,7 +1,7 @@
 
-# Model Card: Flux on slcp
+# Model Card: Flux on bernoulli_glm
 
-This document provides a summary of the `flux` model trained on the `slcp` dataset.
+This document provides a summary of the `flux` model trained on the `bernoulli_glm` dataset.
 
 ## 1. Model & Pipeline
 
@@ -11,7 +11,7 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 
 ## 2. Dataset
 
-- **Dataset:** `slcp`
+- **Dataset:** `bernoulli_glm`
 - **Description:** A synthetic benchmark dataset.
 - **Training Size:** The model was trained on 100,000 (1e5) samples.
 
@@ -24,8 +24,8 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 | `context_in_dim` | `1` |
 | `mlp_ratio` | `4` |
 | `num_heads` | `4` |
-| `depth` | `4` |
-| `depth_single_blocks` | `8` |
+| `depth` | `8` |
+| `depth_single_blocks` | `16` |
 | `axes_dim` | `[10]` |
 | `qkv_bias` | `True` |
 | `theta` | `-1` |
@@ -55,7 +55,7 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.916 ± 0.037
+- **Average C2ST Accuracy:** 0.827 ± 0.041
 
 ---
 *This model card was automatically generated.*
