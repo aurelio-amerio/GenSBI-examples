@@ -22,7 +22,7 @@ model:
   val_emb_dim: 10
   id_emb_dim: 10
   qkv_bias: true
-  combining_strategy: "concat"
+  id_merge_mode: "concat"
   theta: -1
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
