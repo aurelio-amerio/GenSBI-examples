@@ -24,9 +24,9 @@ This document provides a summary of the `flux` model trained on the `bernoulli_g
 | `context_in_dim` | `1` |
 | `mlp_ratio` | `4` |
 | `num_heads` | `4` |
-| `depth` | `8` |
-| `depth_single_blocks` | `16` |
-| `axes_dim` | `[10]` |
+| `depth` | `4` |
+| `depth_single_blocks` | `8` |
+| `axes_dim` | `[20]` |
 | `qkv_bias` | `True` |
 | `theta` | `-1` |
 | `params_dtype` | `bfloat16` |
@@ -37,7 +37,7 @@ This document provides a summary of the `flux` model trained on the `bernoulli_g
 | Parameter | Value |
 |---|---|
 | `batch_size` | `256` |
-| `nsteps` | `10000` |
+| `nsteps` | `50000` |
 | `ema_decay` | `0.999` |
 | `multistep` | `1` |
 | `early_stopping` | `False` |
@@ -55,7 +55,7 @@ This document provides a summary of the `flux` model trained on the `bernoulli_g
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.827 ± 0.041
+- **Average C2ST Accuracy:** 0.560 ± 0.015
 
 ---
 *This model card was automatically generated.*
