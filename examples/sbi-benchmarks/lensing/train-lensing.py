@@ -339,7 +339,10 @@ def main():
     theta_o = thetas_[-1:]  # True parameter for the observed data.
 
     post_samples_star = pipeline_latent.sample(
-        jax.random.PRNGKey(42), x_o, nsamples=10_000
+        jax.random.PRNGKey(42),
+        x_o,
+        nsamples=10_000,
+        encoder_key=jax.random.PRNGKey(1234),
     )
 
     x_o = x_o.reshape(1, -1)
