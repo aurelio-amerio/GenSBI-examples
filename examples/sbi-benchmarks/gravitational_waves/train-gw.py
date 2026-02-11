@@ -104,6 +104,12 @@ ch_cond = 2  # not used since we use a VAE for the conditionals
 
 
 def main():
+    # open the config file, and get the training and restore flag
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+        train_model = config["training"]["train_model"]
+        restore_model = config["training"]["restore_model"]
+
     repo_name = "aurelio-amerio/SBI-benchmarks"
 
     task_name = "gravitational_waves"
@@ -225,8 +231,11 @@ def main():
         id_embedding_strategy=("absolute", "rope1d"),
     )
 
-    pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
-    # pipeline_latent.restore_model()
+    if train_model:
+        pipeline_latent.train(nnx.Rngs(0), nsteps * multistep, save_model=True)
+
+    if restore_model:
+        pipeline_latent.restore_model()
 
     # plot the results
 
@@ -255,7 +264,7 @@ def main():
     plot_marginals(
         res_unnorm, true_param=theta_true, range=[(25, 75), (25, 75)], gridsize=30
     )
-    plt.savefig(f"gw_samples_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight")
+    plt.savefig(f"imgs/gw_samples_conf{experiment}.png", dpi=100, bbox_inches="tight")
     plt.show()
 
     # split in thetas and xs
@@ -290,7 +299,7 @@ def main():
 
     plot_tarp(ecp, alpha)
     plt.savefig(
-        f"gw_tarp_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/gw_tarp_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
@@ -298,7 +307,7 @@ def main():
 
     f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
     plt.savefig(
-        f"gw_sbc_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/gw_sbc_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
@@ -354,7 +363,7 @@ def main():
         x_o,
     )
     plt.savefig(
-        f"gw_lc2st_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/gw_lc2st_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
