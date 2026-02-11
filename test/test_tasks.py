@@ -1,0 +1,172 @@
+# %%
+import os
+
+# select device
+
+os.environ["JAX_PLATFORMS"] = "cpu"
+
+import jax
+import jax.numpy as jnp
+
+import pytest
+
+import numpy as np
+
+from gensbi_examples.tasks import get_task
+
+
+# %%
+@pytest.mark.parametrize(
+    "task_name, kind",
+    [
+        ("two_moons", "conditional"),
+        ("bernoulli_glm", "conditional"),
+        ("gaussian_linear", "conditional"),
+        ("gaussian_linear_uniform", "conditional"),
+        ("gaussian_mixture", "conditional"),
+        ("slcp", "conditional"),
+        ("two_moons", "joint"),
+        ("bernoulli_glm", "joint"),
+        ("gaussian_linear", "joint"),
+        ("gaussian_linear_uniform", "joint"),
+        ("gaussian_mixture", "joint"),
+        ("slcp", "joint"),
+    ],
+)
+def test_basic_task(task_name, kind):
+    task = get_task(task_name, kind, use_multiprocessing=False)
+    obs, reference_samples = task.get_reference(num_observation=1)
+    assert (
+        obs.shape[1] == task.dim_cond
+    ), f"obs shape {obs.shape[1]} != dim_cond {task.dim_cond}"
+    assert (
+        reference_samples.shape[1] == task.dim_obs
+    ), f"reference_samples shape {reference_samples.shape[1]} != dim_obs {task.dim_obs}"
+
+    train_dataset = task.get_train_dataset(batch_size=32, nsamples=1000)
+    val_dataset = task.get_val_dataset(batch_size=32)
+    test_dataset = task.get_test_dataset(batch_size=32)
+
+    # get one batch from each dataset
+    train_batch = next(iter(train_dataset))
+    val_batch = next(iter(val_dataset))
+    test_batch = next(iter(test_dataset))
+
+    # check shapes
+    if kind == "joint":
+        # check the batch size
+        assert (
+            train_batch.shape[0] == 32
+        ), f"train_batch shape {train_batch.shape[0]} != 32"
+        assert val_batch.shape[0] == 32, f"val_batch shape {val_batch.shape[0]} != 32"
+        assert (
+            test_batch.shape[0] == 32
+        ), f"test_batch shape {test_batch[0].shape[0]} != 32"
+        assert (
+            train_batch.shape[1] == task.dim_joint
+        ), f"train_batch shape {train_batch.shape[1]} != dim_joint {task.dim_joint}"
+        assert (
+            val_batch.shape[1] == task.dim_joint
+        ), f"val_batch shape {val_batch.shape[1]} != dim_joint {task.dim_joint}"
+        assert (
+            test_batch.shape[1] == task.dim_joint
+        ), f"test_batch shape {test_batch.shape[1]} != dim_joint {task.dim_joint}"
+    elif kind == "conditional":
+        # check the batch size
+        assert (
+            train_batch[0].shape[0] == 32
+        ), f"train_batch shape {train_batch[0].shape[0]} != 32"
+        assert (
+            val_batch[0].shape[0] == 32
+        ), f"val_batch shape {val_batch[0].shape[0]} != 32"
+        assert (
+            test_batch[0].shape[0] == 32
+        ), f"test_batch shape {test_batch[0].shape[0]} != 32"
+
+        assert (
+            train_batch[0].shape[1] == task.dim_obs
+        ), f"train_batch[0] shape {train_batch[0].shape[1]} != dim_obs {task.dim_obs}"
+        assert (
+            train_batch[1].shape[1] == task.dim_cond
+        ), f"train_batch[1] shape {train_batch[1].shape[1]} != dim_cond {task.dim_cond}"
+        assert (
+            val_batch[0].shape[1] == task.dim_obs
+        ), f"val_batch[0] shape {val_batch[0].shape[1]} != dim_obs {task.dim_obs}"
+        assert (
+            val_batch[1].shape[1] == task.dim_cond
+        ), f"val_batch[1] shape {val_batch[1].shape[1]} != dim_cond {task.dim_cond}"
+        assert (
+            test_batch[0].shape[1] == task.dim_obs
+        ), f"test_batch[0] shape {test_batch[0].shape[1]} != dim_obs {task.dim_obs}"
+        assert (
+            test_batch[1].shape[1] == task.dim_cond
+        ), f"test_batch[1] shape {test_batch[1].shape[1]} != dim_cond {task.dim_cond}"
+
+        print(f"All tests passed for {task_name} {kind}!")
+
+
+@pytest.mark.parametrize(
+    "task_name",
+    [
+        "gravitational_waves",
+        "gravitational_lensing",
+    ],
+)
+def test_advanced_task(task_name):
+    task = get_task(task_name, "conditional", use_multiprocessing=False)
+
+    train_dataset = task.get_train_dataset(batch_size=32, nsamples=100)
+    val_dataset = task.get_val_dataset(batch_size=32)
+    test_dataset = task.get_test_dataset(batch_size=32)
+
+    # get one batch from each dataset
+    train_batch = next(iter(train_dataset))
+    val_batch = next(iter(val_dataset))
+    test_batch = next(iter(test_dataset))
+
+    # check the batch size
+    assert (
+        train_batch[0].shape[0] == 32
+    ), f"train_batch[0] shape {train_batch[0].shape[0]} != 32"
+    assert (
+        val_batch[0].shape[0] == 32
+    ), f"val_batch[0] shape {val_batch[0].shape[0]} != 32"
+    assert (
+        test_batch[0].shape[0] == 32
+    ), f"test_batch[0] shape {test_batch[0].shape[0]} != 32"
+
+    assert (
+        train_batch[0].shape[1] == task.dim_obs
+    ), f"train_batch[0] shape {train_batch[0].shape[1]} != dim_obs {task.dim_obs}"
+    assert (
+        train_batch[1].shape[1] == task.dim_cond
+    ), f"train_batch[1] shape {train_batch[1].shape[1]} != dim_cond {task.dim_cond}"
+    assert (
+        train_batch[1].shape[2] == task.ch_cond
+    ), f"train_batch[1] shape {train_batch[1].shape[2]} != ch_cond {task.ch_cond}"
+
+    assert (
+        val_batch[0].shape[1] == task.dim_obs
+    ), f"val_batch[0] shape {val_batch[0].shape[1]} != dim_obs {task.dim_obs}"
+    assert (
+        val_batch[1].shape[1] == task.dim_cond
+    ), f"val_batch[1] shape {val_batch[1].shape[1]} != dim_cond {task.dim_cond}"
+    assert (
+        val_batch[1].shape[2] == task.ch_cond
+    ), f"val_batch[1] shape {val_batch[1].shape[2]} != ch_cond {task.ch_cond}"
+
+    assert (
+        test_batch[0].shape[1] == task.dim_obs
+    ), f"test_batch[0] shape {test_batch[0].shape[1]} != dim_obs {task.dim_obs}"
+    assert (
+        test_batch[1].shape[1] == task.dim_cond
+    ), f"test_batch[1] shape {test_batch[1].shape[1]} != dim_cond {task.dim_cond}"
+    assert (
+        test_batch[1].shape[2] == task.ch_cond
+    ), f"test_batch[1] shape {test_batch[1].shape[2]} != ch_cond {task.ch_cond}"
+
+    print(f"All tests passed for {task_name} conditional!")
+
+    return
+
+# %%
