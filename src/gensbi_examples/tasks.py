@@ -24,12 +24,40 @@ def process_conditional(batch):
     return obs, cond
 
 
+def normalize(batch, mean, std):
+    mean = jnp.asarray(mean, dtype=batch.dtype)
+    std = jnp.asarray(std, dtype=batch.dtype)
+    return (batch - mean) / std
+
+
+def unnormalize(batch, mean, std):
+    mean = jnp.asarray(mean, dtype=batch.dtype)
+    std = jnp.asarray(std, dtype=batch.dtype)
+    return batch * std + mean
+
+
+def has_posterior_samples(task_name):
+    if task_name in [
+        "two_moons",
+        "bernoulli_glm",
+        "gaussian_linear",
+        "gaussian_linear_uniform",
+        "gaussian_mixture",
+        "slcp",
+    ]:
+        return True
+    else:
+        return False
+
+
 class Task:
-    def __init__(self, task_name, kind="joint"):
+    def __init__(self, task_name, kind="joint", seed=42, use_multiprocessing=True):
 
         self.repo_name = "aurelio-amerio/SBI-benchmarks"
 
         self.task_name = task_name
+        self.seed = seed
+        self.use_multiprocessing = use_multiprocessing
 
         fname = hf_hub_download(
             repo_id=self.repo_name, filename="metadata.json", repo_type="dataset"
@@ -38,29 +66,44 @@ class Task:
             metadata = json.load(f)
 
         self.dataset = load_dataset(self.repo_name, task_name).with_format("numpy")
-        self.dataset_posterior = load_dataset(
-            self.repo_name, f"{task_name}_posterior"
-        ).with_format("numpy")
 
-        self.max_samples = self.dataset["train"].num_rows
+        self.df_train = self.dataset["train"]
+        self.df_val = self.dataset["validation"]
+        self.df_test = self.dataset["test"]
 
-        self.observations = self.dataset_posterior["reference_posterior"][
-            "observations"
-        ]
-        self.reference_samples = self.dataset_posterior["reference_posterior"][
-            "reference_samples"
-        ]
+        self.max_samples = self.df_train.num_rows
 
-        self.true_parameters = self.dataset_posterior["reference_posterior"][
-            "true_parameters"
-        ]
+        if has_posterior_samples(task_name):
+            self.dataset_posterior = load_dataset(
+                self.repo_name, f"{task_name}_posterior"
+            ).with_format("numpy")
+            self.observations = self.dataset_posterior["reference_posterior"][
+                "observations"
+            ]
+            self.reference_samples = self.dataset_posterior["reference_posterior"][
+                "reference_samples"
+            ]
+
+            self.true_parameters = self.dataset_posterior["reference_posterior"][
+                "true_parameters"
+            ]
+            self.num_observations = len(self.observations)
+        else:
+            self.dataset_posterior = None
+            self.observations = None
+            self.reference_samples = None
+            self.true_parameters = None
 
         self.dim_cond = metadata[task_name]["dim_cond"]
         self.dim_obs = metadata[task_name]["dim_obs"]
 
-        self.dim_joint = self.dim_cond + self.dim_obs
+        if kind == "joint":
+            self.dim_joint = self.dim_cond + self.dim_obs
+        elif kind == "conditional":
+            self.dim_joint = None
+        else:
+            raise ValueError(f"Unknown kind: {kind}")
 
-        self.num_observations = len(self.observations)
         self.kind = kind
 
         if kind == "joint":
@@ -75,10 +118,10 @@ class Task:
             nsamples < self.max_samples
         ), f"nsamples must be less than {self.max_samples}"
 
-        df = self.dataset["train"].select(range(int(nsamples)))  # [:]
+        df = self.df_train.select(range(int(nsamples)))  # [:]
 
         dataset_grain = (
-            grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
+            grain.MapDataset.source(df).shuffle(self.seed).repeat().to_iter_dataset()
         )
 
         performance_config = grain.experimental.pick_performance_config(
@@ -88,19 +131,19 @@ class Task:
             max_buffer_size=None,
         )
 
-        dataset_batched = (
-            dataset_grain.batch(batch_size)
-            .map(self.process_fn)
-            .mp_prefetch(performance_config.multiprocessing_options)
-        )
+        dataset_batched = dataset_grain.batch(batch_size).map(self.process_fn)
+        if self.use_multiprocessing:
+            dataset_batched = dataset_batched.mp_prefetch(
+                performance_config.multiprocessing_options
+            )
 
         return dataset_batched
 
     def get_val_dataset(self, batch_size):
-        df = self.dataset["validation"]  # [:]
+        df = self.df_val
 
         val_dataset_grain = (
-            grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
+            grain.MapDataset.source(df).shuffle(self.seed).repeat().to_iter_dataset()
         )
         performance_config = grain.experimental.pick_performance_config(
             ds=val_dataset_grain,
@@ -108,27 +151,27 @@ class Task:
             max_workers=None,
             max_buffer_size=None,
         )
-        val_dataset_grain = (
-            val_dataset_grain.batch(batch_size)
-            .map(self.process_fn)
-            .mp_prefetch(performance_config.multiprocessing_options)
-        )
+        val_dataset_grain = val_dataset_grain.batch(batch_size).map(self.process_fn)
+        if self.use_multiprocessing:
+            val_dataset_grain = val_dataset_grain.mp_prefetch(
+                performance_config.multiprocessing_options
+            )
 
         return val_dataset_grain
 
     def get_test_dataset(self, batch_size):
-        df = self.dataset["test"]  # [:]
+        df = self.df_test
 
-        val_dataset_grain = (
+        test_dataset_grain = (
             grain.MapDataset.source(df)
-            .shuffle(42)
+            .shuffle(self.seed)
             .repeat()
             .to_iter_dataset()
             .batch(batch_size)
             .map(self.process_fn)
         )
 
-        return val_dataset_grain
+        return test_dataset_grain
 
     def get_reference(self, num_observation=1):
         """
@@ -197,9 +240,9 @@ class Task:
 
 
 class TwoMoons(Task):
-    def __init__(self, kind="joint"):
+    def __init__(self, kind="joint", **kwargs):
         task_name = "two_moons"
-        super().__init__(task_name, kind=kind)
+        super().__init__(task_name, kind=kind, **kwargs)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -221,18 +264,18 @@ class TwoMoons(Task):
 
 
 class BernoulliGLM(Task):
-    def __init__(self, kind="joint"):
+    def __init__(self, kind="joint", **kwargs):
         task_name = "bernoulli_glm"
-        super().__init__(task_name, kind=kind)
+        super().__init__(task_name, kind=kind, **kwargs)
 
     def get_base_mask_fn(self):
         raise NotImplementedError()
 
 
 class GaussianLinear(Task):
-    def __init__(self, kind="joint"):
+    def __init__(self, kind="joint", **kwargs):
         task_name = "gaussian_linear"
-        super().__init__(task_name, kind=kind)
+        super().__init__(task_name, kind=kind, **kwargs)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -251,9 +294,9 @@ class GaussianLinear(Task):
 
 
 class GaussianLinearUniform(Task):
-    def __init__(self, kind="joint"):
+    def __init__(self, kind="joint", **kwargs):
         task_name = "gaussian_linear_uniform"
-        super().__init__(task_name, kind=kind)
+        super().__init__(task_name, kind=kind, **kwargs)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -272,9 +315,9 @@ class GaussianLinearUniform(Task):
 
 
 class GaussianMixture(Task):
-    def __init__(self, kind="joint"):
+    def __init__(self, kind="joint", **kwargs):
         task_name = "gaussian_mixture"
-        super().__init__(task_name, kind=kind)
+        super().__init__(task_name, kind=kind, **kwargs)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -296,9 +339,9 @@ class GaussianMixture(Task):
 
 
 class SLCP(Task):
-    def __init__(self, kind="joint"):
+    def __init__(self, kind="joint", **kwargs):
         task_name = "slcp"
-        super().__init__(task_name, kind=kind)
+        super().__init__(task_name, kind=kind, **kwargs)
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -322,22 +365,119 @@ class SLCP(Task):
         return base_mask_fn
 
 
-def get_task(task_name, kind="joint"):
+class GravitationalWaves(Task):
+    def __init__(self, **kwargs):
+        task_name = "gravitational_waves"
+        super().__init__(task_name, kind="conditional", **kwargs)
+
+        self.dim_obs = 2
+        self.ch_obs = 1
+        dim_cond_tot = self.dim_cond  # from super
+        self.dim_cond = 8192
+        self.ch_cond = 2
+        assert (
+            self.dim_cond == dim_cond_tot[0] and self.ch_cond == dim_cond_tot[1]
+        ), f"Dimension mismatch, expected ({dim_cond_tot[0]}, {dim_cond_tot[1]}), got ({self.dim_cond}, {self.ch_cond})"
+
+        self.xs_mean = jnp.array([[[0.00051776, -0.00040733]]], dtype=jnp.bfloat16)
+        self.thetas_mean = jnp.array([[44.826576, 45.070328]], dtype=jnp.bfloat16)
+
+        self.xs_std = jnp.array([[[60.80799, 59.33193]]], dtype=jnp.bfloat16)
+        self.thetas_std = jnp.array([[20.189356, 20.16127]], dtype=jnp.bfloat16)
+
+        self.process_fn = self.split_data
+
+        return
+
+    def split_data(self, batch):
+        obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
+        obs = normalize(obs, self.thetas_mean, self.thetas_std)
+        obs = obs.reshape(obs.shape[0], self.dim_obs, self.ch_obs)
+        cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
+        cond = normalize(cond, self.xs_mean, self.xs_std)
+        cond = cond[..., None]
+        return obs, cond
+
+    def get_reference(self, num_observation=1):
+        raise NotImplementedError(
+            "Reference posterior samples not available for this task."
+        )
+
+    def get_true_parameters(self, num_observation=1):
+        raise NotImplementedError("True parameters not available for this task.")
+
+
+class GravitationalLensing(Task):
+    def __init__(self, **kwargs):
+        task_name = "lensing"
+        super().__init__(task_name, kind="conditional", **kwargs)
+
+        self.dim_obs = 2
+        self.ch_obs = 1
+        dim_cond_tot = self.dim_cond  # from super
+        self.dim_cond = 32
+        self.ch_cond = 32
+        assert (
+            self.dim_cond == dim_cond_tot[0] and self.ch_cond == dim_cond_tot[1]
+        ), f"Dimension mismatch, expected ({dim_cond_tot[0]}, {dim_cond_tot[1]}), got ({self.dim_cond}, {self.ch_cond})"
+
+        self.xs_mean = jnp.array([-1.1874731e-05], dtype=jnp.bfloat16).reshape(1, 1, 1)
+        self.thetas_mean = jnp.array(
+            [0.5996428, 0.15998043], dtype=jnp.bfloat16
+        ).reshape(1, 2)
+
+        self.xs_std = jnp.array([1.0440514], dtype=jnp.bfloat16).reshape(1, 1, 1)
+        self.thetas_std = jnp.array(
+            [0.2886958, 0.08657552], dtype=jnp.bfloat16
+        ).reshape(1, 2)
+
+        self.process_fn = self.split_data
+        return
+
+    def split_data(self, batch):
+        obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
+        obs = normalize(obs, self.thetas_mean, self.thetas_std)
+        obs = obs.reshape(obs.shape[0], self.dim_obs, self.ch_obs)
+        cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
+        cond = normalize(cond, self.xs_mean, self.xs_std)
+        cond = cond[..., None]
+        return obs, cond
+
+    def get_reference(self, num_observation=1):
+        raise NotImplementedError(
+            "Reference posterior samples not available for this task."
+        )
+
+    def get_true_parameters(self, num_observation=1):
+        raise NotImplementedError("True parameters not available for this task.")
+
+
+def get_task(task_name, kind="conditional", **kwargs):
     """
     Returns a Task object based on the task name.
     """
     task_name = task_name.lower()
     if task_name == "two_moons":
-        return TwoMoons(kind=kind)
+        return TwoMoons(kind=kind, **kwargs)
     elif task_name == "bernoulli_glm":
-        return BernoulliGLM(kind=kind)
+        return BernoulliGLM(kind=kind, **kwargs)
     elif task_name == "gaussian_linear":
-        return GaussianLinear(kind=kind)
+        return GaussianLinear(kind=kind, **kwargs)
     elif task_name == "gaussian_linear_uniform":
-        return GaussianLinearUniform(kind=kind)
+        return GaussianLinearUniform(kind=kind, **kwargs)
     elif task_name == "gaussian_mixture":
-        return GaussianMixture(kind=kind)
+        return GaussianMixture(kind=kind, **kwargs)
     elif task_name == "slcp":
-        return SLCP(kind=kind)
+        return SLCP(kind=kind, **kwargs)
+    elif task_name == "gravitational_waves":
+        assert (
+            kind == "conditional"
+        ), "Gravitational waves task is only available in conditional mode."
+        return GravitationalWaves(**kwargs)
+    elif task_name == "gravitational_lensing":
+        assert (
+            kind == "conditional"
+        ), "Gravitational lensing task is only available in conditional mode."
+        return GravitationalLensing(**kwargs)
     else:
         raise ValueError(f"Unknown task: {task_name}")
