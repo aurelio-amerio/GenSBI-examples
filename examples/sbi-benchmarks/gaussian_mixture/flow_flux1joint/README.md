@@ -25,7 +25,7 @@ This document provides a summary of the `flux1joint` model trained on the `gauss
 | `mlp_ratio` | `4` |
 | `num_heads` | `4` |
 | `depth_single_blocks` | `16` |
-| `value_emb_dim` | `10` |
+| `val_emb_dim` | `10` |
 | `cond_emb_dim` | `4` |
 | `id_emb_dim` | `10` |
 | `id_embedding_strategy` | `concat` |
