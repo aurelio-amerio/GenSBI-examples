@@ -43,8 +43,8 @@ This document provides a summary of the `flux` model trained on the `bernoulli_g
 | `early_stopping` | `False` |
 | `val_every` | `100` |
 | `experiment_id` | `3` |
-| `restore_model` | `False` |
-| `train_model` | `True` |
+| `restore_model` | `True` |
+| `train_model` | `False` |
 | `warmup_steps` | `500` |
 | `decay_transition` | `0.8` |
 | `rtol` | `0.0001` |

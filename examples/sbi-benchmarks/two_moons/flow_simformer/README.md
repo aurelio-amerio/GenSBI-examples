@@ -41,8 +41,8 @@ This document provides a summary of the `simformer` model trained on the `two_mo
 | `early_stopping` | `True` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
-| `restore_model` | `False` |
-| `train_model` | `True` |
+| `restore_model` | `True` |
+| `train_model` | `False` |
 | `warmup_steps` | `500` |
 | `decay_transition` | `0.6` |
 | `rtol` | `0.0001` |

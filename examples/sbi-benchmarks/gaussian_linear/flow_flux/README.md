@@ -43,8 +43,8 @@ This document provides a summary of the `flux` model trained on the `gaussian_li
 | `early_stopping` | `False` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
-| `restore_model` | `False` |
-| `train_model` | `True` |
+| `restore_model` | `True` |
+| `train_model` | `False` |
 | `warmup_steps` | `500` |
 | `decay_transition` | `0.8` |
 | `rtol` | `0.0001` |
@@ -55,7 +55,7 @@ This document provides a summary of the `flux` model trained on the `gaussian_li
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.507 ± 0.008
+- **Average C2ST Accuracy:** 0.509 ± 0.006
 
 ---
 *This model card was automatically generated.*
