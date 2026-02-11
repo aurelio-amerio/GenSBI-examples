@@ -175,7 +175,7 @@ def main():
     samples, true_param, _ = get_samples(8, nsamples=100_000, use_ema=True)
 
     plot_marginals(samples[..., 0], plot_levels=False, backend="seaborn", gridsize=50)
-    plt.savefig(f"{img_dir}/marginals_ema.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{img_dir}/marginals_ema_{experiment_id}.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     # --------- C2ST TEST ---------
@@ -284,7 +284,7 @@ def main():
     )
 
     plot_tarp(ecp, alpha)
-    plt.savefig(f"{img_dir}/tarp.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{img_dir}/tarp_{experiment_id}.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     print("TARP diagnostic complete.")
@@ -294,7 +294,7 @@ def main():
 
     f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
     plt.savefig(
-        f"{img_dir}/sbc.png", dpi=100, bbox_inches="tight"
+        f"{img_dir}/sbc_{experiment_id}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
@@ -341,7 +341,7 @@ def main():
         x_o,
     )
     plt.savefig(
-        f"{img_dir}/lc2st.png", dpi=100, bbox_inches="tight"
+        f"{img_dir}/lc2st_{experiment_id}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 

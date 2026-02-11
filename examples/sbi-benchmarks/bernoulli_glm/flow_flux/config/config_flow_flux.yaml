@@ -8,8 +8,8 @@ optimizer:
   warmup_steps: 500
   decay_transition: 0.80
   rtol: 1.0e-4
-  max_lr: 4.0e-4
-  min_lr: 4.0e-6
+  max_lr: 1.0e-4
+  min_lr: 1.0e-6
 
 model:
   in_channels: 1
@@ -19,21 +19,22 @@ model:
   num_heads: 4
   depth: 4
   depth_single_blocks: 8
-  val_emb_dim: 20
-  id_emb_dim: 10
+  axes_dim: [20]
   qkv_bias: true
-  id_merge_mode: "concat"
   theta: -1
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
+  # id_merge_mode: "sum" # "sum" or "concat". Use "concat" for small models to reduce confusion.
+  # val_emb_dim: null # Required if id_merge_mode="concat"
+  # id_emb_dim: null # Required if id_merge_mode="concat". Recommended 1:1 ratio with val_emb_dim.
 
 training:
-  batch_size: 4096
+  batch_size: 256
   nsteps: 50000
   ema_decay: 0.999
   multistep: 1
   early_stopping: false
   val_every: 100
-  experiment_id: 2
+  experiment_id: 3
   restore_model: false
   train_model: true

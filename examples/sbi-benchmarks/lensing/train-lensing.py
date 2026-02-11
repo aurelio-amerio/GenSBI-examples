@@ -100,6 +100,13 @@ ch_obs = 1
 
 
 def main():
+
+    # open the config file, and get the training and restore flag
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+        train_model = config["training"]["train_model"]
+        restore_model = config["training"]["restore_model"]
+
     repo_name = "aurelio-amerio/SBI-benchmarks"
 
     task_name = "lensing"
@@ -222,8 +229,11 @@ def main():
         id_embedding_strategy=("absolute", "rope2d"),
     )
 
-    # pipeline_latent.train(nnx.Rngs(0), save_model=True)
-    pipeline_latent.restore_model()
+    if train_model:
+        pipeline_latent.train(nnx.Rngs(0), save_model=True)
+
+    if restore_model:
+        pipeline_latent.restore_model()
 
     # plot the results
 
