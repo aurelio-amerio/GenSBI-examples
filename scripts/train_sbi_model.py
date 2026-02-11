@@ -299,7 +299,7 @@ def main():
     plt.show()
 
     # LC2ST diagnostic
-    data = task.dataset["test"].with_format("jax")[:10_00]
+    data = task.dataset["test"].with_format("jax")[:10_000]
     xs_ = jnp.asarray(data["xs"][:], dtype=jnp.bfloat16)
     thetas_ = jnp.asarray(data["thetas"][:], dtype=jnp.bfloat16)
 
