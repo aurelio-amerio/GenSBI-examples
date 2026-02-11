@@ -12,7 +12,8 @@ import os
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
 else:
-    os.environ["JAX_PLATFORMS"] = "cuda"  # change to 'cpu' if no GPU is available
+    pass  # use the default platform
+    # os.environ["JAX_PLATFORMS"] = "cuda"  # change to 'cpu' if no GPU is available
 
 # Set JAX backend (use 'cuda' for GPU, 'cpu' otherwise)
 # os.environ["JAX_PLATFORMS"] = "cuda"
@@ -25,7 +26,7 @@ import jax.numpy as jnp
 from flax import nnx
 
 from gensbi_examples.tasks import get_task
-from gensbi_examples.c2st import c2st
+from gensbi.diagnostics.metrics import c2st
 
 from gensbi.diagnostics import run_tarp, plot_tarp
 from gensbi.diagnostics import run_sbc, sbc_rank_plot
@@ -66,6 +67,13 @@ def main():
     strategy = config.get("strategy", {})
     method = strategy.get("method")
     model_type = strategy.get("model")
+
+    # training
+    train_params = config.get("training", {})
+    batch_size = train_params.get("batch_size", 4096)
+    restore_model = train_params.get("restore_model", False)
+    train_model = train_params.get("train_model", True)
+    experiment_id = train_params.get("experiment_id", 1)
 
     # task_name and variant
     task_name = config.get("task_name")
@@ -113,42 +121,13 @@ def main():
     # Task and dataset setup
     task = get_task(task_name, kind=kind)
 
-    # Training parameters
-    train_params = config.get("training", {})
-    multistep = train_params.get("multistep", 1)
-    experiment_id = train_params.get("experiment_id", 1)
-    restore_model = train_params.get("restore_model", False)
-    train_model = train_params.get("train_model", True)
-    batch_size = train_params.get("batch_size", 4096)
-    early_stopping = train_params.get("early_stopping", True)
-    nsteps = train_params.get("nsteps", 30000) * multistep
-    val_every = train_params.get("val_every", 100) * multistep
-
     # Set checkpoint directory (new structure)
     checkpoint_dir = os.path.join(os.getcwd(), "checkpoints")
-    checkpoint_dir_ema = os.path.join(checkpoint_dir, "ema")
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    os.makedirs(checkpoint_dir_ema, exist_ok=True)
-
-    # Optimizer parameters
-    opt_params = config.get("optimizer", {})
-    PATIENCE = opt_params.get("patience", 10)
-    COOLDOWN = opt_params.get("cooldown", 2)
-    FACTOR = opt_params.get("factor", 0.5)
-    ACCUMULATION_SIZE = opt_params.get("accumulation_size", 100) * multistep
-    RTOL = opt_params.get("rtol", 1e-4)
-    MAX_LR = opt_params.get("max_lr", 1e-3)
-    MIN_LR = opt_params.get("min_lr", 0.0)
-    MIN_SCALE = MIN_LR / MAX_LR if MAX_LR > 0 else 0.0
-
-    ema_decay = opt_params.get("ema_decay", 0.99)
 
     train_dataset = task.get_train_dataset(batch_size)
     val_dataset = task.get_val_dataset(
         512
     )  # we are using the mean loss, so batch size does not matter
-    # dataset_iter = iter(train_dataset)
-    # val_dataset_iter = iter(val_dataset)
 
     dim_obs = task.dim_obs
     dim_cond = task.dim_cond
@@ -157,86 +136,13 @@ def main():
     # Model parameters from config
     model_params = config.get("model", {})
 
-    if model_type == "simformer":
-        params = SimformerParams(
-            rngs=nnx.Rngs(0),
-            in_channels=model_params.get("in_channels", 1),
-            value_emb_dim=model_params.get("value_emb_dim", 40),
-            id_emb_dim=model_params.get("id_emb_dim", 40),
-            cond_emb_dim=model_params.get("cond_emb_dim", 10),
-            dim_joint=dim_joint,
-            fourier_features=model_params.get("fourier_features", 128),
-            num_heads=model_params.get("num_heads", 6),
-            num_layers=model_params.get("num_layers", 8),
-            widening_factor=model_params.get("widening_factor", 3),
-            qkv_features=model_params.get("qkv_features", 90),
-            num_hidden_layers=model_params.get("num_hidden_layers", 1),
-        )
-    elif model_type == "flux1joint":
-        theta = model_params.get("theta", -1)
-        if theta == -1:
-            theta = 5 * (dim_obs + dim_cond)
-        params = Flux1JointParams(
-            in_channels=model_params.get("in_channels", 1),
-            vec_in_dim=model_params.get("vec_in_dim", None),
-            mlp_ratio=model_params.get("mlp_ratio", 4),
-            num_heads=model_params.get("num_heads", 4),
-            depth_single_blocks=model_params.get("depth_single_blocks", 16),
-            axes_dim=model_params.get("axes_dim", [10]),
-            condition_dim=model_params.get("condition_dim", [4]),
-            qkv_bias=model_params.get("qkv_bias", True),
-            dim_joint=dim_joint,
-            theta=theta,
-            rngs=nnx.Rngs(default=42),
-            param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
-        )
-    elif model_type == "flux":
-        theta = model_params.get("theta", -1)
-        if theta == -1:
-            theta = 4 * (dim_obs + dim_cond)
-
-        params = Flux1Params(
-            in_channels=model_params.get("in_channels", 1),
-            vec_in_dim=model_params.get("vec_in_dim", None),
-            context_in_dim=model_params.get("context_in_dim", 1),
-            mlp_ratio=model_params.get("mlp_ratio", 4),
-            num_heads=model_params.get("num_heads", 4),
-            depth=model_params.get("depth", 8),
-            depth_single_blocks=model_params.get("depth_single_blocks", 16),
-            axes_dim=model_params.get("axes_dim", [10]),
-            qkv_bias=model_params.get("qkv_bias", True),
-            dim_obs=dim_obs,
-            dim_cond=dim_cond,
-            theta=theta,
-            rngs=nnx.Rngs(default=42),
-            param_dtype=getattr(jnp, model_params.get("param_dtype", "float32")),
-        )
-
-    training_config = PipelineClass.get_default_training_config()
-    # overwrite the defaults with the config file values
-    training_config["nsteps"] = nsteps
-    training_config["ema_decay"] = ema_decay
-    training_config["patience"] = PATIENCE
-    training_config["cooldown"] = COOLDOWN
-    training_config["factor"] = FACTOR
-    training_config["accumulation_size"] = ACCUMULATION_SIZE
-    training_config["rtol"] = RTOL
-    training_config["max_lr"] = MAX_LR
-    training_config["min_lr"] = MIN_LR
-    training_config["min_scale"] = MIN_SCALE
-    training_config["val_every"] = val_every
-    training_config["early_stopping"] = early_stopping
-    training_config["experiment_id"] = experiment_id
-    training_config["multistep"] = multistep
-    training_config["checkpoint_dir"] = checkpoint_dir
-
-    pipeline = PipelineClass(
+    pipeline = PipelineClass.init_pipeline_from_config(
         train_dataset,
         val_dataset,
-        dim_obs=dim_obs,
-        dim_cond=dim_cond,
-        params=params,
-        training_config=training_config,
+        dim_obs,
+        dim_cond,
+        config_path=args.config,
+        checkpoint_dir=checkpoint_dir,
     )
 
     # current training config
@@ -269,7 +175,7 @@ def main():
     samples, true_param, _ = get_samples(8, nsamples=100_000, use_ema=True)
 
     plot_marginals(samples[..., 0], plot_levels=False, backend="seaborn", gridsize=50)
-    plt.savefig(f"{img_dir}/marginals_ema.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{img_dir}/marginals_ema_{experiment_id}.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     # --------- C2ST TEST ---------
@@ -378,7 +284,7 @@ def main():
     )
 
     plot_tarp(ecp, alpha)
-    plt.savefig(f"{img_dir}/tarp.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{img_dir}/tarp_{experiment_id}.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     print("TARP diagnostic complete.")
@@ -388,7 +294,7 @@ def main():
 
     f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
     plt.savefig(
-        f"{img_dir}/sbc.png", dpi=100, bbox_inches="tight"
+        f"{img_dir}/sbc_{experiment_id}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
@@ -435,7 +341,7 @@ def main():
         x_o,
     )
     plt.savefig(
-        f"{img_dir}/lc2st.png", dpi=100, bbox_inches="tight"
+        f"{img_dir}/lc2st_{experiment_id}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 

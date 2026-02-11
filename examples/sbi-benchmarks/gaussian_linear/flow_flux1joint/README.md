@@ -25,10 +25,11 @@ This document provides a summary of the `flux1joint` model trained on the `gauss
 | `mlp_ratio` | `4` |
 | `num_heads` | `4` |
 | `depth_single_blocks` | `16` |
-| `axes_dim` | `[10]` |
-| `condition_dim` | `[4]` |
+| `value_emb_dim` | `10` |
+| `cond_emb_dim` | `4` |
+| `id_emb_dim` | `10` |
+| `id_embedding_strategy` | `concat` |
 | `qkv_bias` | `True` |
-| `theta` | `-1` |
 | `params_dtype` | `float32` |
 
 ## 4. Training Configuration
@@ -42,21 +43,19 @@ This document provides a summary of the `flux1joint` model trained on the `gauss
 | `early_stopping` | `True` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
-| `restore_model` | `False` |
-| `train_model` | `True` |
-| `patience` | `10` |
-| `cooldown` | `2` |
-| `factor` | `0.5` |
-| `accumulation_size` | `100` |
+| `restore_model` | `True` |
+| `train_model` | `False` |
+| `warmup_steps` | `500` |
+| `decay_transition` | `0.6` |
 | `rtol` | `0.0001` |
-| `max_lr` | `0.001` |
-| `min_lr` | `1e-08` |
+| `max_lr` | `0.0004` |
+| `min_lr` | `4e-06` |
 
 ## 5. Evaluation
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.501 ± 0.004
+- **Average C2ST Accuracy:** 0.505 ± 0.005
 
 ---
 *This model card was automatically generated.*

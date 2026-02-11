@@ -100,6 +100,13 @@ ch_obs = 1
 
 
 def main():
+
+    # open the config file, and get the training and restore flag
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+        train_model = config["training"]["train_model"]
+        restore_model = config["training"]["restore_model"]
+
     repo_name = "aurelio-amerio/SBI-benchmarks"
 
     task_name = "lensing"
@@ -204,9 +211,8 @@ def main():
         .map(split_data)
     )
 
-    training_config["checkpoint_dir"] = (
-        "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/lensing/npe_v1a/checkpoints"
-    )
+    current_dir = os.getcwd()
+    training_config["checkpoint_dir"] = os.path.join(current_dir, "checkpoints")
 
     pipeline_latent = ConditionalFlowPipeline(
         model,
@@ -223,8 +229,11 @@ def main():
         id_embedding_strategy=("absolute", "rope2d"),
     )
 
-    # pipeline_latent.train(nnx.Rngs(0), save_model=True)
-    pipeline_latent.restore_model()
+    if train_model:
+        pipeline_latent.train(nnx.Rngs(0), save_model=True)
+
+    if restore_model:
+        pipeline_latent.restore_model()
 
     # plot the results
 
@@ -248,7 +257,9 @@ def main():
     res_unnorm = unnormalize(res, thetas_mean, thetas_std)
 
     plot_marginals(res_unnorm, true_param=theta_true, gridsize=30)
-    plt.savefig(f"lensing_samples_conf{experiment}.png", dpi=100, bbox_inches="tight")
+    plt.savefig(
+        f"imgs/lensing_samples_conf{experiment}.png", dpi=100, bbox_inches="tight"
+    )
     plt.show()
 
     # # split in thetas and xs
@@ -284,7 +295,7 @@ def main():
 
     plot_tarp(ecp, alpha)
     plt.savefig(
-        f"lensing_tarp_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/lensing_tarp_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
@@ -292,7 +303,7 @@ def main():
 
     f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
     plt.savefig(
-        f"lensing_sbc_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/lensing_sbc_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
@@ -347,7 +358,7 @@ def main():
         x_o,
     )
     plt.savefig(
-        f"lensing_lc2st_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/lensing_lc2st_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 

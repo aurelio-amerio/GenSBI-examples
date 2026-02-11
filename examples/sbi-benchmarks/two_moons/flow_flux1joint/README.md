@@ -25,12 +25,12 @@ This document provides a summary of the `flux1joint` model trained on the `two_m
 | `mlp_ratio` | `4` |
 | `num_heads` | `4` |
 | `depth_single_blocks` | `16` |
-| `axes_dim` | `[10]` |
-| `condition_dim` | `[4]` |
+| `value_emb_dim` | `10` |
+| `cond_emb_dim` | `4` |
+| `id_emb_dim` | `10` |
+| `id_embedding_strategy` | `concat` |
 | `qkv_bias` | `True` |
-| `theta` | `40` |
-| `params_dtype` | `bfloat16` |
-| `id_embedding_strategy` | `absolute` |
+| `params_dtype` | `float32` |
 
 ## 4. Training Configuration
 
@@ -55,7 +55,7 @@ This document provides a summary of the `flux1joint` model trained on the `two_m
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.510 ± 0.013
+- **Average C2ST Accuracy:** 0.503 ± 0.010
 
 ---
 *This model card was automatically generated.*

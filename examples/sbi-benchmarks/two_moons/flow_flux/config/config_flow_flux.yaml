@@ -1,8 +1,3 @@
-
-# Simformer Training Configuration
-
-# note: yaml can't resolve 1e-3 as 0.001, so write float numbers explicitly
-
 task_name: two_moons
 
 strategy:
@@ -29,7 +24,6 @@ model:
   theta: 40
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
-
 
 training:
   batch_size: 4096

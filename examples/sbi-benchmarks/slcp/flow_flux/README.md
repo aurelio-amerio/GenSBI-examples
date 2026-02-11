@@ -24,10 +24,13 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 | `context_in_dim` | `1` |
 | `mlp_ratio` | `4` |
 | `num_heads` | `4` |
-| `depth` | `8` |
-| `depth_single_blocks` | `16` |
-| `axes_dim` | `[10]` |
+| `depth` | `4` |
+| `depth_single_blocks` | `8` |
+| `val_emb_dim` | `20` |
+| `id_emb_dim` | `10` |
 | `qkv_bias` | `True` |
+| `id_merge_mode` | `concat` |
+| `theta` | `-1` |
 | `params_dtype` | `bfloat16` |
 | `id_embedding_strategy` | `['absolute', 'absolute']` |
 
@@ -35,25 +38,26 @@ This document provides a summary of the `flux` model trained on the `slcp` datas
 
 | Parameter | Value |
 |---|---|
-| `batch_size` | `4096` |
+| `batch_size` | `256` |
 | `nsteps` | `50000` |
 | `ema_decay` | `0.999` |
 | `multistep` | `1` |
-| `early_stopping` | `True` |
+| `early_stopping` | `False` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
-| `restore_model` | `True` |
-| `train_model` | `False` |
+| `restore_model` | `False` |
+| `train_model` | `True` |
 | `warmup_steps` | `500` |
-| `decay_transition` | `0.6` |
-| `max_lr` | `0.0004` |
-| `min_lr` | `4e-06` |
+| `decay_transition` | `0.8` |
+| `rtol` | `0.0001` |
+| `max_lr` | `0.0001` |
+| `min_lr` | `1e-06` |
 
 ## 5. Evaluation
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.804 ± 0.060
+- **Average C2ST Accuracy:** 0.688 ± 0.046
 
 ---
 *This model card was automatically generated.*
