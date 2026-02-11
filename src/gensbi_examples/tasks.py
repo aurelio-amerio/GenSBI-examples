@@ -24,12 +24,39 @@ def process_conditional(batch):
     return obs, cond
 
 
+def normalize(batch, mean, std):
+    mean = jnp.asarray(mean, dtype=batch.dtype)
+    std = jnp.asarray(std, dtype=batch.dtype)
+    return (batch - mean) / std
+
+
+def unnormalize(batch, mean, std):
+    mean = jnp.asarray(mean, dtype=batch.dtype)
+    std = jnp.asarray(std, dtype=batch.dtype)
+    return batch * std + mean
+
+
+def has_posterior_samples(task_name):
+    if task_name in [
+        "two_moons",
+        "bernoulli_glm",
+        "gaussian_linear",
+        "gaussian_linear_uniform",
+        "gaussian_mixture",
+        "slcp",
+    ]:
+        return True
+    else:
+        return False
+
+
 class Task:
-    def __init__(self, task_name, kind="joint"):
+    def __init__(self, task_name, kind="joint", seed=42):
 
         self.repo_name = "aurelio-amerio/SBI-benchmarks"
 
         self.task_name = task_name
+        self.seed = seed
 
         fname = hf_hub_download(
             repo_id=self.repo_name, filename="metadata.json", repo_type="dataset"
@@ -44,16 +71,21 @@ class Task:
 
         self.max_samples = self.dataset["train"].num_rows
 
-        self.observations = self.dataset_posterior["reference_posterior"][
-            "observations"
-        ]
-        self.reference_samples = self.dataset_posterior["reference_posterior"][
-            "reference_samples"
-        ]
+        if has_posterior_samples(task_name):
+            self.observations = self.dataset_posterior["reference_posterior"][
+                "observations"
+            ]
+            self.reference_samples = self.dataset_posterior["reference_posterior"][
+                "reference_samples"
+            ]
 
-        self.true_parameters = self.dataset_posterior["reference_posterior"][
-            "true_parameters"
-        ]
+            self.true_parameters = self.dataset_posterior["reference_posterior"][
+                "true_parameters"
+            ]
+        else:
+            self.observations = None
+            self.reference_samples = None
+            self.true_parameters = None
 
         self.dim_cond = metadata[task_name]["dim_cond"]
         self.dim_obs = metadata[task_name]["dim_obs"]
@@ -78,7 +110,7 @@ class Task:
         df = self.dataset["train"].select(range(int(nsamples)))  # [:]
 
         dataset_grain = (
-            grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
+            grain.MapDataset.source(df).shuffle(self.seed).repeat().to_iter_dataset()
         )
 
         performance_config = grain.experimental.pick_performance_config(
@@ -100,7 +132,7 @@ class Task:
         df = self.dataset["validation"]  # [:]
 
         val_dataset_grain = (
-            grain.MapDataset.source(df).shuffle(42).repeat().to_iter_dataset()
+            grain.MapDataset.source(df).shuffle(self.seed).repeat().to_iter_dataset()
         )
         performance_config = grain.experimental.pick_performance_config(
             ds=val_dataset_grain,
@@ -119,16 +151,16 @@ class Task:
     def get_test_dataset(self, batch_size):
         df = self.dataset["test"]  # [:]
 
-        val_dataset_grain = (
+        test_dataset_grain = (
             grain.MapDataset.source(df)
-            .shuffle(42)
+            .shuffle(self.seed)
             .repeat()
             .to_iter_dataset()
             .batch(batch_size)
             .map(self.process_fn)
         )
 
-        return val_dataset_grain
+        return test_dataset_grain
 
     def get_reference(self, num_observation=1):
         """
@@ -322,7 +354,75 @@ class SLCP(Task):
         return base_mask_fn
 
 
-def get_task(task_name, kind="joint"):
+class GravitationalWaves(Task):
+    def __init__(self):
+        task_name = "gravitational_waves"
+        super().__init__(task_name, kind="conditional")
+
+        self.xs_mean = jnp.array([[[0.00051776, -0.00040733]]], dtype=jnp.bfloat16)
+        self.thetas_mean = jnp.array([[44.826576, 45.070328]], dtype=jnp.bfloat16)
+
+        self.xs_std = jnp.array([[[60.80799, 59.33193]]], dtype=jnp.bfloat16)
+        self.thetas_std = jnp.array([[20.189356, 20.16127]], dtype=jnp.bfloat16)
+
+        self.process_fn = self.split_data
+        return
+
+    def split_data(self, batch):
+        obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
+        obs = normalize(obs, self.thetas_mean, self.thetas_std)
+        obs = obs.reshape(obs.shape[0], self.dim_obs, self.ch_obs)
+        cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
+        cond = normalize(cond, self.xs_mean, self.xs_std)
+        cond = cond[..., None]
+        return obs, cond
+
+    def get_reference(self, num_observation=1):
+        raise NotImplementedError(
+            "Reference posterior samples not available for this task."
+        )
+
+    def get_true_parameters(self, num_observation=1):
+        raise NotImplementedError("True parameters not available for this task.")
+
+
+class GravitationalLensing(Task):
+    def __init__(self):
+        task_name = "lensing"
+        super().__init__(task_name, kind="conditional")
+
+        self.xs_mean = jnp.array([-1.1874731e-05], dtype=jnp.bfloat16).reshape(1, 1, 1)
+        self.thetas_mean = jnp.array(
+            [0.5996428, 0.15998043], dtype=jnp.bfloat16
+        ).reshape(1, 2)
+
+        self.xs_std = jnp.array([1.0440514], dtype=jnp.bfloat16).reshape(1, 1, 1)
+        self.thetas_std = jnp.array(
+            [0.2886958, 0.08657552], dtype=jnp.bfloat16
+        ).reshape(1, 2)
+
+        self.process_fn = self.split_data
+        return
+
+    def split_data(self, batch):
+        obs = jnp.array(batch["thetas"], dtype=jnp.bfloat16)
+        obs = normalize(obs, self.thetas_mean, self.thetas_std)
+        obs = obs.reshape(obs.shape[0], self.dim_obs, self.ch_obs)
+        cond = jnp.array(batch["xs"], dtype=jnp.bfloat16)
+        cond = normalize(cond, self.xs_mean, self.xs_std)
+        cond = cond[..., None]
+        return obs, cond
+
+    def get_reference(self, num_observation=1):
+        raise NotImplementedError(
+            "Reference posterior samples not available for this task."
+        )
+
+    def get_true_parameters(self, num_observation=1):
+        raise NotImplementedError("True parameters not available for this task.")
+
+
+def get_task(task_name, kind="conditional"):
     """
     Returns a Task object based on the task name.
     """
@@ -339,5 +439,15 @@ def get_task(task_name, kind="joint"):
         return GaussianMixture(kind=kind)
     elif task_name == "slcp":
         return SLCP(kind=kind)
+    elif task_name == "gravitational_waves":
+        assert (
+            kind == "conditional"
+        ), "Gravitational waves task is only available in conditional mode."
+        return GravitationalWaves()
+    elif task_name == "gravitational_lensing":
+        assert (
+            kind == "conditional"
+        ), "Gravitational lensing task is only available in conditional mode."
+        return GravitationalLensing()
     else:
         raise ValueError(f"Unknown task: {task_name}")
