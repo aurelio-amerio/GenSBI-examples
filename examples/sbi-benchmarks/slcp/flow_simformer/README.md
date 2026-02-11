@@ -23,7 +23,7 @@ This document provides a summary of the `simformer` model trained on the `slcp` 
 | `value_emb_dim` | `40` |
 | `id_emb_dim` | `40` |
 | `cond_emb_dim` | `10` |
-| `fourier_features` | `128` |
+| `fourier_features` | `256` |
 | `num_heads` | `6` |
 | `num_layers` | `8` |
 | `widening_factor` | `3` |
@@ -35,27 +35,25 @@ This document provides a summary of the `simformer` model trained on the `slcp` 
 | Parameter | Value |
 |---|---|
 | `batch_size` | `4096` |
-| `nsteps` | `30000` |
+| `nsteps` | `50000` |
 | `ema_decay` | `0.999` |
-| `multistep` | `8` |
+| `multistep` | `1` |
 | `early_stopping` | `True` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
-| `restore_model` | `False` |
-| `train_model` | `True` |
-| `patience` | `10` |
-| `cooldown` | `2` |
-| `factor` | `0.5` |
-| `accumulation_size` | `100` |
+| `restore_model` | `True` |
+| `train_model` | `False` |
+| `warmup_steps` | `500` |
+| `decay_transition` | `0.6` |
 | `rtol` | `0.0001` |
-| `max_lr` | `0.001` |
-| `min_lr` | `1e-08` |
+| `max_lr` | `0.0004` |
+| `min_lr` | `4e-06` |
 
 ## 5. Evaluation
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.588 ± 0.070
+- **Average C2ST Accuracy:** 0.552 ± 0.025
 
 ---
 *This model card was automatically generated.*

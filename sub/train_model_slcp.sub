@@ -9,6 +9,7 @@ executable = start_training.sh
 arguments = "$(config_file)"
 getenv = True
 request_gpus = 1
+requirements = (Machine != "mlwn11.ific.uv.es")
 
 log                     = condor_logs/logs_$(experiment_name)_$(method)_$(model).log
 output                  = condor_logs/outfile_$(experiment_name)_$(method)_$(model).out
@@ -24,7 +25,7 @@ config_file = $(experiment_path)/config/config_$(method)_$(model).yaml
 
 queue method,model, from (
     flow, flux
-    flow, flux1joint
+    # flow, flux1joint
     # flow, simformer
     # diffusion, simformer
     # diffusion, flux1joint

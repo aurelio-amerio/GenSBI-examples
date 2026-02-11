@@ -9,24 +9,22 @@ strategy:
   model: "simformer"
 
 optimizer:
-  patience: 10
-  cooldown: 2
-  factor: 0.5
-  accumulation_size: 100
+  warmup_steps: 500
+  decay_transition: 0.60
   rtol: 1.0e-4
-  max_lr: 1.0e-3
-  min_lr: 1.0e-8
+  max_lr: 4.0e-4
+  min_lr: 4.0e-6
 
 model:
   in_channels: 1
   value_emb_dim: 40
   id_emb_dim: 40
   cond_emb_dim: 10
-  fourier_features: 128
-  num_heads: 6
+  fourier_features: 256
+  num_heads: 4
   num_layers: 8
   widening_factor: 3
-  qkv_features: 60
+  qkv_features: 40
   num_hidden_layers: 1
 
 training:
@@ -37,5 +35,5 @@ training:
   early_stopping: true
   val_every: 100
   experiment_id: 1
-  restore_model: true
-  train_model: false
+  restore_model: false
+  train_model: true

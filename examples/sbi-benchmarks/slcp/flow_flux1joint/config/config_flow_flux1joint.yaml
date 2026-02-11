@@ -20,14 +20,14 @@ model:
   vec_in_dim: null
   context_in_dim: 1
   mlp_ratio: 4
-  num_heads: 4
+  num_heads: 6
   depth_single_blocks: 16
-  axes_dim: [10]
-  condition_dim: [4]
+  value_emb_dim: 10
+  cond_emb_dim: 4
+  id_emb_dim: 10
+  id_embedding_strategy: "concat"
   qkv_bias: true
-  theta: 40
-  params_dtype: "bfloat16"
-  id_embedding_strategy: "absolute"
+  params_dtype: "float32"
 
 training:
   batch_size: 4096
