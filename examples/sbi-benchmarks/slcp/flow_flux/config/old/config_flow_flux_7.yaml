@@ -1,4 +1,3 @@
-
 # Simformer Training Configuration
 
 # note: yaml can't resolve 1e-3 as 0.001, so write float numbers explicitly
@@ -39,5 +38,5 @@ training:
   early_stopping: true
   val_every: 100
   experiment_id: 7
-  restore_model: false
-  train_model: true
+  restore_model: true
+  train_model: false

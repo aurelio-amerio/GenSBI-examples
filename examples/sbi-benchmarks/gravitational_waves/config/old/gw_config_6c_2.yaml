@@ -1,4 +1,3 @@
-
 # Simformer Training Configuration
 
 # note: yaml can't resolve 1e-3 as 0.001, so write float numbers explicitly
@@ -24,7 +23,7 @@ model:
   num_heads: 4
   depth: 8
   depth_single_blocks: 16
-  axes_dim: [16,4]
+  axes_dim: [16, 4]
   theta: 500
   qkv_bias: true
   params_dtype: "bfloat16"
@@ -36,19 +35,19 @@ vae_model:
   ch: 32
   out_ch: 2
   ch_mult: [
-            1,  # 8192
-            2,  # 4096
-            4,  # 2048
-            8,  # 1024
-            16,  # 512
-            16,  # 256
-            16,  # 128
-            16,  # 64
-            # 16, # 32
-            # 16, # 16
-            # 16, # 8
-            # 16, # 4
-        ]
+      1, # 8192
+      2, # 4096
+      4, # 2048
+      8, # 1024
+      16, # 512
+      16, # 256
+      16, # 128
+      16, # 64
+      # 16, # 32
+      # 16, # 16
+      # 16, # 8
+      # 16, # 4
+    ]
   num_res_blocks: 1
   z_channels: 128
   scale_factor: 1.0
@@ -63,5 +62,5 @@ training:
   early_stopping: false
   val_every: 100
   experiment_id: 2
-  restore_model: false
-  train_model: true
+  restore_model: true
+  train_model: false
