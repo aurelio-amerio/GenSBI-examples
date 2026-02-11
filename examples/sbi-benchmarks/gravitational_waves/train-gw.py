@@ -49,6 +49,8 @@ from gensbi.diagnostics import run_tarp, plot_tarp
 from gensbi.diagnostics import run_sbc, sbc_rank_plot
 from gensbi.diagnostics import LC2ST, plot_lc2st
 
+from gensbi_examples.tasks import GravitationalWaves
+
 
 config_path = "./config/gw_config_6c.yaml"
 
@@ -110,20 +112,11 @@ def main():
         train_model = config["training"]["train_model"]
         restore_model = config["training"]["restore_model"]
 
-    repo_name = "aurelio-amerio/SBI-benchmarks"
+    task = GravitationalWaves()
 
-    task_name = "gravitational_waves"
-
-    # dataset = load_dataset(repo_name, task_name).with_format("numpy")
-    # dataset = load_dataset(
-    #     repo_name, task_name, cache_dir="/data/users/.cache"
-    # ).with_format("numpy")
-    dataset = load_dataset(repo_name, task_name).with_format("numpy")
-
-    # %%
-    df_train = dataset["train"]
-    df_val = dataset["validation"]
-    df_test = dataset["test"]
+    df_train = task.df_train
+    df_val = task.df_val
+    df_test = task.df_test
 
     # compute the mean of xs and thetas
     # xs_mean = np.mean(df_train["xs"], axis=(0, 1), keepdims=True)
