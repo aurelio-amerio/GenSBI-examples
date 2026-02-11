@@ -20,7 +20,7 @@ This document provides a summary of the `simformer` model trained on the `slcp` 
 | Parameter | Value |
 |---|---|
 | `in_channels` | `1` |
-| `value_emb_dim` | `40` |
+| `val_emb_dim` | `40` |
 | `id_emb_dim` | `40` |
 | `cond_emb_dim` | `10` |
 | `fourier_features` | `256` |
