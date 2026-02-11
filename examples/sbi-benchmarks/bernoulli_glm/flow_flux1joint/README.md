@@ -28,7 +28,7 @@ This document provides a summary of the `flux1joint` model trained on the `berno
 | `val_emb_dim` | `10` |
 | `cond_emb_dim` | `4` |
 | `id_emb_dim` | `10` |
-| `id_embedding_strategy` | `concat` |
+| `id_merge_mode` | `concat` |
 | `qkv_bias` | `True` |
 | `params_dtype` | `float32` |
 
