@@ -19,14 +19,13 @@ model:
   num_heads: 4
   depth: 4
   depth_single_blocks: 8
-  axes_dim: [20]
+  val_emb_dim: 20
+  id_emb_dim: 10
   qkv_bias: true
+  id_merge_mode: "concat"
   theta: -1
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
-  # id_merge_mode: "sum" # "sum" or "concat". Use "concat" for small models to reduce confusion.
-  # val_emb_dim: null # Required if id_merge_mode="concat"
-  # id_emb_dim: null # Required if id_merge_mode="concat". Recommended 1:1 ratio with val_emb_dim.
 
 training:
   batch_size: 256
@@ -35,6 +34,6 @@ training:
   multistep: 1
   early_stopping: false
   val_every: 100
-  experiment_id: 3
+  experiment_id: 1
   restore_model: false
   train_model: true
