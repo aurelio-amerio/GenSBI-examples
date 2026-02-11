@@ -43,6 +43,8 @@ from gensbi.diagnostics import LC2ST, plot_lc2st
 from gensbi.diagnostics import run_sbc, sbc_rank_plot
 from gensbi.diagnostics import run_tarp, plot_tarp
 
+from gensbi_examples.tasks import GravitationalLensing
+
 
 ### end of imports ###
 
@@ -107,18 +109,11 @@ def main():
         train_model = config["training"]["train_model"]
         restore_model = config["training"]["restore_model"]
 
-    repo_name = "aurelio-amerio/SBI-benchmarks"
+    task = GravitationalLensing()
 
-    task_name = "lensing"
-
-    # dataset = load_dataset(
-    #     repo_name, task_name, cache_dir="/data/users/.cache"
-    # ).with_format("numpy")
-    dataset = load_dataset(repo_name, task_name).with_format("numpy")
-
-    df_train = dataset["train"]
-    df_val = dataset["validation"]
-    df_test = dataset["test"]
+    df_train = task.df_train
+    df_val = task.df_val
+    df_test = task.df_test
 
     xs_mean = jnp.array([-1.1874731e-05], dtype=jnp.bfloat16).reshape(1, 1, 1)
     thetas_mean = jnp.array([0.5996428, 0.15998043], dtype=jnp.bfloat16).reshape(1, 2)
