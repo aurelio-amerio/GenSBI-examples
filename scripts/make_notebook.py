@@ -134,6 +134,23 @@ def make_notebook(replacements):
 
     print(f"Reading stub from: {stub_path}")
 
+    # read C2ST accuracy and std from file c2st_results_ema_1_flow_flux.txt
+    c2st_results_path = os.path.join(
+        target_dir,
+        "c2st_results",
+        f"c2st_results_ema_1_{replacements['{model_name}']}.txt",
+    )
+    with open(c2st_results_path, "r") as f:
+        c2st_results = f.read()
+
+    # the text to find is "Average C2ST accuracy EMA: 0.5527 +- 0.0152"
+    c2st_accuracy = c2st_results.split("Average C2ST accuracy EMA: ")[
+        1
+    ].split(" ")[0]
+    c2st_std = c2st_results.split("Average C2ST accuracy EMA: ")[
+        1
+    ].split(" ")[2]
+
     try:
         with open(stub_path, "r") as f:
             content = f.read()
@@ -141,6 +158,8 @@ def make_notebook(replacements):
         # Perform replacements
         for key, value in replacements.items():
             content = content.replace(key, value)
+        content = content.replace("{C2ST_ACCURACY}", c2st_accuracy)
+        content = content.replace("{C2ST_STD}", c2st_std)
 
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)

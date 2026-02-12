@@ -200,7 +200,7 @@ plt.show()
 # We report here the results of the posterior calibration tests. As an excercise, you can implement the tests as in the Two Moons example and compare the results. 
 
 # %% [markdown]
-# **Average C2ST**: 0.558 ± 0.016
+# **Average C2ST**: {C2ST_ACCURACY} ± {C2ST_STD}
 
 # %% [markdown]
 # **TARP:** <br><br>
