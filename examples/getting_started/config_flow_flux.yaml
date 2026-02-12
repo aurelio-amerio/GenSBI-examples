@@ -16,11 +16,11 @@ model:
   vec_in_dim: null
   context_in_dim: 1
   mlp_ratio: 3
-  num_heads: 2
+  num_heads: 4
   depth: 4
   depth_single_blocks: 8
   val_emb_dim: 10
-  id_emb_dim: 10
+  id_emb_dim: 4
   qkv_bias: true
   theta: -1
   params_dtype: "bfloat16"
@@ -28,8 +28,8 @@ model:
   id_embedding_strategy: ["absolute", "absolute"]
 
 training:
-  batch_size: 1024
-  nsteps: 30000
+  batch_size: 256
+  nsteps: 10000
   ema_decay: 0.999
   multistep: 1
   early_stopping: false
