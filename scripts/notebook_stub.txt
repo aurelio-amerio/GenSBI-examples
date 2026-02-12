@@ -78,7 +78,7 @@ from gensbi.utils.plotting import plot_marginals
 
 # %%
 from gensbi_examples.tasks import get_task
-task = get_task("{task_name}", kind="{kind}", use_multiprocessing=False)
+task = get_task("{task_name_gensbi}", kind="{kind}", use_multiprocessing=False)
 
 # %%
 # reference posterior for an observation
