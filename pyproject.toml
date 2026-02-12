@@ -17,6 +17,16 @@ dependencies = [
     "grain>=0.2.12",
 ]
 
+test = [
+    "pytest",
+    "pytest-xdist",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-env",
+    "genbadge[all]",
+    "flake8",
+]
+
 [project.urls]
 Homepage = "https://github.com/aurelio-amerio/GenSBI-examples"
 Issues = "https://github.com/aurelio-amerio/GenSBI-examples/issues"
@@ -36,4 +46,12 @@ include = [
     "/src",
     "/README.md",
     "/LICENSE",
+]
+
+[tool.pytest.ini_options]
+env = [
+    "JAX_PLATFORMS=cpu"
+]
+testpaths = [
+    "test",
 ]
