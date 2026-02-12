@@ -1,7 +1,5 @@
 import os
 import jupytext
-import nbformat
-import json
 
 # Dictionary of replacements based on the task requirements
 
@@ -115,6 +113,7 @@ def make_notebook(replacements):
     stub_path = os.path.join(script_dir, "notebook_stub.txt")
 
     # Construct the target directory path
+    # target: ../examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/
     target_dir = os.path.join(
         script_dir,
         "..",
@@ -127,37 +126,33 @@ def make_notebook(replacements):
     # Resolve to absolute path
     target_dir = os.path.abspath(target_dir)
 
-    # Target filenames
-    target_filename_py = (
+    # Construct the target file name: {task_name_gensbi}_{model_name}.py
+    target_filename = (
         f"{replacements['{task_name_gensbi}']}_{replacements['{model_name}']}.py"
     )
-    target_filename_ipynb = (
-        f"{replacements['{task_name_gensbi}']}_{replacements['{model_name}']}.ipynb"
-    )
+    target_path = os.path.join(target_dir, target_filename)
 
-    target_path_py = os.path.join(target_dir, target_filename_py)
-    target_path_ipynb = os.path.join(target_dir, target_filename_ipynb)
+    print(f"Reading stub from: {stub_path}")
 
-    print(f"Processing: {target_filename_ipynb}")
-
-    # Read C2ST results
+    # read C2ST accuracy and std from file c2st_results_ema_1_flow_flux.txt
     c2st_results_path = os.path.join(
         target_dir,
         "c2st_results",
         f"c2st_results_ema_1_{replacements['{model_name}']}.txt",
     )
+    with open(c2st_results_path, "r") as f:
+        c2st_results = f.read()
+
+    # the text to find is "Average C2ST accuracy EMA: 0.5527 +- 0.0152"
+    c2st_accuracy = c2st_results.split("Average C2ST accuracy EMA: ")[
+        1
+    ].split(" ")[0]
+    c2st_std = c2st_results.split("Average C2ST accuracy EMA: ")[
+        1
+    ].split(" ")[2]
 
     try:
-        # Use utf-8 explicitly to handle symbols like ±
-        with open(c2st_results_path, "r", encoding="utf-8") as f:
-            c2st_results = f.read()
-
-        c2st_accuracy = c2st_results.split("Average C2ST accuracy EMA: ")[1].split(" ")[
-            0
-        ]
-        c2st_std = c2st_results.split("Average C2ST accuracy EMA: ")[1].split(" ")[2]
-
-        with open(stub_path, "r", encoding="utf-8") as f:
+        with open(stub_path, "r") as f:
             content = f.read()
 
         # Perform replacements
@@ -169,40 +164,26 @@ def make_notebook(replacements):
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
 
-        # 1. Write the Python temporary file
-        with open(target_path_py, "w", encoding="utf-8") as f:
+        # Write the new file
+        with open(target_path, "w") as f:
             f.write(content)
-            f.flush()
-            os.fsync(f.fileno())  # Force write to disk
 
-        # 2. Convert to Notebook object
-        notebook = jupytext.read(target_path_py)
+        # call jupytext to convert the python file to a notebook
+        # jupytext.convert(target_path, target_path.replace(".py", ".ipynb"))
+        notebook = jupytext.read(target_path)
+        jupytext.write(notebook, target_path.replace(".py", ".ipynb"))
 
-        # 3. Write to .ipynb with explicit JSON dump to ensure validity
-        # We use nbformat directly to ensure the JSON is clean and standard
-        with open(target_path_ipynb, "w", encoding="utf-8") as f:
-            nbformat.write(notebook, f)
-            f.flush()
-            os.fsync(f.fileno())  # Force write to disk
+        print(
+            f"Successfully created notebook at: {target_path.replace('.py', '.ipynb')}"
+        )
 
-        print(f"  -> Created: {target_path_ipynb}")
+        # remove the python file
+        os.remove(target_path)
 
-        # 4. Verification Step (Crucial for your error)
-        try:
-            with open(target_path_ipynb, "r", encoding="utf-8") as f:
-                json.load(f)
-            print("  -> Verification: Valid JSON.")
-        except json.JSONDecodeError as e:
-            print(f"  -> CRITICAL ERROR: Generated file is corrupted! {e}")
-
-        # Remove the temp python file
-        if os.path.exists(target_path_py):
-            os.remove(target_path_py)
-
-    except FileNotFoundError as e:
-        print(f"  -> Error: File not found: {e}")
+    except FileNotFoundError:
+        print(f"Error: Could not find checking {stub_path}")
     except Exception as e:
-        print(f"  -> An error occurred: {e}")
+        print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
