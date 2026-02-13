@@ -18,6 +18,7 @@ dependencies = [
     "imageio>=2.37.2",
 ]
 
+[project.optional-dependencies]
 test = [
     "pytest",
     "pytest-xdist",
