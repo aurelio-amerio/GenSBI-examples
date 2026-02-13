@@ -29,7 +29,7 @@ This notebook demonstrates {kind} {matching_technique} on the {TASKNAME} task us
 | 3. [Model Configuration & Definition](#model-configuration-definition) | Load config, set parameters, instantiate model |
 | 4. [Training](#training) | Train or restore model, manage checkpoints |
 | 5. [Evaluation & Visualization](#evaluation-visualization) | Visualize loss, sample posterior, compute log prob |
-| 6. [Diagnostics](#diagnostics) | Run diagnostics (TARP, SBC, L-C2ST) |
+| 6. [Posterior Calibration Checks](#posterior-calibration-checks) | TARP, SBC, L-C2ST |
 
 ---
 
@@ -225,7 +225,7 @@ plt.show()
 
 +++
 
-## 6. Diagnostics
+## 6. Posterior Calibration Checks
 
 +++
 
