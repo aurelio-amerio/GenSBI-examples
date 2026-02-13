@@ -104,6 +104,23 @@ def test_basic_task(task_name, kind):
 
         print(f"All tests passed for {task_name} {kind}!")
 
+    if kind == "joint":
+        # test the edge mask
+        masks = ["faithfull", "min_faithfull", "undirected", "directed"]
+        dim_joint = task.dim_joint
+        node_ids = np.arange(dim_joint)
+        condition_mask = np.zeros(dim_joint, dtype=bool)
+        mask_shape = (dim_joint, dim_joint)
+        for mask_name in masks:
+            mask_fn = task.get_edge_mask_fn(name=mask_name)
+            mask = mask_fn(node_ids, condition_mask)
+            assert mask.shape == mask_shape, f"mask shape {mask.shape} != {mask_shape}"
+
+        # test the "none" mask
+        mask_fn = task.get_edge_mask_fn(name="none")
+        mask = mask_fn(node_ids, condition_mask)
+        assert mask is None, f"mask is not None"
+
 
 @pytest.mark.parametrize(
     "task_name",
@@ -168,5 +185,6 @@ def test_advanced_task(task_name):
     print(f"All tests passed for {task_name} conditional!")
 
     return
+
 
 # %%
