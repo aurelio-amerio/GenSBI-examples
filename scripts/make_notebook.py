@@ -109,8 +109,8 @@ def make_notebook(replacements):
     # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # Path to the stub file
-    stub_path = os.path.join(script_dir, "notebook_stub.txt")
+    # Path to the template file
+    template_path = os.path.join(script_dir, "notebook_template.md")
 
     # Construct the target directory path
     target_dir = os.path.join(
@@ -125,13 +125,13 @@ def make_notebook(replacements):
     # Resolve to absolute path
     target_dir = os.path.abspath(target_dir)
 
-    # Construct the target file name: {task_name_gensbi}_{model_name}.py
+    # Construct the target file name: {task_name_gensbi}_{model_name}.md
     target_filename = (
-        f"{replacements['{task_name_gensbi}']}_{replacements['{model_name}']}.py"
+        f"{replacements['{task_name_gensbi}']}_{replacements['{model_name}']}.md"
     )
     target_path = os.path.join(target_dir, target_filename)
 
-    print(f"Reading stub from: {stub_path}")
+    print(f"Reading template from: {template_path}")
 
     # read C2ST accuracy and std from file c2st_results_ema_1_flow_flux.txt
     # (Wrapped in try/except to prevent crash if results file is missing)
@@ -156,7 +156,7 @@ def make_notebook(replacements):
         c2st_std = "N/A"
 
     try:
-        with open(stub_path, "r") as f:
+        with open(template_path, "r") as f:
             content = f.read()
 
         # Perform replacements
@@ -168,28 +168,23 @@ def make_notebook(replacements):
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
 
-        # Write the temporary python file
+        # Write the temporary md file
         with open(target_path, "w") as f:
             f.write(content)
 
-        # Read the python file as a notebook object
-        notebook = jupytext.read(target_path)
+        # Read the md file as a notebook object
+        notebook = jupytext.read(target_path, fmt="md:myst")
 
         # 1. Write as standard Jupyter Notebook (.ipynb)
-        ipynb_path = target_path.replace(".py", ".ipynb")
+        ipynb_path = target_path.replace(".md", ".ipynb")
         jupytext.write(notebook, ipynb_path)
         print(f"Created notebook: {ipynb_path}")
 
-        # 2. Write as MyST Markdown (.md)
-        myst_path = target_path.replace(".py", ".md")
-        jupytext.write(notebook, myst_path, fmt="md:myst")
-        print(f"Created MyST Markdown: {myst_path}")
-
-        # Remove the temporary python file
+        # delete the temporary md file
         os.remove(target_path)
 
     except FileNotFoundError:
-        print(f"Error: Could not find checking {stub_path}")
+        print(f"Error: Could not find checking {template_path}")
     except Exception as e:
         print(f"An error occurred: {e}")
 
