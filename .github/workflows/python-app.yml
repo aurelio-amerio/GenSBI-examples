@@ -31,7 +31,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends pandoc
           python -m pip install --upgrade pip
-          pip install .[test,docs]
+          pip install .[test]
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
@@ -40,7 +40,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         run: |
-          pytest --junitxml=reports/junit/junit.xml --cov=gensbi --cov-report=xml:reports/coverage/coverage.xml --cov-report=term-missing
+          pytest --junitxml=reports/junit/junit.xml --cov=gensbi_examples --cov-report=xml:reports/coverage/coverage.xml --cov-report=term-missing
           # Generate coverage badge
           genbadge coverage --input-file reports/coverage/coverage.xml --output-file reports/badges/coverage.svg
           # Generate test results badge
