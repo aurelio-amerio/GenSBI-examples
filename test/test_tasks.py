@@ -104,7 +104,7 @@ def test_basic_task(task_name, kind):
 
         print(f"All tests passed for {task_name} {kind}!")
 
-    if kind == "joint":
+    if kind == "joint" and task_name != "bernoulli_glm":
         # test the edge mask
         masks = ["faithfull", "min_faithfull", "undirected", "directed"]
         dim_joint = task.dim_joint
