@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/GenSBI # Replace <package-name> with your PyPI project name
+      url: https://pypi.org/p/GenSBI-examples # Replace <package-name> with your PyPI project name
     permissions:
       id-token: write # IMPORTANT: mandatory for trusted publishing
 
@@ -65,7 +65,7 @@ jobs:
 
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/GenSBI
+      url: https://test.pypi.org/p/GenSBI-examples
 
     permissions:
       id-token: write # IMPORTANT: mandatory for trusted publishing
