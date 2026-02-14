@@ -11,3 +11,4 @@ condor_submit train_model_gaussian_linear.sub
 condor_submit train_model_gaussian_mixture.sub
 condor_submit train_model_lensing.sub
 condor_submit train_model_gw.sub
+condor_submit train_my_first_model.sub
