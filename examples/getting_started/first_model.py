@@ -22,6 +22,10 @@ import matplotlib.pyplot as plt
 from gensbi.diagnostics import check_tarp, run_tarp, plot_tarp
 from gensbi.diagnostics import check_sbc, run_sbc, sbc_rank_plot
 from gensbi.diagnostics import LC2ST, plot_lc2st
+from gensbi.diagnostics.marginal_coverage import (
+    compute_marginal_coverage,
+    plot_marginal_coverage,
+)
 
 
 def _simulator(key, thetas):
@@ -185,21 +189,38 @@ def main():
     plt.show()
 
     # %%
-    ecp, alpha = run_tarp(
+    tarp_result = run_tarp(
         thetas,
         posterior_samples,
         references=None,  # will be calculated automatically.
+        bootstrap=False,
     )
 
     # %%
-    atc, ks_pval = check_tarp(ecp, alpha)
+    atc, ks_pval = check_tarp(tarp_result)
     print(atc, "Should be close to 0")
     print(ks_pval, "Should be larger than 0.05")
 
     # %%
-    plot_tarp(ecp, alpha)
+    plot_tarp(tarp_result, mode="both")
     plt.savefig(
         "flux1_flow_pipeline_tarp_2.png", dpi=100, bbox_inches="tight"
+    )  # uncomment to save the figure
+    plt.show()
+
+    # %%
+    print("Running Marginal Coverage diagnostic...")
+    # Shape of posterior_samples: (num_post, num_sims, dim)
+    # compute_marginal_coverage expects: (theta, posterior_samples)
+    # theta: (num_sims, dim)
+    # posterior_samples: (num_post, num_sims, dim)
+
+    alpha_marginal = compute_marginal_coverage(
+        thetas, posterior_samples, method="histogram"
+    )
+    plot_marginal_coverage(alpha_marginal)
+    plt.savefig(
+        "flux1_flow_pipeline_marginal_coverage_2.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
