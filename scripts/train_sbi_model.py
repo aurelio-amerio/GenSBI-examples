@@ -31,6 +31,10 @@ from gensbi.diagnostics.metrics import c2st
 from gensbi.diagnostics import run_tarp, plot_tarp
 from gensbi.diagnostics import run_sbc, sbc_rank_plot
 from gensbi.diagnostics import LC2ST, plot_lc2st
+from gensbi.diagnostics.marginal_coverage import (
+    compute_marginal_coverage,
+    plot_marginal_coverage,
+)
 
 from gensbi.models import SimformerParams, Flux1JointParams, Flux1Params
 from gensbi.recipes import (
@@ -175,7 +179,9 @@ def main():
     samples, true_param, _ = get_samples(8, nsamples=100_000, use_ema=True)
 
     plot_marginals(samples[..., 0], plot_levels=False, backend="seaborn", gridsize=50)
-    plt.savefig(f"{img_dir}/marginals_ema_{experiment_id}.png", dpi=300, bbox_inches="tight")
+    plt.savefig(
+        f"{img_dir}/marginals_ema_{experiment_id}.png", dpi=300, bbox_inches="tight"
+    )
     plt.show()
 
     # --------- C2ST TEST ---------
@@ -264,7 +270,7 @@ def main():
     xs = jnp.asarray(data["xs"][:], dtype=jnp.bfloat16)
     thetas = jnp.asarray(data["thetas"][:], dtype=jnp.bfloat16)
 
-    num_posterior_samples = 1_000
+    num_posterior_samples = 10_000
 
     posterior_samples = pipeline.sample_batched(
         jax.random.PRNGKey(12345), xs, num_posterior_samples, use_ema=True
@@ -277,17 +283,36 @@ def main():
         (posterior_samples.shape[0], posterior_samples.shape[1], -1)
     )
 
-    ecp, alpha = run_tarp(
+    tarp_result = run_tarp(
         thetas,
         posterior_samples,
         references=None,  # will be calculated automatically.
+        bootstrap=False,
     )
 
-    plot_tarp(ecp, alpha)
+    plot_tarp(tarp_result, mode="both")  # Plot both credibility and confidence
     plt.savefig(f"{img_dir}/tarp_{experiment_id}.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     print("TARP diagnostic complete.")
+
+    print("Running Marginal Coverage diagnostic...")
+    # Using the same samples from TARP
+    # Shape of posterior_samples: (num_post, num_sims, dim)
+    # compute_marginal_coverage expects: (theta, posterior_samples)
+    # theta: (num_sims, dim)
+    # posterior_samples: (num_post, num_sims, dim)
+
+    alpha_marginal = compute_marginal_coverage(
+        thetas, posterior_samples, method="histogram"
+    )
+    plot_marginal_coverage(alpha_marginal)
+    plt.savefig(
+        f"{img_dir}/marginal_coverage_{experiment_id}.png", dpi=300, bbox_inches="tight"
+    )
+    plt.show()
+    print("Marginal Coverage diagnostic complete.")
+
     print("Running SBC diagnostic...")
 
     ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
@@ -299,6 +324,7 @@ def main():
     plt.show()
 
     # LC2ST diagnostic
+    print("Running LC2ST diagnostic...")
     data = task.dataset["test"].with_format("jax")[:10_000]
     xs_ = jnp.asarray(data["xs"][:], dtype=jnp.bfloat16)
     thetas_ = jnp.asarray(data["thetas"][:], dtype=jnp.bfloat16)
@@ -344,6 +370,9 @@ def main():
         f"{img_dir}/lc2st_{experiment_id}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
+    print("LC2ST diagnostic complete.")
+
+    print("All diagnostics complete.")
 
 
 if __name__ == "__main__":

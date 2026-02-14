@@ -42,6 +42,10 @@ from gensbi.utils.plotting import plot_marginals
 from gensbi.diagnostics import LC2ST, plot_lc2st
 from gensbi.diagnostics import run_sbc, sbc_rank_plot
 from gensbi.diagnostics import run_tarp, plot_tarp
+from gensbi.diagnostics.marginal_coverage import (
+    compute_marginal_coverage,
+    plot_marginal_coverage,
+)
 
 from gensbi_examples.tasks import GravitationalLensing
 
@@ -265,7 +269,7 @@ def main():
     xs_ = normalize(jnp.array(xs_, dtype=jnp.bfloat16), xs_mean, xs_std)
     xs_ = xs_[..., None]
 
-    num_posterior_samples = 1000
+    num_posterior_samples = 10000
 
     posterior_samples_ = pipeline_latent.sample_batched(
         jax.random.PRNGKey(42),
@@ -282,16 +286,30 @@ def main():
         posterior_samples_.shape[0], posterior_samples_.shape[1], -1
     )
 
-    ecp, alpha = run_tarp(
+    tarp_result = run_tarp(
         thetas,
         posterior_samples,
         references=None,  # will be calculated automatically.
+        bootstrap=False,
     )
 
-    plot_tarp(ecp, alpha)
+    plot_tarp(tarp_result, mode="both")
     plt.savefig(
         f"imgs/lensing_tarp_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
+    plt.show()
+
+    # Marginal Coverage
+    print("Running Marginal Coverage diagnostic...")
+    alpha_marginal = compute_marginal_coverage(
+        thetas, posterior_samples, method="histogram"
+    )
+    plot_marginal_coverage(alpha_marginal)
+    plt.savefig(
+        f"imgs/lensing_marginal_coverage_conf{experiment}.png",
+        dpi=100,
+        bbox_inches="tight",
+    )
     plt.show()
 
     ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
