@@ -35,5 +35,5 @@ training:
   early_stopping: false
   val_every: 100
   experiment_id: 2
-  restore_model: false
-  train_model: true
+  restore_model: true
+  train_model: false

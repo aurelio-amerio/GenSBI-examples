@@ -1,0 +1,26 @@
+experiment_name = my_first_model
+version = 1a    
+workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/getting_started
+script_path = first_model.py
+
+universe = vanilla
+
+request_memory = 64 GB
+request_cpus = 8
+
+executable = train_model.sh
+arguments = "$(workdir) $(script_path)"
+getenv = True
+request_gpus = 1
+requirements = (Machine != "mlwn11.ific.uv.es")
+
+log                     = condor_logs/logs_$(experiment_name)_$(version).log
+output                  = condor_logs/outfile_$(experiment_name)_$(version).out
+error                   = condor_logs/errors_$(experiment_name)_$(version).err
+
+#########
+
+queue 
+
+
+

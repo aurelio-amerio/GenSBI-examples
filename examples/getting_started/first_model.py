@@ -104,6 +104,13 @@ def main():
     checkpoint_dir = os.path.join(cwd, "checkpoints")
     config_path = os.path.join(cwd, "config_flow_flux.yaml")
 
+    # read config file
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    train_model = config["train"]["train_model"]
+    restore_model = config["train"]["restore_model"]
+
     pipeline = Flux1FlowPipeline.init_pipeline_from_config(
         train_dataset_grain,
         val_dataset_grain,
@@ -113,20 +120,24 @@ def main():
         checkpoint_dir,
     )
 
-    loss_history = pipeline.train(nnx.Rngs(0), save_model=True)
+    if restore_model:
+        pipeline.restore_model()
 
-    steps = np.linspace(1, len(loss_history[0]), len(loss_history[0])) * 100
-    plt.plot(steps, loss_history[0], label="train loss")
-    plt.plot(steps, loss_history[1], label="val loss")
-    plt.yscale("log")
-    plt.xlabel("steps")
-    plt.ylabel("loss")
-    plt.ylim(0.1, 10)
-    plt.legend()
-    plt.savefig(
-        "flux1_flow_pipeline_loss_2.png", dpi=100, bbox_inches="tight"
-    )  # uncomment to save the figure
-    plt.show()
+    if train_model:
+        loss_history = pipeline.train(nnx.Rngs(0), save_model=True)
+
+        steps = np.linspace(1, len(loss_history[0]), len(loss_history[0])) * 100
+        plt.plot(steps, loss_history[0], label="train loss")
+        plt.plot(steps, loss_history[1], label="val loss")
+        plt.yscale("log")
+        plt.xlabel("steps")
+        plt.ylabel("loss")
+        plt.ylim(0.1, 10)
+        plt.legend()
+        plt.savefig(
+            "flux1_flow_pipeline_loss_2.png", dpi=100, bbox_inches="tight"
+        )  # uncomment to save the figure
+        plt.show()
 
     rngs = nnx.Rngs(42)
 
@@ -164,7 +175,7 @@ def main():
     xs_ = test_data[:, dim_obs:, :]  # (200, 3, 1)
 
     posterior_samples_ = pipeline.sample_batched(
-        jax.random.PRNGKey(0), xs_, nsamples=1000
+        jax.random.PRNGKey(0), xs_, nsamples=10_000
     )
 
     # flatten the dataset. sbi expects 2D arrays of shape (num_samples, features), while our data is 3D of shape (num_samples, dim, channels).
@@ -176,13 +187,13 @@ def main():
     )
 
     ranks, dap_samples = run_sbc(thetas, xs, posterior_samples)
-    check_stats = check_sbc(ranks, thetas, dap_samples, 1_000)
+    check_stats = check_sbc(ranks, thetas, dap_samples, 10_000)
 
     # %%
     print(check_stats)
 
     # %%
-    f, ax = sbc_rank_plot(ranks, 1_000, plot_type="hist", num_bins=20)
+    f, ax = sbc_rank_plot(ranks, 10_000, plot_type="hist", num_bins=20)
     plt.savefig(
         "flux1_flow_pipeline_sbc_2.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
