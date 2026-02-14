@@ -53,7 +53,7 @@ This document provides a summary of the `simformer` model trained on the `two_mo
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.617 ± 0.021
+- **Average C2ST Accuracy:** 0.618 ± 0.021
 
 ---
 *This model card was automatically generated.*
