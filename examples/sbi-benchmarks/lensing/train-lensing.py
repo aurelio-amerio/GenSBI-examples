@@ -295,7 +295,7 @@ def main():
 
     plot_tarp(tarp_result, mode="both")
     plt.savefig(
-        f"imgs/lensing_tarp_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/lensing_tarp_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
@@ -316,7 +316,7 @@ def main():
 
     f, ax = sbc_rank_plot(ranks, num_posterior_samples, plot_type="hist", num_bins=20)
     plt.savefig(
-        f"imgs/lensing_sbc_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/lensing_sbc_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
@@ -374,7 +374,7 @@ def main():
         x_o,
     )
     plt.savefig(
-        f"imgs/lensing_lc2st_v1a_conf{experiment}.png", dpi=100, bbox_inches="tight"
+        f"imgs/lensing_lc2st_conf{experiment}.png", dpi=100, bbox_inches="tight"
     )  # uncomment to save the figure
     plt.show()
 
