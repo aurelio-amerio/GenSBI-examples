@@ -42,7 +42,7 @@ This document provides a summary of the `flux` model trained on the `bernoulli_g
 | `multistep` | `1` |
 | `early_stopping` | `False` |
 | `val_every` | `100` |
-| `experiment_id` | `3` |
+| `experiment_id` | `1` |
 | `restore_model` | `True` |
 | `train_model` | `False` |
 | `warmup_steps` | `500` |
