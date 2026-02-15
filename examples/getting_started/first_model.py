@@ -110,8 +110,8 @@ def main():
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
-    train_model = config["train"]["train_model"]
-    restore_model = config["train"]["restore_model"]
+    train_model = config["training"]["train_model"]
+    restore_model = config["training"]["restore_model"]
 
     pipeline = Flux1FlowPipeline.init_pipeline_from_config(
         train_dataset_grain,
