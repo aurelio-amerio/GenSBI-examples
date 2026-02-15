@@ -29,7 +29,7 @@ This notebook demonstrates {kind} {matching_technique} on the {TASKNAME} task us
 | 3. [Model Configuration & Definition](#model-configuration-definition) | Load config, set parameters, instantiate model |
 | 4. [Training](#training) | Train or restore model, manage checkpoints |
 | 5. [Evaluation & Visualization](#evaluation-visualization) | Visualize loss, sample posterior, compute log prob |
-| 6. [Posterior Calibration Checks](#posterior-calibration-checks) | TARP, SBC, L-C2ST |
+| 6. [Posterior Calibration Checks](#posterior-calibration-checks) | Marginal coverage, TARP, SBC, L-C2ST |
 
 ---
 
@@ -221,7 +221,7 @@ plt.show()
 # plt.show()
 ```
 
-<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/marginals_ema.png" width=800>
+<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/marginals_ema_1.png" width=800>
 
 +++
 
@@ -237,16 +237,21 @@ We report here the results of the posterior calibration tests. As an excercise, 
 
 +++
 
+**Marginal Coverage:** <br><br>
+<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/marginal_coverage_1.png" width=800>
+
++++
+
 **TARP:** <br><br>
-<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/tarp.png" width=400>
+<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/tarp_1.png" width=800>
 
 +++
 
 **SBC** <br><br>
 
-<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/sbc.png" width=800>
+<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/sbc_1.png" width=800>
 
 +++
 
 **L-C2ST**<br><br>
-<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/lc2st.png" width=400>
+<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}/imgs/lc2st_1.png" width=500>
