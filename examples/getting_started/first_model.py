@@ -27,6 +27,8 @@ from gensbi.diagnostics.marginal_coverage import (
     plot_marginal_coverage,
 )
 
+import yaml
+
 
 def _simulator(key, thetas):
 
