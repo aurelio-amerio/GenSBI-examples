@@ -11,41 +11,38 @@ def find_ancestors_jax(mask, node):
 
     Args:
         mask (Array): Adjacency matrix of a directed graph.
+                      Rows are parents, columns are children.
         node (int): Node of interest.
 
     Returns:
-        _type_: _description_
+        Array: Boolean array where True indicates the node is an ancestor.
+               Does not include the node itself unless it is part of a cycle.
     """
     num_nodes = mask.shape[0]
-    is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
-    stack = stack.at[0].set(node)
     
-    def body_fn(carry, i):
-        is_ancestor, stack = carry
-        current_node = stack[i]
-        current_parents = mask[current_node, :]
-        
-        def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
-            value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
-            
-            def true_fn(is_ancestor, stack):
-                is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
-            
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
-        
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
+    # Initialize ancestor set with the node itself (to start traversal)
+    # We use a vector representation where index k is True if k is in the set.
+    current_layer = jnp.zeros(num_nodes, dtype=jnp.bool_).at[node].set(True)
     
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
+    # Accumulator for all ancestors found
+    all_ancestors = jnp.zeros(num_nodes, dtype=jnp.bool_)
     
+    # The mask is PxC. mask[p, c] = True.
+    # We want to find parents p given children c.
+    # This corresponds to multiplying mask by the child vector.
+    # (mask @ c)[p] = sum_k mask[p, k] * c[k]
+    # If c[k] is True and mask[p, k] is True, then p is added.
+    # This propagates from children to parents.
+
+    # We iterate num_nodes times to cover the maximum possible path length.
+    def body_fn(carry, _):
+        current_layer, all_ancestors = carry
+        parents = mask.astype(jnp.bool_) @ current_layer
+        all_ancestors = all_ancestors | parents
+        current_layer = parents
+        return (current_layer, all_ancestors), None
+
+    (_, is_ancestor), _ = jax.lax.scan(body_fn, (current_layer, all_ancestors), None, length=num_nodes)
 
     return is_ancestor
 
@@ -208,4 +205,3 @@ def minimally_faithfull_mask(mask, condition_mask):
     """ Minimally faithfull mask update for conditioning"""
     I = moralize(mask)
     H = jnp.zeros_like(mask, dtype=jnp.bool_)
-    
