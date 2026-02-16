@@ -1,6 +1,7 @@
 import numpy as np
 from gensbi_examples.tasks import process_conditional
 
+
 def test_process_conditional_1d():
     batch = {
         "xs": np.array([1, 2, 3]),
@@ -16,6 +17,7 @@ def test_process_conditional_1d():
     # Check values
     assert np.array_equal(obs, np.array([[4], [5], [6]]))
     assert np.array_equal(cond, np.array([[1], [2], [3]]))
+
 
 def test_process_conditional_2d():
     batch = {
@@ -36,9 +38,12 @@ def test_process_conditional_2d():
     assert np.array_equal(obs, expected_obs)
     assert np.array_equal(cond, expected_cond)
 
+
 def test_process_conditional_mixed_shapes():
-    # It should work even if xs and thetas have different leading dimensions as long as they are compatible with the slicing
-    # But usually batch dimensions match. Let's stick to matching batch dimensions.
+    # It should work even if xs and thetas have different leading dimensions
+    # as long as they are compatible with the slicing
+    # But usually batch dimensions match.
+    # Let's stick to matching batch dimensions.
 
     batch = {
         "xs": np.zeros((10, 5)),
