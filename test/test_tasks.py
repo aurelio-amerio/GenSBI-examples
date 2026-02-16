@@ -5,14 +5,11 @@ import os
 
 os.environ["JAX_PLATFORMS"] = "cpu"
 
-import jax
-import jax.numpy as jnp
+import pytest  # noqa: E402
 
-import pytest
+import numpy as np  # noqa: E402
 
-import numpy as np
-
-from gensbi_examples.tasks import get_task
+from gensbi_examples.tasks import get_task  # noqa: E402
 
 
 # %%
