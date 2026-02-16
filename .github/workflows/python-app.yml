@@ -70,6 +70,7 @@ jobs:
           cp reports/badges/*.svg img/badges/
 
       - name: Commit and push badges to main
+        if: github.event_name != 'pull_request'
         uses: stefanzweifel/git-auto-commit-action@v6
 
         with:
