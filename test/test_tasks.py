@@ -187,4 +187,12 @@ def test_advanced_task(task_name):
     return
 
 
+def test_gravitational_waves_reference_error():
+    task = get_task("gravitational_waves", "conditional", use_multiprocessing=False)
+    with pytest.raises(NotImplementedError, match="Reference posterior samples not available for this task."):
+        task.get_reference()
+
+    with pytest.raises(NotImplementedError, match="True parameters not available for this task."):
+        task.get_true_parameters()
+
 # %%
