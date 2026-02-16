@@ -188,3 +188,11 @@ def test_advanced_task(task_name):
 
 
 # %%
+def test_get_reference_error():
+    task = get_task("two_moons", "joint", use_multiprocessing=False)
+
+    with pytest.raises(ValueError, match="num_observation must be between 1 and"):
+        task.get_reference(num_observation=0)
+
+    with pytest.raises(ValueError, match="num_observation must be between 1 and"):
+        task.get_reference(num_observation=task.num_observations + 1)
