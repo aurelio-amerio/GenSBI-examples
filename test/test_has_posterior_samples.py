@@ -1,6 +1,7 @@
 import pytest
 from gensbi_examples.tasks import has_posterior_samples
 
+
 @pytest.mark.parametrize(
     "task_name, expected",
     [
