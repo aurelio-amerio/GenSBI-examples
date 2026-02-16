@@ -6,10 +6,11 @@ from functools import partial
 # Set JAX to use CPU
 os.environ["JAX_PLATFORMS"] = "cpu"
 
-import jax
-import jax.numpy as jnp
+import jax  # noqa: E402
+import jax.numpy as jnp  # noqa: E402
 
-from gensbi_examples.mask import get_condition_mask_fn
+from gensbi_examples.mask import get_condition_mask_fn  # noqa: E402
+
 
 @pytest.mark.parametrize("name", ["structured_random", "random", "joint", "posterior", "likelihood"])
 def test_get_condition_mask_fn_valid_names(name):
@@ -28,10 +29,12 @@ def test_get_condition_mask_fn_valid_names(name):
     assert mask.shape == (num_samples, theta_dim + x_dim)
     assert mask.dtype == jnp.bool_
 
+
 def test_get_condition_mask_fn_invalid_name():
     """Test get_condition_mask_fn with an invalid name."""
     with pytest.raises(NotImplementedError):
         get_condition_mask_fn("invalid_name")
+
 
 def test_get_condition_mask_fn_kwargs():
     """Test passing kwargs to get_condition_mask_fn."""
