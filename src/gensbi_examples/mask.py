@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as jnp
-import jax.random as jrandom
 
 from functools import partial
 
@@ -53,7 +52,10 @@ def sample_structured_conditional_mask(
     likelihood_mask = jnp.array([True] * theta_dim + [False] * x_dim, dtype=jnp.bool_)
     random1_mask = jax.random.bernoulli(key2, rnd1_prob, shape=(theta_dim + x_dim,)).astype(jnp.bool_)
     random2_mask = jax.random.bernoulli(key3, rnd2_prob, shape=(theta_dim + x_dim,)).astype(jnp.bool_)
-    mask_options = jnp.stack([joint_mask, posterior_mask, likelihood_mask, random1_mask, random2_mask], axis=0)  # (5, theta_dim + x_dim)
+    mask_options = jnp.stack(
+        [joint_mask, posterior_mask, likelihood_mask, random1_mask, random2_mask],
+        axis=0
+    )  # (5, theta_dim + x_dim)
     idx = jax.random.choice(key1, 5, shape=(num_samples,), p=jnp.array([p_joint, p_posterior, p_likelihood, p_rnd1, p_rnd2]))
     condition_mask = mask_options[idx]
     all_ones_mask = jnp.all(condition_mask, axis=-1)
@@ -75,6 +77,3 @@ def get_condition_mask_fn(name, **kwargs):
         return partial(likelihood_conditional_mask, **kwargs)
     else:
         raise NotImplementedError()
-    
-
-

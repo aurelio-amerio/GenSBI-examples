@@ -1,7 +1,8 @@
-import pytest
+
 import jax
 import jax.numpy as jnp
 from gensbi_examples.mask import sample_random_conditional_mask
+
 
 def test_sample_random_conditional_mask():
     """Test sample_random_conditional_mask function."""
