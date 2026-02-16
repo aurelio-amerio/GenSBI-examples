@@ -71,7 +71,7 @@ jobs:
 
       - name: Commit and push badges to main
         uses: stefanzweifel/git-auto-commit-action@v6
-
+        if: github.event_name != 'pull_request'
         with:
           commit_message: "Update badges [skip ci]"
           branch: main
