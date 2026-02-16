@@ -1,7 +1,7 @@
-
 import pytest
 from unittest.mock import patch, MagicMock
 from gensbi_examples.tasks import get_task, Task
+
 
 def test_invalid_kind_error():
     """
@@ -31,7 +31,7 @@ def test_invalid_kind_error():
 
         # Mock dataset
         mock_dataset = MagicMock()
-        mock_dataset.__getitem__.return_value = MagicMock() # for ["train"], etc.
+        mock_dataset.__getitem__.return_value = MagicMock()  # for ["train"], etc.
         mock_load_dataset.return_value = mock_dataset
 
         # The actual test
