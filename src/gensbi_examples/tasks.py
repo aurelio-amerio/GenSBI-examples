@@ -114,9 +114,8 @@ class Task:
             raise ValueError(f"Unknown kind: {kind}")
 
     def get_train_dataset(self, batch_size, nsamples=1e5):
-        assert (
-            nsamples < self.max_samples
-        ), f"nsamples must be less than {self.max_samples}"
+        if nsamples >= self.max_samples:
+            raise ValueError(f"nsamples must be less than {self.max_samples}")
 
         df = self.df_train.select(range(int(nsamples)))  # [:]
 
@@ -375,9 +374,10 @@ class GravitationalWaves(Task):
         dim_cond_tot = self.dim_cond  # from super
         self.dim_cond = 8192
         self.ch_cond = 2
-        assert (
-            self.dim_cond == dim_cond_tot[0] and self.ch_cond == dim_cond_tot[1]
-        ), f"Dimension mismatch, expected ({dim_cond_tot[0]}, {dim_cond_tot[1]}), got ({self.dim_cond}, {self.ch_cond})"
+        if self.dim_cond != dim_cond_tot[0] or self.ch_cond != dim_cond_tot[1]:
+            raise ValueError(
+                f"Dimension mismatch, expected ({dim_cond_tot[0]}, {dim_cond_tot[1]}), got ({self.dim_cond}, {self.ch_cond})"
+            )
 
         self.xs_mean = jnp.array([[[0.00051776, -0.00040733]]], dtype=jnp.bfloat16)
         self.thetas_mean = jnp.array([[44.826576, 45.070328]], dtype=jnp.bfloat16)
@@ -417,9 +417,10 @@ class GravitationalLensing(Task):
         dim_cond_tot = self.dim_cond  # from super
         self.dim_cond = 32
         self.ch_cond = 32
-        assert (
-            self.dim_cond == dim_cond_tot[0] and self.ch_cond == dim_cond_tot[1]
-        ), f"Dimension mismatch, expected ({dim_cond_tot[0]}, {dim_cond_tot[1]}), got ({self.dim_cond}, {self.ch_cond})"
+        if self.dim_cond != dim_cond_tot[0] or self.ch_cond != dim_cond_tot[1]:
+            raise ValueError(
+                f"Dimension mismatch, expected ({dim_cond_tot[0]}, {dim_cond_tot[1]}), got ({self.dim_cond}, {self.ch_cond})"
+            )
 
         self.xs_mean = jnp.array([-1.1874731e-05], dtype=jnp.bfloat16).reshape(1, 1, 1)
         self.thetas_mean = jnp.array(
@@ -470,14 +471,16 @@ def get_task(task_name, kind="conditional", **kwargs):
     elif task_name == "slcp":
         return SLCP(kind=kind, **kwargs)
     elif task_name == "gravitational_waves":
-        assert (
-            kind == "conditional"
-        ), "Gravitational waves task is only available in conditional mode."
+        if kind != "conditional":
+            raise ValueError(
+                "Gravitational waves task is only available in conditional mode."
+            )
         return GravitationalWaves(**kwargs)
     elif task_name == "gravitational_lensing":
-        assert (
-            kind == "conditional"
-        ), "Gravitational lensing task is only available in conditional mode."
+        if kind != "conditional":
+            raise ValueError(
+                "Gravitational lensing task is only available in conditional mode."
+            )
         return GravitationalLensing(**kwargs)
     else:
         raise ValueError(f"Unknown task: {task_name}")
