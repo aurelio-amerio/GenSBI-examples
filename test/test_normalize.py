@@ -1,6 +1,6 @@
 import jax.numpy as jnp
-import pytest
 from gensbi_examples.tasks import normalize
+
 
 def test_normalize_basic():
     """Test basic normalization with scalar mean and std."""
@@ -10,6 +10,7 @@ def test_normalize_basic():
     expected = jnp.array([-1.0, 0.0, 1.0])
     result = normalize(batch, mean, std)
     assert jnp.allclose(result, expected)
+
 
 def test_normalize_broadcasting():
     """Test normalization with array mean and std (broadcasting)."""
@@ -22,6 +23,7 @@ def test_normalize_broadcasting():
     result = normalize(batch, mean, std)
     assert jnp.allclose(result, expected)
 
+
 def test_normalize_dtype():
     """Test that the output dtype matches the input batch dtype."""
     batch = jnp.array([10, 20, 30], dtype=jnp.float32)
@@ -29,6 +31,7 @@ def test_normalize_dtype():
     std = 10.0
     result = normalize(batch, mean, std)
     assert result.dtype == jnp.float32
+
 
 def test_normalize_zero_std():
     """Test normalization with zero std (should result in inf or nan)."""
