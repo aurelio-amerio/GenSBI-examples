@@ -5,14 +5,11 @@ import os
 
 os.environ["JAX_PLATFORMS"] = "cpu"
 
-import jax
-import jax.numpy as jnp
+import pytest  # noqa: E402
 
-import pytest
+import numpy as np  # noqa: E402
 
-import numpy as np
-
-from gensbi_examples.tasks import get_task
+from gensbi_examples.tasks import get_task  # noqa: E402
 
 
 # %%
@@ -119,7 +116,7 @@ def test_basic_task(task_name, kind):
         # test the "none" mask
         mask_fn = task.get_edge_mask_fn(name="none")
         mask = mask_fn(node_ids, condition_mask)
-        assert mask is None, f"mask is not None"
+        assert mask is None, "mask is not None"
 
 
 @pytest.mark.parametrize(
@@ -188,3 +185,11 @@ def test_advanced_task(task_name):
 
 
 # %%
+def test_get_reference_error():
+    task = get_task("two_moons", "joint", use_multiprocessing=False)
+
+    with pytest.raises(ValueError, match="num_observation must be between 1 and"):
+        task.get_reference(num_observation=0)
+
+    with pytest.raises(ValueError, match="num_observation must be between 1 and"):
+        task.get_reference(num_observation=task.num_observations + 1)
