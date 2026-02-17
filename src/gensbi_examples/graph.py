@@ -18,34 +18,60 @@ def find_ancestors_jax(mask, node):
     """
     num_nodes = mask.shape[0]
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
-    stack = stack.at[0].set(node)
+    # Use a queue for BFS. Initialize with the starting node.
+    # Size is num_nodes + 1 to handle potential re-visit of start node in cycles.
+    queue = jnp.zeros(num_nodes + 1, dtype=jnp.int32)
+    queue = queue.at[0].set(node)
     
-    def body_fn(carry, i):
-        is_ancestor, stack = carry
-        current_node = stack[i]
-        current_parents = mask[current_node, :]
+    # Queue pointers
+    head = 0
+    tail = 1
+
+    def body_fn(carry, step):
+        is_ancestor, queue, head, tail = carry
+
+        # Check if queue is empty
+        is_empty = head == tail
+
+        # Safe access to queue
+        safe_head = jax.lax.min(head, num_nodes)
+        current_node = queue[safe_head]
         
-        def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
-            value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
+        def process_node(carry):
+            is_ancestor, queue, head, tail = carry
+            current_parents = mask[current_node, :]
             
-            def true_fn(is_ancestor, stack):
-                is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
+            def inner_body_fn(carry, j):
+                is_ancestor, queue, tail = carry
+
+                is_parent = current_parents[j] != 0
+                # Add to queue if parent, not already visited, and not self (immediate loop)
+                cond = is_parent & (~is_ancestor[j]) & (j != current_node)
+
+                def update_fn(val):
+                    is_ancestor, queue, tail = val
+                    is_ancestor = is_ancestor.at[j].set(True)
+                    safe_tail = jax.lax.min(tail, num_nodes)
+                    queue = queue.at[safe_tail].set(j)
+                    return is_ancestor, queue, tail + 1
+
+                def no_update_fn(val):
+                    return val
+
+                return jax.lax.cond(cond, update_fn, no_update_fn, (is_ancestor, queue, tail)), None
             
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
-        
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
+            (is_ancestor, queue, tail), _ = jax.lax.scan(inner_body_fn, (is_ancestor, queue, tail), jnp.arange(num_nodes))
+
+            return is_ancestor, queue, head + 1, tail
+
+        def no_op(carry):
+            return carry
+
+        new_carry = jax.lax.cond(is_empty, no_op, process_node, (is_ancestor, queue, head, tail))
+        return new_carry, None
     
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-    
+    # We run scan num_nodes + 1 times to cover all potential expansions
+    (is_ancestor, queue, head, tail), _ = jax.lax.scan(body_fn, (is_ancestor, queue, head, tail), jnp.arange(num_nodes + 1))
 
     return is_ancestor
 
