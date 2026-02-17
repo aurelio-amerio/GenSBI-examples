@@ -18,33 +18,39 @@ def find_ancestors_jax(mask, node):
     """
     num_nodes = mask.shape[0]
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
-    stack = stack.at[0].set(node)
+    # We need a queue for BFS. Max size could be num_nodes + 1 to be safe against re-visiting start node in cycles
+    queue = jnp.zeros(num_nodes + 1, dtype=jnp.int32)
+    queue = queue.at[0].set(node)
+    tail = 1
     
     def body_fn(carry, i):
-        is_ancestor, stack = carry
-        current_node = stack[i]
+        is_ancestor, queue, tail = carry
+
+        # We process the node at queue[i] if i < tail
+        current_node = queue[i]
+        should_process = i < tail
+
         current_parents = mask[current_node, :]
         
         def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
+            is_ancestor, queue, tail = carry
             value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
+            cond = should_process & (value != 0) & (j != current_node) & (~is_ancestor[j])
             
-            def true_fn(is_ancestor, stack):
+            def true_fn(args):
+                is_ancestor, queue, tail = args
                 is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
+                queue = queue.at[tail].set(j)
+                tail = tail + 1
+                return is_ancestor, queue, tail
             
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
+            is_ancestor, queue, tail = jax.lax.cond(cond, true_fn, lambda x: x, (is_ancestor, queue, tail))
+            return (is_ancestor, queue, tail), None
         
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
+        (is_ancestor, queue, tail), _ = jax.lax.scan(inner_body_fn, (is_ancestor, queue, tail), jnp.arange(num_nodes))
+        return (is_ancestor, queue, tail), None
     
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
+    (is_ancestor, queue, tail), _ = jax.lax.scan(body_fn, (is_ancestor, queue, tail), jnp.arange(num_nodes))
     
 
     return is_ancestor
