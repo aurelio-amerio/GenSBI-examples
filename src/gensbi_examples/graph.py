@@ -35,7 +35,7 @@ def find_ancestors_jax(mask, node):
         def inner_body_fn(carry, j):
             is_ancestor, queue, tail = carry
             value = current_parents[j]
-            cond = should_process & value & (j != current_node) & (~is_ancestor[j])
+            cond = should_process & (value != 0) & (j != current_node) & (~is_ancestor[j])
             
             def true_fn(args):
                 is_ancestor, queue, tail = args
