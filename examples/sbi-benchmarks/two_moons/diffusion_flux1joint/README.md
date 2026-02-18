@@ -43,8 +43,8 @@ This document provides a summary of the `flux1joint` model trained on the `two_m
 | `early_stopping` | `True` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
-| `restore_model` | `True` |
-| `train_model` | `False` |
+| `restore_model` | `False` |
+| `train_model` | `True` |
 | `warmup_steps` | `500` |
 | `decay_transition` | `0.6` |
 | `rtol` | `0.0001` |
@@ -55,7 +55,7 @@ This document provides a summary of the `flux1joint` model trained on the `two_m
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.566 ± 0.016
+- **Average C2ST Accuracy:** 0.571 ± 0.019
 
 ---
 *This model card was automatically generated.*

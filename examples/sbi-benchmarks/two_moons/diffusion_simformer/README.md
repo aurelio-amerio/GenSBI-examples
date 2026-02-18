@@ -41,8 +41,8 @@ This document provides a summary of the `simformer` model trained on the `two_mo
 | `early_stopping` | `True` |
 | `val_every` | `100` |
 | `experiment_id` | `1` |
-| `restore_model` | `True` |
-| `train_model` | `False` |
+| `restore_model` | `False` |
+| `train_model` | `True` |
 | `warmup_steps` | `500` |
 | `decay_transition` | `0.6` |
 | `rtol` | `0.0001` |
@@ -53,7 +53,7 @@ This document provides a summary of the `simformer` model trained on the `two_mo
 
 The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). An accuracy score close to 0.5 indicates that the generated samples are highly similar to the true data distribution.
 
-- **Average C2ST Accuracy:** 0.618 ± 0.021
+- **Average C2ST Accuracy:** 0.617 ± 0.023
 
 ---
 *This model card was automatically generated.*
