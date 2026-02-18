@@ -1,5 +1,5 @@
 
-import jax 
+import jax
 import jax.numpy as jnp
 
 from functools import partial
@@ -18,34 +18,77 @@ def find_ancestors_jax(mask, node):
     """
     num_nodes = mask.shape[0]
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
-    stack = stack.at[0].set(node)
-    
-    def body_fn(carry, i):
-        is_ancestor, stack = carry
-        current_node = stack[i]
-        current_parents = mask[current_node, :]
-        
-        def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
-            value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
-            
-            def true_fn(is_ancestor, stack):
-                is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
-            
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
-        
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
-    
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-    
+
+    # Queue for BFS/DFS traversal.
+    # Size num_nodes + 1 to handle potential cycle edge case.
+    queue_size = num_nodes + 1
+    queue = jnp.full(queue_size, -1, dtype=jnp.int32)
+    queue = queue.at[0].set(node)
+
+    # Pointers
+    # head: index of current node to process
+    # tail: index where next node will be added
+    head = 0
+    tail = 1
+
+    def body_fn(carry, _):
+        is_ancestor, queue, head, tail = carry
+
+        # Check if queue is empty
+        queue_not_empty = head < tail
+
+        def process_node(carry):
+            is_ancestor, queue, head, tail = carry
+            current_node = queue[head]
+            current_parents = mask[current_node, :]
+
+            def inner_body_fn(carry, j):
+                is_ancestor, queue, tail = carry
+                value = current_parents[j]
+                # Is parent AND not current node AND not already visited
+                cond = value & (j != current_node) & (~is_ancestor[j])
+
+                def true_fn(carry):
+                    is_ancestor, queue, tail = carry
+                    is_ancestor = is_ancestor.at[j].set(True)
+                    queue = queue.at[tail].set(j)
+                    tail = tail + 1
+                    return is_ancestor, queue, tail
+
+                def false_fn(carry):
+                    return carry
+
+                return jax.lax.cond(cond, true_fn, false_fn, carry), None
+
+            (is_ancestor, queue, tail), _ = jax.lax.scan(
+                inner_body_fn,
+                (is_ancestor, queue, tail),
+                jnp.arange(num_nodes)
+            )
+            return is_ancestor, queue, head, tail
+
+        def no_op(carry):
+            return carry
+
+        res = jax.lax.cond(
+            queue_not_empty,
+            process_node,
+            no_op,
+            (is_ancestor, queue, head, tail)
+        )
+        is_ancestor, queue, head, tail = res
+
+        # Increment head
+        head = head + 1
+
+        return (is_ancestor, queue, head, tail), None
+
+    # Run scan enough times to process all nodes
+    (is_ancestor, _, _, _), _ = jax.lax.scan(
+        body_fn,
+        (is_ancestor, queue, head, tail),
+        jnp.arange(queue_size)
+    )
 
     return is_ancestor
 
@@ -54,15 +97,15 @@ def find_ancestors_jax(mask, node):
 @partial(jax.jit, static_argnums=(2,))
 def faithfull_mask(base_mask, condition_mask, conditioned_nodes="unchanged"):
     """ Faithfull mask update for conditioning"""
-    
+
     graph = base_mask.astype(jnp.bool_).copy()
     base_mask = base_mask.astype(jnp.bool_) # Rows are paraents, columns are children
     condition_mask = condition_mask.astype(jnp.bool_)
     num_nodes = base_mask.shape[0]
-    
+
     def body_fn(carry, i):
         base_mask, condition_mask = carry
-        
+
         def condition_case(base_mask, condition_mask):
             # We need to update all ancestors of i
             is_ancestor = find_ancestors_jax(graph, i)
@@ -78,18 +121,18 @@ def faithfull_mask(base_mask, condition_mask, conditioned_nodes="unchanged"):
             parents_of_children_of_i = jnp.any(parents_of_children_of_i, axis=0)
 
             return base_mask, condition_mask
-        
+
         def uncondition_case(base_mask, condition_mask):
             return base_mask, condition_mask
-        
+
         base_mask, condition_mask = jax.lax.cond(condition_mask[i], condition_case, uncondition_case, base_mask, condition_mask)
-        
+
 
         return (base_mask, condition_mask), None
 
     (base_mask, condition_mask), _ = jax.lax.scan(body_fn, (base_mask, condition_mask), jnp.arange(num_nodes))
-        
-    
+
+
     return base_mask
 
 
@@ -110,8 +153,8 @@ def min_faithfull_mask(mask, condition_mask, top_mode=0, conditioned_nodes="unch
 
     def cond_fn(val):
         S, _, _, _ = val
-        return jnp.any(S) 
-    
+        return jnp.any(S)
+
     def body_fn(val):
         S, M, I, H = val
         #print(S)
@@ -120,7 +163,7 @@ def min_faithfull_mask(mask, condition_mask, top_mode=0, conditioned_nodes="unch
         # print("Frontal set: ",S)
         # print("Marked: ", M)
         # print("Selected: ",v)
-        # Add edge in I between unmarked neighbours in I 
+        # Add edge in I between unmarked neighbours in I
         neighbours_v = I[v,:] & (~M)
         I = I | (neighbours_v[:,None] & neighbours_v[None,:])
         # Make unmarked neighbours of v, the parents of v in H
@@ -128,7 +171,7 @@ def min_faithfull_mask(mask, condition_mask, top_mode=0, conditioned_nodes="unch
         # Remove v from S and mark it
         S = S.at [v].set(False)
         M = M.at[v].set(True)
-        
+
         if top_mode == 1:
             u = mask[:,v] & (~M) # Not marked children
             upstream_u = mask & (u[:, None]  & ~u[None,:]) # Parents of not marked children
@@ -137,19 +180,19 @@ def min_faithfull_mask(mask, condition_mask, top_mode=0, conditioned_nodes="unch
             u = mask[v,:] & (~M) # Not marked parents
             upstream_u = mask & (u[None,:]  & ~u[:, None]) # Children of not marked parents
             all_upstream_u_marked = ~jnp.any(upstream_u & ~M, axis=1)
-        
-        
+
+
 
         S = S | (u & all_upstream_u_marked)
         S = S & (~condition_mask)
 
-        
+
         return S, M, I, H
-    
+
     _,_,_, H = jax.lax.while_loop(cond_fn, body_fn, (S, M, I, H))
     H = H | jnp.eye(num_nodes, dtype=jnp.bool_)
     H = jax.lax.cond(jnp.any(condition_mask), lambda x: x, lambda x: mask, H)
-    
+
     # Conditioned nodes will keep the unconditional edges, hence each row of H where condition_mask is true should be equal to "mask"
     if conditioned_nodes == "unchanged":
         H = H & ~condition_mask[:, None] | mask & condition_mask[:, None]
@@ -157,21 +200,21 @@ def min_faithfull_mask(mask, condition_mask, top_mode=0, conditioned_nodes="unch
         H = H & ~condition_mask[:, None]
     elif conditioned_nodes == "added":
         H = H | condition_mask[:, None]
-    
+
     return H
-    
-                
-        
-    
-    
+
+
+
+
+
 @partial(jax.jit, static_argnums=(4,))
 def min_fill_heuristic(G, I, S, M, top_mode=0):
     """ Min-fill heuristic for finding a node to eliminate"""
-    
+
     # 0 is child, 1 is parent
     UPSTREAM = top_mode
     DOWNSTREAM = 1 - top_mode
-    
+
     # Find the number of edges that would be added if we eliminated each node
     num_edges_added = I.sum(axis=DOWNSTREAM)
     num_edges_added = S * num_edges_added + (~S) * (I.shape[0] + 1)
@@ -186,21 +229,21 @@ def min_fill_heuristic(G, I, S, M, top_mode=0):
     reversed_array = (num_parents)[::-1]
     index = jnp.argmin(reversed_array)
     node_to_eliminate = len(reversed_array) - 1 - index
-    
 
-    return node_to_eliminate 
+
+    return node_to_eliminate
 
 
 @jax.jit
 def moralize(adj_matrix):
     adj_matrix = adj_matrix.astype(jnp.bool_)
-    
+
     # Make the graph undirected
     undirected_graph = adj_matrix | adj_matrix.T
-    
+
     # Add edges between parents
     undirected_graph = undirected_graph | (adj_matrix.T @ adj_matrix)
-    
+
     return undirected_graph
 
 
@@ -208,4 +251,3 @@ def minimally_faithfull_mask(mask, condition_mask):
     """ Minimally faithfull mask update for conditioning"""
     I = moralize(mask)
     H = jnp.zeros_like(mask, dtype=jnp.bool_)
-    
