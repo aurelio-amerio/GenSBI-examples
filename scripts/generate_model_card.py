@@ -2,10 +2,12 @@ import yaml
 import re
 import argparse
 
+
 def parse_config(config_path):
     """Parses the YAML configuration file."""
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
+
 
 def parse_results(results_path):
     """Parses the C2ST results file."""
@@ -20,6 +22,7 @@ def parse_results(results_path):
     except FileNotFoundError:
         print(f"Warning: Results file not found at {results_path}")
     return {}
+
 
 def create_markdown_content(config, results):
     """Generates the simple Markdown content for the model card."""
@@ -38,7 +41,7 @@ def create_markdown_content(config, results):
 
     # --- Create tables for model architecture and training config ---
     model_arch_table = create_table_from_dict(config.get('model', {}))
-    
+
     training_params = config.get('training', {})
     optimizer_params = config.get('optimizer', {})
     full_training_config = {**training_params, **optimizer_params}
@@ -81,6 +84,7 @@ The model's performance is evaluated using the Classifier 2-Sample Test (C2ST). 
 """
     return md_content
 
+
 def main():
     parser = argparse.ArgumentParser(description="Generate a simple Markdown model card.")
     parser.add_argument("--config", type=str, required=True, help="Path to the model configuration YAML file.")
@@ -98,6 +102,6 @@ def main():
 
     print(f"Successfully created simple model card at {args.output}!")
 
+
 if __name__ == "__main__":
     main()
-
