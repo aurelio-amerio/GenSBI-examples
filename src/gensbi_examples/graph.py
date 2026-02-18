@@ -56,7 +56,7 @@ def faithfull_mask(base_mask, condition_mask, conditioned_nodes="unchanged"):
     """ Faithfull mask update for conditioning"""
     
     graph = base_mask.astype(jnp.bool_).copy()
-    base_mask = base_mask.astype(jnp.bool_) # Rows are paraents, columns are children
+    base_mask = base_mask.astype(jnp.bool_) # Rows are children, columns are parents
     condition_mask = condition_mask.astype(jnp.bool_)
     num_nodes = base_mask.shape[0]
     
