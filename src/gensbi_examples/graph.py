@@ -14,41 +14,58 @@ def find_ancestors_jax(mask, node):
         node (int): Node of interest.
 
     Returns:
-        _type_: _description_
+        Array: Boolean array indicating if each node is an ancestor.
     """
     num_nodes = mask.shape[0]
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
-    stack = stack.at[0].set(node)
-    
-    def body_fn(carry, i):
-        is_ancestor, stack = carry
-        current_node = stack[i]
-        current_parents = mask[current_node, :]
-        
-        def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
-            value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
-            
-            def true_fn(is_ancestor, stack):
+
+    # BFS queue
+    queue = jnp.zeros(num_nodes + 1, dtype=jnp.int32)
+    queue = queue.at[0].set(node)
+    head = 0
+    tail = 1
+
+    def cond_fn(val):
+        _, _, head, tail = val
+        return head < tail
+
+    def body_fn(val):
+        is_ancestor, queue, head, tail = val
+        curr = queue[head]
+        head = head + 1
+
+        # Get parents of curr (rows are children, cols are parents)
+        # So mask[curr, :] are parents of curr
+        parents = mask[curr, :]
+
+        def scan_parents(carry, j):
+            is_ancestor, queue, tail = carry
+            is_parent = parents[j]
+
+            # Add to queue if:
+            # 1. It is a parent
+            # 2. It is not the current node (no self-loops)
+            # 3. It has not been visited/marked as ancestor yet
+            should_add = is_parent & (j != curr) & (~is_ancestor[j])
+
+            def add_fn(args):
+                is_ancestor, queue, tail = args
                 is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
-            
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
-        
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
-    
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-    
+                queue = queue.at[tail].set(j)
+                tail = tail + 1
+                return is_ancestor, queue, tail
 
-    return is_ancestor
+            res = jax.lax.cond(should_add, add_fn, lambda x: x, (is_ancestor, queue, tail))
+            return res, None
 
+        (is_ancestor, queue, tail), _ = jax.lax.scan(scan_parents, (is_ancestor, queue, tail), jnp.arange(num_nodes))
+
+        return is_ancestor, queue, head, tail
+
+    val = (is_ancestor, queue, head, tail)
+    val = jax.lax.while_loop(cond_fn, body_fn, val)
+
+    return val[0]
 
 
 @partial(jax.jit, static_argnums=(2,))
