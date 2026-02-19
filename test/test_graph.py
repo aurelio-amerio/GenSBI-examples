@@ -1,12 +1,11 @@
-
 import os
 
 # select device
 os.environ["JAX_PLATFORMS"] = "cpu"
 
-import jax.numpy as jnp
-import pytest
-from gensbi_examples.graph import find_ancestors_jax
+import jax.numpy as jnp  # noqa: E402
+from gensbi_examples.graph import find_ancestors_jax  # noqa: E402
+
 
 def test_find_ancestors_linear_chain():
     """
@@ -26,19 +25,20 @@ def test_find_ancestors_linear_chain():
 
     # Check ancestors of 2
     ancestors_2 = find_ancestors_jax(mask, 2)
-    assert ancestors_2[0] == True
-    assert ancestors_2[1] == True
-    assert ancestors_2[2] == False # Self is not ancestor unless cycle
+    assert ancestors_2[0]
+    assert ancestors_2[1]
+    assert not ancestors_2[2]  # Self is not ancestor unless cycle
 
     # Check ancestors of 1
     ancestors_1 = find_ancestors_jax(mask, 1)
-    assert ancestors_1[0] == True
-    assert ancestors_1[1] == False
-    assert ancestors_1[2] == False
+    assert ancestors_1[0]
+    assert not ancestors_1[1]
+    assert not ancestors_1[2]
 
     # Check ancestors of 0
     ancestors_0 = find_ancestors_jax(mask, 0)
     assert not jnp.any(ancestors_0)
+
 
 def test_find_ancestors_branching():
     """
@@ -54,12 +54,13 @@ def test_find_ancestors_branching():
     mask = mask.at[2, 1].set(1)
 
     ancestors_2 = find_ancestors_jax(mask, 2)
-    assert ancestors_2[0] == True
-    assert ancestors_2[1] == True
-    assert ancestors_2[2] == False
+    assert ancestors_2[0]
+    assert ancestors_2[1]
+    assert not ancestors_2[2]
 
     ancestors_0 = find_ancestors_jax(mask, 0)
     assert not jnp.any(ancestors_0)
+
 
 def test_find_ancestors_cycle():
     """
@@ -93,12 +94,13 @@ def test_find_ancestors_cycle():
     mask = mask.at[0, 1].set(1)
 
     ancestors_0 = find_ancestors_jax(mask, 0)
-    assert ancestors_0[1] == True
-    assert ancestors_0[0] == True # Self-loop via cycle
+    assert ancestors_0[1]
+    assert ancestors_0[0]  # Self-loop via cycle
 
     ancestors_1 = find_ancestors_jax(mask, 1)
-    assert ancestors_1[0] == True
-    assert ancestors_1[1] == True
+    assert ancestors_1[0]
+    assert ancestors_1[1]
+
 
 def test_find_ancestors_disconnected():
     """
@@ -110,6 +112,7 @@ def test_find_ancestors_disconnected():
 
     ancestors_0 = find_ancestors_jax(mask, 0)
     assert not jnp.any(ancestors_0)
+
 
 def test_find_ancestors_self_loop():
     """
@@ -123,4 +126,4 @@ def test_find_ancestors_self_loop():
     mask = mask.at[0, 0].set(1)
 
     ancestors_0 = find_ancestors_jax(mask, 0)
-    assert ancestors_0[0] == False
+    assert not ancestors_0[0]
