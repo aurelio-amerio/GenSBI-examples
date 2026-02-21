@@ -14,38 +14,53 @@ def find_ancestors_jax(mask, node):
         node (int): Node of interest.
 
     Returns:
-        _type_: _description_
+        is_ancestor (Array): Boolean array indicating ancestors.
     """
     num_nodes = mask.shape[0]
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
+    stack = jnp.zeros(num_nodes, dtype=jnp.int32)
     stack = stack.at[0].set(node)
-    
+    write_index = 1
+
     def body_fn(carry, i):
-        is_ancestor, stack = carry
-        current_node = stack[i]
-        current_parents = mask[current_node, :]
-        
-        def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
-            value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
-            
-            def true_fn(is_ancestor, stack):
-                is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
-            
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
-        
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
-    
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-    
+        is_ancestor, stack, write_index = carry
+
+        def process_node(carry):
+            is_ancestor, stack, write_index = carry
+            current_node = stack[i]
+            current_parents = mask[current_node, :]
+
+            def inner_body_fn(carry, j):
+                is_ancestor, stack, write_index = carry
+                value = current_parents[j]
+                cond = value & (j != current_node) & (~is_ancestor[j])
+
+                def true_fn(carry):
+                    is_ancestor, stack, write_index = carry
+                    is_ancestor = is_ancestor.at[j].set(True)
+                    stack = stack.at[write_index].set(j)
+                    write_index = write_index + 1
+                    return is_ancestor, stack, write_index
+
+                def false_fn(carry):
+                    return carry
+
+                return jax.lax.cond(cond, true_fn, false_fn, carry), None
+
+            (is_ancestor, stack, write_index), _ = jax.lax.scan(
+                inner_body_fn, (is_ancestor, stack, write_index), jnp.arange(num_nodes)
+            )
+            return is_ancestor, stack, write_index
+
+        def no_op(carry):
+            return carry
+
+        carry = jax.lax.cond(i < write_index, process_node, no_op, carry)
+        return carry, None
+
+    (is_ancestor, stack, write_index), _ = jax.lax.scan(
+        body_fn, (is_ancestor, stack, write_index), jnp.arange(num_nodes)
+    )
 
     return is_ancestor
 
