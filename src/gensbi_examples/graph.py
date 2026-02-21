@@ -14,38 +14,43 @@ def find_ancestors_jax(mask, node):
         node (int): Node of interest.
 
     Returns:
-        _type_: _description_
+        is_ancestor (Array): Boolean array where True indicates the node is an ancestor.
     """
     num_nodes = mask.shape[0]
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
-    stack = stack.at[0].set(node)
-    
-    def body_fn(carry, i):
-        is_ancestor, stack = carry
-        current_node = stack[i]
-        current_parents = mask[current_node, :]
-        
-        def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
-            value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
-            
-            def true_fn(is_ancestor, stack):
-                is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
-            
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
-        
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
-    
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-    
+
+    # Active set of nodes whose parents we want to find. Initially just the start node.
+    active = jnp.zeros(num_nodes, dtype=jnp.bool_)
+    active = active.at[node].set(True)
+
+    # Ensure mask is boolean for bitwise operations
+    mask_bool = mask.astype(jnp.bool_)
+
+    # Remove self-loops from consideration to match original behavior (direct self-loops ignored)
+    mask_bool = mask_bool & (~jnp.eye(num_nodes, dtype=jnp.bool_))
+
+    def body_fn(carry, _):
+        active, is_ancestor = carry
+
+        # Find parents of all active nodes.
+        # mask[c, p] means p -> c (rows represent children and columns represent parents)
+        # So mask[c, :] is the row for child c, containing 1s at parent indices.
+        # active[c] is true if c is in active set.
+        # We want union of parents of all c in active.
+        # active[:, None] & mask selects rows corresponding to active children.
+        # any(..., axis=0) reduces over rows, resulting in (N,) array of parents.
+
+        new_parents = jnp.any(active[:, None] & mask_bool, axis=0)
+
+        # Filter out nodes that are already known ancestors to avoid re-processing
+        new_active = new_parents & (~is_ancestor)
+
+        # Update ancestors
+        is_ancestor = is_ancestor | new_active
+
+        return (new_active, is_ancestor), None
+
+    (active, is_ancestor), _ = jax.lax.scan(body_fn, (active, is_ancestor), None, length=num_nodes)
 
     return is_ancestor
 
