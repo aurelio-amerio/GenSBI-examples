@@ -14,38 +14,79 @@ def find_ancestors_jax(mask, node):
         node (int): Node of interest.
 
     Returns:
-        _type_: _description_
+        is_ancestor (Array): Boolean array indicating ancestors.
     """
     num_nodes = mask.shape[0]
+
+    # Initialize BFS state
+    # Queue for BFS, max size is num_nodes
+    queue = jnp.zeros(num_nodes, dtype=jnp.int32)
+    queue = queue.at[0].set(node)
+
+    # Visited/Ancestors mask
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
-    stack = stack.at[0].set(node)
     
-    def body_fn(carry, i):
-        is_ancestor, stack = carry
-        current_node = stack[i]
-        current_parents = mask[current_node, :]
+    # Read and Write pointers for queue
+    read_idx = 0
+    write_idx = 1
+
+    def cond_fn(val):
+        _, _, read_idx, write_idx = val
+        return read_idx < write_idx
+
+    def body_fn(val):
+        queue, is_ancestor, read_idx, write_idx = val
+
+        # Pop from queue
+        curr_node = queue[read_idx]
+        read_idx += 1
+
+        # Get parents of current node
+        # mask[i, j] = 1 means j -> i.
+        # So mask[curr_node, :] gives parents of curr_node.
+        parents_mask = mask[curr_node, :] != 0
+
+        # We need to iterate over all potential parents 'j'
+        # and add them to queue if not visited.
         
-        def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
-            value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
+        def inner_update(carry, j):
+            queue, is_ancestor, write_idx = carry
             
-            def true_fn(is_ancestor, stack):
-                is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
+            is_parent = parents_mask[j]
+            not_visited = ~is_ancestor[j]
             
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
+            should_mark = is_parent & not_visited
+
+            # Don't add to queue if it is the start node (we already processed/are processing it)
+            # or if we already visited it (covered by not_visited, but start node starts as not_visited in array)
+            # This logic allows detecting self-loop (should_mark=True) but prevents re-queueing node.
+            should_enqueue = should_mark & (j != node)
+
+            # Update visited/ancestor
+            # Use logical OR to keep previously true values
+            new_is_ancestor = is_ancestor.at[j].set(is_ancestor[j] | should_mark)
+
+            # Update queue
+            # If should_add, write j to queue at write_idx
+            # Else write existing value (no-op)
+            new_queue = queue.at[write_idx].set(
+                jax.lax.select(should_enqueue, j, queue[write_idx])
+            )
+
+            new_write_idx = write_idx + jax.lax.select(should_enqueue, 1, 0)
+
+            return (new_queue, new_is_ancestor, new_write_idx), None
+
+        (queue, is_ancestor, write_idx), _ = jax.lax.scan(
+            inner_update,
+            (queue, is_ancestor, write_idx),
+            jnp.arange(num_nodes)
+        )
         
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
-    
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-    
+        return queue, is_ancestor, read_idx, write_idx
+
+    val = (queue, is_ancestor, read_idx, write_idx)
+    queue, is_ancestor, _, _ = jax.lax.while_loop(cond_fn, body_fn, val)
 
     return is_ancestor
 
@@ -208,4 +249,3 @@ def minimally_faithfull_mask(mask, condition_mask):
     """ Minimally faithfull mask update for conditioning"""
     I = moralize(mask)
     H = jnp.zeros_like(mask, dtype=jnp.bool_)
-    
