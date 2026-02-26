@@ -42,7 +42,8 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from gensbi.models import Flux1Params, Flux1
-from gensbi.recipes import ConditionalFlowPipeline
+from gensbi.recipes import ConditionalPipeline
+from gensbi.core import FlowMatchingMethod
 
 # imports
 from gensbi.diagnostics import run_tarp, plot_tarp
@@ -216,7 +217,7 @@ def main():
 
     training_config["checkpoint_dir"] = checkpoint_dir
 
-    pipeline_latent = ConditionalFlowPipeline(
+    pipeline_latent = ConditionalPipeline(
         model,
         train_dataset_npe,
         val_dataset_npe,
@@ -224,6 +225,7 @@ def main():
         dim_cond=dim_cond_latent,  # we are workin in the latent space of the vae
         ch_obs=ch_obs,
         ch_cond=z_ch,  # conditioning is now in the latent space
+        method=FlowMatchingMethod(),
         training_config=training_config,
         id_embedding_strategy=("absolute", "rope1d"),
     )
