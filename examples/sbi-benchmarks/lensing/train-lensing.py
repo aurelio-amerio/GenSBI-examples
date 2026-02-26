@@ -29,7 +29,8 @@ import yaml
 import matplotlib.pyplot as plt
 
 # gensbi
-from gensbi.recipes import ConditionalFlowPipeline
+from gensbi.recipes import ConditionalPipeline
+from gensbi.core import FlowMatchingMethod
 from gensbi.recipes.flux1 import parse_flux1_params, parse_training_config
 from gensbi.recipes.utils import patchify_2d
 
@@ -213,7 +214,7 @@ def main():
     current_dir = os.getcwd()
     training_config["checkpoint_dir"] = os.path.join(current_dir, "checkpoints")
 
-    pipeline_latent = ConditionalFlowPipeline(
+    pipeline_latent = ConditionalPipeline(
         model,
         train_dataset_npe,
         val_dataset_npe,
@@ -224,6 +225,7 @@ def main():
         ),  # we are workin in the latent space of the vae
         ch_obs=ch_obs,
         ch_cond=ch_cond_latent,  # conditioning is now in the latent space
+        method=FlowMatchingMethod(),
         training_config=training_config,
         id_embedding_strategy=("absolute", "rope2d"),
     )
