@@ -18,7 +18,7 @@ error                   = condor_logs/examples/errors_$(experiment_name)_$(versi
 #########
 
 queue experiment_name, script_path, from (
-    flux1_diff, flux1_diffusion_pipeline.py
+    #flux1_diff, flux1_diffusion_pipeline.py
     flux1_flow, flux1_flow_pipeline.py
     flux1_sm, flux1_sm_pipeline.py
     flux1joint_diff, flux1joint_diffusion_pipeline.py
