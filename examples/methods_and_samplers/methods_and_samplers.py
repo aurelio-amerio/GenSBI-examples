@@ -460,7 +460,7 @@ method_sm = ScoreMatchingMethod()
 # method_sm = ScoreMatchingMethod(sde_type="VE")
 
 training_config_sm = ConditionalPipeline.get_default_training_config()
-training_config_sm["nsteps"] = 10000
+training_config_sm["nsteps"] = 50000
 training_config_sm["checkpoint_dir"] = os.path.join(os.getcwd(), "checkpoints", "sm")
 
 pipeline_sm = ConditionalPipeline(
