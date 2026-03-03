@@ -16,9 +16,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
 
     steps:
 
@@ -39,30 +36,28 @@ jobs:
           swap-storage: true
     
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Set up Python 3.11
+        run: uv python install 3.11
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends pandoc
-          python -m pip install --upgrade pip
-          pip install .[test]
+          uv sync --group dev
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          uv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         run: |
-          pytest --junitxml=reports/junit/junit.xml --cov=gensbi_examples --cov-report=xml:reports/coverage/coverage.xml --cov-report=term-missing
+          uv run pytest --junitxml=reports/junit/junit.xml --cov=gensbi_examples --cov-report=xml:reports/coverage/coverage.xml --cov-report=term-missing
           # Generate coverage badge
-          genbadge coverage --input-file reports/coverage/coverage.xml --output-file reports/badges/coverage.svg
+          uv run genbadge coverage --input-file reports/coverage/coverage.xml --output-file reports/badges/coverage.svg
           # Generate test results badge
-          genbadge tests --input-file reports/junit/junit.xml --output-file reports/badges/tests.svg
+          uv run genbadge tests --input-file reports/junit/junit.xml --output-file reports/badges/tests.svg
 
       - name: Copy badges to img/badges
         run: |

@@ -1,6 +1,6 @@
 [project]
 name = "gensbi-examples"
-version = "0.1.0"
+version = "0.1.1"
 description = "Examples for the GenSBI library"
 authors = [{ name = "Aurelio Amerio", email = "dev@gensbi.com" }]
 license = { file = "LICENSE" }
@@ -18,7 +18,14 @@ dependencies = [
     "imageio>=2.37.2",
 ]
 
-[project.optional-dependencies]
+[project.urls]
+Homepage = "https://github.com/aurelio-amerio/GenSBI-examples"
+Issues = "https://github.com/aurelio-amerio/GenSBI-examples/issues"
+
+[dependency-groups]
+lint = [
+    "flake8",
+]
 test = [
     "pytest",
     "pytest-xdist",
@@ -26,29 +33,15 @@ test = [
     "pytest-mock",
     "pytest-env",
     "genbadge[all]",
-    "flake8",
 ]
-
-[project.urls]
-Homepage = "https://github.com/aurelio-amerio/GenSBI-examples"
-Issues = "https://github.com/aurelio-amerio/GenSBI-examples/issues"
+dev = [
+    {include-group = "lint"},
+    {include-group = "test"},
+]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build]
-sources = ["src"]
-
-[tool.hatch.build.targets.sdist]
-include = [
-    "/src",
-    "/README.md",
-    "/LICENSE",
-]
+requires = ["uv_build>=0.10.7,<0.11.0"]
+build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 env = [
