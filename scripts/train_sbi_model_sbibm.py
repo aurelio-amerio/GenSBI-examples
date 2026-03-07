@@ -56,6 +56,9 @@ import matplotlib.pyplot as plt
 
 # %%
 def main():
+    # --- Global override: set to True to force training, False to skip & restore, None to use config ---
+    TRAINING_OVERRIDE = False
+
     # Argument parser for config file
     parser = argparse.ArgumentParser(description="Simformer Training Script")
     parser.add_argument(
@@ -87,6 +90,11 @@ def main():
     batch_size = train_params.get("batch_size", 256)
     restore_model = train_params.get("restore_model", False)
     train_model = train_params.get("train_model", True)
+
+    # Override from variable if set
+    if TRAINING_OVERRIDE is not None:
+        train_model = TRAINING_OVERRIDE
+        restore_model = not TRAINING_OVERRIDE
     experiment_id = train_params.get("experiment_id", 1)
     dataset_size = args.dataset_size
 
@@ -196,8 +204,10 @@ def main():
         if key is None:
             key = jax.random.PRNGKey(42)
 
+        # Reshape to (1, D, 1) so normalization broadcasts correctly
+        obs_for_model = jnp.array(observation)[None, :, None]
         # Normalize observation before feeding to the model
-        obs_for_model = task.normalize_cond(observation)
+        obs_for_model = task.normalize_cond(obs_for_model)
 
         samples = pipeline.sample(key, obs_for_model, nsamples, use_ema=use_ema)
 
