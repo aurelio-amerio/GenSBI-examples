@@ -6,6 +6,7 @@ import numpy as np
 from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 import json
+import os as _os
 
 # from .utils import download_artifacts
 from .graph import faithfull_mask, min_faithfull_mask, moralize
@@ -64,6 +65,23 @@ def has_posterior_samples(task_name):
         return True
     else:
         return False
+
+
+_STATS_DIR = _os.path.join(_os.path.dirname(__file__), "stats")
+
+
+def _load_precomputed_stats(task_name):
+    """Load precomputed mean/std from shipped npz files, if available."""
+    path = _os.path.join(_STATS_DIR, f"stats_{task_name}.npz")
+    if not _os.path.exists(path):
+        return None
+    data = np.load(path)
+    return {
+        "obs_mean": data["obs_mean"],
+        "obs_std": data["obs_std"],
+        "cond_mean": data["cond_mean"],
+        "cond_std": data["cond_std"],
+    }
 
 
 class Task:
@@ -144,16 +162,34 @@ class Task:
         self.normalize_data = normalize_data
 
         if normalize_data:
-            # Compute stats from training data if not provided
+            # Try loading precomputed stats if not explicitly provided
+            if (
+                obs_mean is None
+                or obs_std is None
+                or cond_mean is None
+                or cond_std is None
+            ):
+                precomputed = _load_precomputed_stats(task_name)
+                if precomputed is not None:
+                    if obs_mean is None:
+                        obs_mean = precomputed["obs_mean"]
+                    if obs_std is None:
+                        obs_std = precomputed["obs_std"]
+                    if cond_mean is None:
+                        cond_mean = precomputed["cond_mean"]
+                    if cond_std is None:
+                        cond_std = precomputed["cond_std"]
+
+            # Fall back to computing from training data if still missing
             if obs_mean is None or obs_std is None:
-                all_obs = self.df_train["thetas"]
-                obs_mean = np.mean(all_obs, axis=0, keepdims=True)
-                obs_std = np.std(all_obs, axis=0, keepdims=True)
+                all_obs = np.array(self.df_train["thetas"][:])
+                obs_mean = np.mean(all_obs, axis=0, keepdims=True)[..., None]
+                obs_std = np.std(all_obs, axis=0, keepdims=True)[..., None]
 
             if cond_mean is None or cond_std is None:
-                all_cond = self.df_train["xs"]
-                cond_mean = np.mean(all_cond, axis=0, keepdims=True)
-                cond_std = np.std(all_cond, axis=0, keepdims=True)
+                all_cond = np.array(self.df_train["xs"][:])
+                cond_mean = np.mean(all_cond, axis=0, keepdims=True)[..., None]
+                cond_std = np.std(all_cond, axis=0, keepdims=True)[..., None]
 
             self.obs_mean = obs_mean
             self.obs_std = obs_std
@@ -339,7 +375,20 @@ class Task:
 class TwoMoons(Task):
     def __init__(self, kind="joint", **kwargs):
         task_name = "two_moons"
-        super().__init__(task_name, kind=kind, **kwargs)
+        stats_ = _load_precomputed_stats(task_name)
+        obs_mean = stats_["obs_mean"]
+        obs_std = stats_["obs_std"]
+        cond_mean = stats_["cond_mean"]
+        cond_std = stats_["cond_std"]
+        super().__init__(
+            task_name,
+            kind=kind,
+            obs_mean=obs_mean,
+            obs_std=obs_std,
+            cond_mean=cond_mean,
+            cond_std=cond_std,
+            **kwargs,
+        )
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -363,7 +412,20 @@ class TwoMoons(Task):
 class BernoulliGLM(Task):
     def __init__(self, kind="joint", **kwargs):
         task_name = "bernoulli_glm"
-        super().__init__(task_name, kind=kind, **kwargs)
+        stats_ = _load_precomputed_stats(task_name)
+        obs_mean = stats_["obs_mean"]
+        obs_std = stats_["obs_std"]
+        cond_mean = stats_["cond_mean"]
+        cond_std = stats_["cond_std"]
+        super().__init__(
+            task_name,
+            kind=kind,
+            obs_mean=obs_mean,
+            obs_std=obs_std,
+            cond_mean=cond_mean,
+            cond_std=cond_std,
+            **kwargs,
+        )
 
     def get_base_mask_fn(self):
         raise NotImplementedError()
@@ -372,7 +434,20 @@ class BernoulliGLM(Task):
 class GaussianLinear(Task):
     def __init__(self, kind="joint", **kwargs):
         task_name = "gaussian_linear"
-        super().__init__(task_name, kind=kind, **kwargs)
+        stats_ = _load_precomputed_stats(task_name)
+        obs_mean = stats_["obs_mean"]
+        obs_std = stats_["obs_std"]
+        cond_mean = stats_["cond_mean"]
+        cond_std = stats_["cond_std"]
+        super().__init__(
+            task_name,
+            kind=kind,
+            obs_mean=obs_mean,
+            obs_std=obs_std,
+            cond_mean=cond_mean,
+            cond_std=cond_std,
+            **kwargs,
+        )
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -393,7 +468,20 @@ class GaussianLinear(Task):
 class GaussianLinearUniform(Task):
     def __init__(self, kind="joint", **kwargs):
         task_name = "gaussian_linear_uniform"
-        super().__init__(task_name, kind=kind, **kwargs)
+        stats_ = _load_precomputed_stats(task_name)
+        obs_mean = stats_["obs_mean"]
+        obs_std = stats_["obs_std"]
+        cond_mean = stats_["cond_mean"]
+        cond_std = stats_["cond_std"]
+        super().__init__(
+            task_name,
+            kind=kind,
+            obs_mean=obs_mean,
+            obs_std=obs_std,
+            cond_mean=cond_mean,
+            cond_std=cond_std,
+            **kwargs,
+        )
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -414,7 +502,20 @@ class GaussianLinearUniform(Task):
 class GaussianMixture(Task):
     def __init__(self, kind="joint", **kwargs):
         task_name = "gaussian_mixture"
-        super().__init__(task_name, kind=kind, **kwargs)
+        stats_ = _load_precomputed_stats(task_name)
+        obs_mean = stats_["obs_mean"]
+        obs_std = stats_["obs_std"]
+        cond_mean = stats_["cond_mean"]
+        cond_std = stats_["cond_std"]
+        super().__init__(
+            task_name,
+            kind=kind,
+            obs_mean=obs_mean,
+            obs_std=obs_std,
+            cond_mean=cond_mean,
+            cond_std=cond_std,
+            **kwargs,
+        )
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -438,7 +539,20 @@ class GaussianMixture(Task):
 class SLCP(Task):
     def __init__(self, kind="joint", **kwargs):
         task_name = "slcp"
-        super().__init__(task_name, kind=kind, **kwargs)
+        stats_ = _load_precomputed_stats(task_name)
+        obs_mean = stats_["obs_mean"]
+        obs_std = stats_["obs_std"]
+        cond_mean = stats_["cond_mean"]
+        cond_std = stats_["cond_std"]
+        super().__init__(
+            task_name,
+            kind=kind,
+            obs_mean=obs_mean,
+            obs_std=obs_std,
+            cond_mean=cond_mean,
+            cond_std=cond_std,
+            **kwargs,
+        )
 
     def get_base_mask_fn(self):
         theta_dim = self.dim_obs
@@ -465,7 +579,7 @@ class SLCP(Task):
 class GravitationalWaves(Task):
     def __init__(self, **kwargs):
         task_name = "gravitational_waves"
-        super().__init__(task_name, kind="conditional", **kwargs)
+        super().__init__(task_name, kind="conditional", **kwargs, normalize_data=False)
 
         self.dim_obs = 2
         self.ch_obs = 1

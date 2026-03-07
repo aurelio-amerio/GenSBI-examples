@@ -44,6 +44,7 @@ requires = ["uv_build>=0.10.7,<0.11.0"]
 build-backend = "uv_build"
 
 [tool.pytest.ini_options]
+addopts = "-n 2"
 env = [
     "JAX_PLATFORMS=cpu"
 ]

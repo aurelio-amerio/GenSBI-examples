@@ -146,7 +146,7 @@ def main():
         )
 
     # Task and dataset setup
-    task = get_task(task_name, kind=kind)
+    task = get_task(task_name, kind=kind, normalize_data=True)
 
     # Set checkpoint directory (new structure)
     checkpoint_dir = os.path.join(os.getcwd(), "checkpoints")
@@ -163,6 +163,10 @@ def main():
     # Model parameters from config
     model_params = config.get("model", {})
 
+    kwargs = {}
+    if method == "score_matching":
+        kwargs["sde_type"] = "VE"
+
     pipeline = PipelineClass.init_pipeline_from_config(
         train_dataset,
         val_dataset,
@@ -170,6 +174,7 @@ def main():
         dim_cond,
         config_path=args.config,
         checkpoint_dir=checkpoint_dir,
+        **kwargs,
     )
 
     # current training config
@@ -191,7 +196,14 @@ def main():
         if key is None:
             key = jax.random.PRNGKey(42)
 
-        samples = pipeline.sample(key, observation, nsamples, use_ema=use_ema)
+        # Normalize observation before feeding to the model
+        obs_for_model = task.normalize_cond(observation)
+
+        samples = pipeline.sample(key, obs_for_model, nsamples, use_ema=use_ema)
+
+        # Unnormalize model output back to physical space
+        samples = task.unnormalize_obs(samples)
+
         return samples, true_param, reference_samples
 
     # make plots
