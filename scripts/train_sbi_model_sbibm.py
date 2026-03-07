@@ -57,7 +57,7 @@ import matplotlib.pyplot as plt
 # %%
 def main():
     # --- Global override: set to True to force training, False to skip & restore, None to use config ---
-    TRAINING_OVERRIDE = False
+    TRAINING_OVERRIDE = None
 
     # Argument parser for config file
     parser = argparse.ArgumentParser(description="Simformer Training Script")
@@ -205,7 +205,7 @@ def main():
             key = jax.random.PRNGKey(42)
 
         # Reshape to (1, D, 1) so normalization broadcasts correctly
-        obs_for_model = jnp.array(observation)[None, :, None]
+        obs_for_model = jnp.array(observation).reshape(1, -1, 1)
         # Normalize observation before feeding to the model
         obs_for_model = task.normalize_cond(obs_for_model)
 
