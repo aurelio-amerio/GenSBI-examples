@@ -21,7 +21,7 @@ experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi
 config_file = $(experiment_path)/config/config_$(method)_$(model).yaml
 
 #########
-dsize = 1000
+dsize = 10000
 queue method,model, from (
     score_matching, flux
     score_matching, flux1joint
@@ -31,7 +31,7 @@ queue method,model, from (
     diffusion, flux1joint
 )
 #########
-dsize = 10000
+dsize = 30000
 queue method,model, from (
     score_matching, flux
     score_matching, flux1joint
