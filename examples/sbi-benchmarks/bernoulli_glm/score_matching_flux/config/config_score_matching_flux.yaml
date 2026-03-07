@@ -1,7 +1,7 @@
-task_name: gaussian_linear
+task_name: bernoulli_glm
 
 strategy:
-  method: "flow"
+  method: "score_matching"
   model: "flux"
 
 optimizer:
@@ -18,10 +18,13 @@ model:
   num_heads: 4
   depth: 4
   depth_single_blocks: 8
-  axes_dim: [10]
+  axes_dim: [20]
   qkv_bias: true
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
+  # id_merge_mode: "sum" # "sum" or "concat". Use "concat" for small models to reduce confusion.
+  # val_emb_dim: null # Required if id_merge_mode="concat"
+  # id_emb_dim: null # Required if id_merge_mode="concat". Recommended 1:1 ratio with val_emb_dim.
 
 training:
   batch_size: 256

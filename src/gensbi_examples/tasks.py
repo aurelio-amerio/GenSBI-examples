@@ -18,9 +18,25 @@ def process_joint(batch):
     return data
 
 
+def process_joint_norm(batch, dim_obs, obs_mean, obs_std, cond_mean, cond_std):
+    data = process_joint(batch)
+    obs_part = data[:, :dim_obs, :]
+    cond_part = data[:, dim_obs:, :]
+    obs_part = normalize(obs_part, obs_mean, obs_std)
+    cond_part = normalize(cond_part, cond_mean, cond_std)
+    return np.concatenate((obs_part, cond_part), axis=1)
+
+
 def process_conditional(batch):
     cond = batch["xs"][..., None]
     obs = batch["thetas"][..., None]
+    return obs, cond
+
+
+def process_conditional_norm(batch, obs_mean, obs_std, cond_mean, cond_std):
+    obs, cond = process_conditional(batch)
+    obs = normalize(obs, obs_mean, obs_std)
+    cond = normalize(cond, cond_mean, cond_std)
     return obs, cond
 
 
@@ -51,7 +67,18 @@ def has_posterior_samples(task_name):
 
 
 class Task:
-    def __init__(self, task_name, kind="joint", seed=42, use_multiprocessing=True):
+    def __init__(
+        self,
+        task_name,
+        kind="joint",
+        seed=42,
+        use_multiprocessing=True,
+        normalize_data=False,
+        obs_mean=None,
+        obs_std=None,
+        cond_mean=None,
+        cond_std=None,
+    ):
 
         self.repo_name = "aurelio-amerio/SBI-benchmarks"
 
@@ -112,6 +139,52 @@ class Task:
             self.process_fn = process_conditional
         else:
             raise ValueError(f"Unknown kind: {kind}")
+
+        # --- Optional normalization ---
+        self.normalize_data = normalize_data
+
+        if normalize_data:
+            # Compute stats from training data if not provided
+            if obs_mean is None or obs_std is None:
+                all_obs = self.df_train["thetas"]
+                obs_mean = np.mean(all_obs, axis=0, keepdims=True)
+                obs_std = np.std(all_obs, axis=0, keepdims=True)
+
+            if cond_mean is None or cond_std is None:
+                all_cond = self.df_train["xs"]
+                cond_mean = np.mean(all_cond, axis=0, keepdims=True)
+                cond_std = np.std(all_cond, axis=0, keepdims=True)
+
+            self.obs_mean = obs_mean
+            self.obs_std = obs_std
+            self.cond_mean = cond_mean
+            self.cond_std = cond_std
+
+            # Use dedicated normalized process functions
+            from functools import partial
+
+            if kind == "joint":
+                self.process_fn = partial(
+                    process_joint_norm,
+                    dim_obs=self.dim_obs,
+                    obs_mean=obs_mean,
+                    obs_std=obs_std,
+                    cond_mean=cond_mean,
+                    cond_std=cond_std,
+                )
+            else:  # conditional
+                self.process_fn = partial(
+                    process_conditional_norm,
+                    obs_mean=obs_mean,
+                    obs_std=obs_std,
+                    cond_mean=cond_mean,
+                    cond_std=cond_std,
+                )
+        else:
+            self.obs_mean = None
+            self.obs_std = None
+            self.cond_mean = None
+            self.cond_std = None
 
     def get_train_dataset(self, batch_size, nsamples=1e5):
         assert (
@@ -237,6 +310,30 @@ class Task:
             return lambda node_id, condition_mask, *args, **kwargs: None
         else:
             raise NotImplementedError()
+
+    def normalize_obs(self, obs):
+        """Normalize observation (theta) data."""
+        if not self.normalize_data:
+            return obs
+        return normalize(obs, self.obs_mean, self.obs_std)
+
+    def normalize_cond(self, cond):
+        """Normalize conditioning (x) data."""
+        if not self.normalize_data:
+            return cond
+        return normalize(cond, self.cond_mean, self.cond_std)
+
+    def unnormalize_obs(self, obs):
+        """Unnormalize observation (theta) samples."""
+        if not self.normalize_data:
+            return obs
+        return unnormalize(obs, self.obs_mean, self.obs_std)
+
+    def unnormalize_cond(self, cond):
+        """Unnormalize conditioning (x) data."""
+        if not self.normalize_data:
+            return cond
+        return unnormalize(cond, self.cond_mean, self.cond_std)
 
 
 class TwoMoons(Task):

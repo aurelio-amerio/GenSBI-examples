@@ -1,7 +1,7 @@
 task_name: gaussian_linear
 
 strategy:
-  method: "flow"
+  method: "diffusion"
   model: "flux"
 
 optimizer:

@@ -5,9 +5,8 @@ strategy:
   model: "flux"
 
 optimizer:
-  warmup_steps: 500
+  warmup_steps: 1000
   decay_transition: 0.80
-  rtol: 1.0e-4
   max_lr: 1.0e-4
   min_lr: 1.0e-6
 
@@ -21,7 +20,6 @@ model:
   depth_single_blocks: 8
   axes_dim: [20]
   qkv_bias: true
-  theta: -1
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
   # id_merge_mode: "sum" # "sum" or "concat". Use "concat" for small models to reduce confusion.
@@ -36,5 +34,5 @@ training:
   early_stopping: false
   val_every: 100
   experiment_id: 1
-  restore_model: true
-  train_model: false
+  restore_model: false
+  train_model: true

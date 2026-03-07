@@ -1,7 +1,7 @@
-task_name: gaussian_linear
+task_name: slcp
 
 strategy:
-  method: "flow"
+  method: "score_matching"
   model: "flux"
 
 optimizer:
@@ -18,8 +18,10 @@ model:
   num_heads: 4
   depth: 4
   depth_single_blocks: 8
-  axes_dim: [10]
+  val_emb_dim: 20
+  id_emb_dim: 10
   qkv_bias: true
+  id_merge_mode: "concat"
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
 

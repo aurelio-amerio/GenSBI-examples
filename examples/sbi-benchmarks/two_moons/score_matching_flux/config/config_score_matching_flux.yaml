@@ -1,7 +1,7 @@
-task_name: gaussian_linear
+task_name: two_moons
 
 strategy:
-  method: "flow"
+  method: "score_matching"
   model: "flux"
 
 optimizer:
@@ -16,10 +16,11 @@ model:
   context_in_dim: 1
   mlp_ratio: 4
   num_heads: 4
-  depth: 4
-  depth_single_blocks: 8
+  depth: 8
+  depth_single_blocks: 16
   axes_dim: [10]
   qkv_bias: true
+
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
 
