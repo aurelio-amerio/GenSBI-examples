@@ -10,7 +10,7 @@ strategy:
 
 optimizer:
   warmup_steps: 1000
-  decay_transition: 0.80
+  decay_transition: 0.60
   max_lr: 2.0e-4
   min_lr: 2.0e-6
 
@@ -28,7 +28,7 @@ model:
 
 training:
   batch_size: 1024
-  nsteps: 30000
+  nsteps: 50000
   ema_decay: 0.999
   multistep: 1
   early_stopping: true

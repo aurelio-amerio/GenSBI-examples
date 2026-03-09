@@ -6,7 +6,7 @@ strategy:
 
 optimizer:
   warmup_steps: 1000
-  decay_transition: 0.80
+  decay_transition: 0.60
   max_lr: 2.0e-4
   min_lr: 2.0e-6
 
