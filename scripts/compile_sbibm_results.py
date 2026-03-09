@@ -52,8 +52,7 @@ def read_c2st_ema(filepath: str) -> str:
             for line in f:
                 m = PATTERN.search(line)
                 if m:
-                    mean, std = m.group(1), m.group(2)
-                    return f"{mean} +- {std}"
+                    return m.group(1)
     except FileNotFoundError:
         return "NaN"
     return "NaN"
