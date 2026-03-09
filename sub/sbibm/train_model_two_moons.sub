@@ -41,14 +41,14 @@ queue method,model, from (
     diffusion, flux1joint
 )
 #########
-# dsize = 100000
-# queue method,model, from (
-#     score_matching, flux
-#     score_matching, flux1joint
-#     flow, flux
-#     flow, flux1joint
-#     diffusion, flux
-#     diffusion, flux1joint
-# )
+dsize = 100000
+queue method,model, from (
+    score_matching, flux
+    score_matching, flux1joint
+    flow, flux
+    flow, flux1joint
+    diffusion, flux
+    diffusion, flux1joint
+)
 #########
 
