@@ -1,0 +1,34 @@
+task_name: slcp
+
+strategy:
+  method: "flow"
+  model: "simformer"
+
+optimizer:
+  warmup_steps: 1000
+  decay_transition: 0.80
+  max_lr: 2.0e-4
+  min_lr: 2.0e-6
+
+model:
+  in_channels: 1
+  val_emb_dim: 40
+  id_emb_dim: 40
+  cond_emb_dim: 10
+  fourier_features: 256
+  num_heads: 6
+  num_layers: 8
+  widening_factor: 3
+  qkv_features: 60
+  num_hidden_layers: 1
+
+training:
+  batch_size: 1024
+  nsteps: 90000
+  ema_decay: 0.999
+  multistep: 1
+  early_stopping: true
+  val_every: 100
+  experiment_id: 1
+  restore_model: false
+  train_model: true
