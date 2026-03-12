@@ -27,8 +27,8 @@ model:
   # id_emb_dim: null # Required if id_merge_mode="concat". Recommended 1:1 ratio with val_emb_dim.
 
 training:
-  batch_size: 1024
-  nsteps: 90000
+  batch_size: 4096
+  nsteps: 50000
   ema_decay: 0.999
   multistep: 1
   early_stopping: true

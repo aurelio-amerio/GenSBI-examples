@@ -29,8 +29,8 @@ model:
   params_dtype: "float32"
 
 training:
-  batch_size: 1024
-  nsteps: 90000
+  batch_size: 4096
+  nsteps: 50000
   ema_decay: 0.999
   multistep: 1
   early_stopping: true
