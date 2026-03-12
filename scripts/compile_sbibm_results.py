@@ -38,12 +38,11 @@ BUDGETS = [10_000, 30_000, 100_000]
 EXPERIMENT_ID = 1  # matches the experiment_id used during training
 
 # regex to extract "Average C2ST accuracy EMA: 0.5771 +- 0.0108"
-PATTERN = re.compile(
-    r"Average C2ST accuracy EMA:\s+([\d.]+)\s*\+-\s*([\d.]+)"
-)
+PATTERN = re.compile(r"Average C2ST accuracy EMA:\s+([\d.]+)\s*\+-\s*([\d.]+)")
 
 
 # ---------- helpers ----------
+
 
 def read_c2st_ema(filepath: str) -> str:
     """Return 'mean +- std' string from a c2st results file, or 'NaN'."""
@@ -78,6 +77,7 @@ def build_result_path(base_dir: str, task: str, method: str, budget: int) -> str
 
 # ---------- main ----------
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Compile SBIBM C2ST EMA results into CSV files."
@@ -87,7 +87,7 @@ def main():
         type=str,
         default="examples/sbi-benchmarks",
         help="Root directory containing <task>/<method>/sbibm/... results "
-             "(default: examples/sbi-benchmarks)",
+        "(default: examples/sbi-benchmarks)",
     )
     args = parser.parse_args()
 
@@ -108,8 +108,8 @@ def main():
             rows.append(row)
 
         # Write CSV inside the task directory
-        task_dir = os.path.join(base_dir, task)
-        csv_path = os.path.join(task_dir, f"{task}.csv")
+        task_dir = os.path.join(base_dir, "stats")
+        csv_path = os.path.join(task_dir, f"{task}_experiment_{EXPERIMENT_ID}.csv")
         fieldnames = ["simulations"] + METHODS
         with open(csv_path, "w", newline="") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
