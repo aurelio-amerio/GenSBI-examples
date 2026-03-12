@@ -5,10 +5,10 @@ strategy:
   model: "flux1joint"
 
 optimizer:
-  warmup_steps: 1000
+  warmup_steps: 500
   decay_transition: 0.60
-  max_lr: 2.0e-4
-  min_lr: 2.0e-6
+  max_lr: 4.0e-4
+  min_lr: 4.0e-6
 
 model:
   in_channels: 1
@@ -25,14 +25,12 @@ model:
   params_dtype: "float32"
 
 training:
-  sigma_min: 1.0e-4
-  sigma_max: 15.0
   batch_size: 1024
   nsteps: 90000
   ema_decay: 0.999
   multistep: 1
   early_stopping: true
   val_every: 100
-  experiment_id: 2
+  experiment_id: 3
   restore_model: false
   train_model: true

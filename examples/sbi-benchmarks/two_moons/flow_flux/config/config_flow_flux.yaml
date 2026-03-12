@@ -5,10 +5,10 @@ strategy:
   model: "flux"
 
 optimizer:
-  warmup_steps: 1000
-  decay_transition: 0.80
-  max_lr: 1.0e-4
-  min_lr: 1.0e-6
+  warmup_steps: 500
+  decay_transition: 0.60
+  max_lr: 4.0e-4
+  min_lr: 4.0e-6
 
 model:
   in_channels: 1
@@ -25,7 +25,7 @@ model:
   id_embedding_strategy: ["absolute", "absolute"]
 
 training:
-  batch_size: 256
+  batch_size: 4096
   nsteps: 50000
   ema_decay: 0.999
   multistep: 1
