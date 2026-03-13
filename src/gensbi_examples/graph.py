@@ -1,5 +1,5 @@
 
-import jax 
+import jax
 import jax.numpy as jnp
 
 from functools import partial
@@ -18,37 +18,57 @@ def find_ancestors_jax(mask, node):
     """
     num_nodes = mask.shape[0]
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
+    stack = jnp.zeros(num_nodes, dtype=jnp.int32)
     stack = stack.at[0].set(node)
+    write_idx = 1
     
     def body_fn(carry, i):
-        is_ancestor, stack = carry
+        is_ancestor, stack, write_idx = carry
+        is_valid_node = i < write_idx
         current_node = stack[i]
-        current_parents = mask[current_node, :]
         
-        def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
-            value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
+        def valid_node_fn(carry):
+            is_ancestor, stack, write_idx = carry
+            current_parents = mask[current_node, :]
             
-            def true_fn(is_ancestor, stack):
-                is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
+            def inner_body_fn(carry, j):
+                is_ancestor, stack, write_idx = carry
+                value = current_parents[j]
+                cond = value & (j != current_node) & (~is_ancestor[j])
+
+                def true_fn(carry):
+                    is_ancestor, stack, write_idx = carry
+                    is_ancestor = is_ancestor.at[j].set(True)
+                    stack = stack.at[write_idx].set(j)
+                    write_idx = write_idx + 1
+                    return is_ancestor, stack, write_idx
+
+                def false_fn(carry):
+                    return carry
+
+                is_ancestor, stack, write_idx = jax.lax.cond(
+                    cond, true_fn, false_fn, (is_ancestor, stack, write_idx)
+                )
+                return (is_ancestor, stack, write_idx), None
             
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
+            (is_ancestor, stack, write_idx), _ = jax.lax.scan(
+                inner_body_fn, (is_ancestor, stack, write_idx), jnp.arange(num_nodes)
+            )
+            return is_ancestor, stack, write_idx
         
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
+        def invalid_node_fn(carry):
+            return carry
+
+        is_ancestor, stack, write_idx = jax.lax.cond(
+            is_valid_node, valid_node_fn, invalid_node_fn, (is_ancestor, stack, write_idx)
+        )
+        return (is_ancestor, stack, write_idx), None
     
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-    
+    (is_ancestor, stack, write_idx), _ = jax.lax.scan(
+        body_fn, (is_ancestor, stack, write_idx), jnp.arange(num_nodes)
+    )
 
     return is_ancestor
-
 
 
 @partial(jax.jit, static_argnums=(2,))
@@ -93,8 +113,7 @@ def faithfull_mask(base_mask, condition_mask, conditioned_nodes="unchanged"):
     return base_mask
 
 
-
-@partial(jax.jit, static_argnums=(2,3))
+@partial(jax.jit, static_argnums=(2, 3))
 def min_faithfull_mask(mask, condition_mask, top_mode=0, conditioned_nodes="unchanged"):
     """ Minimally faithfull mask update for conditioning"""
     num_nodes = mask.shape[0]
@@ -159,11 +178,8 @@ def min_faithfull_mask(mask, condition_mask, top_mode=0, conditioned_nodes="unch
         H = H | condition_mask[:, None]
     
     return H
-    
-                
-        
-    
-    
+
+
 @partial(jax.jit, static_argnums=(4,))
 def min_fill_heuristic(G, I, S, M, top_mode=0):
     """ Min-fill heuristic for finding a node to eliminate"""
@@ -194,18 +210,18 @@ def min_fill_heuristic(G, I, S, M, top_mode=0):
 @jax.jit
 def moralize(adj_matrix):
     adj_matrix = adj_matrix.astype(jnp.bool_)
-    
+
     # Make the graph undirected
     undirected_graph = adj_matrix | adj_matrix.T
-    
+
     # Add edges between parents
     undirected_graph = undirected_graph | (adj_matrix.T @ adj_matrix)
-    
+
     return undirected_graph
 
 
 def minimally_faithfull_mask(mask, condition_mask):
     """ Minimally faithfull mask update for conditioning"""
-    I = moralize(mask)
-    H = jnp.zeros_like(mask, dtype=jnp.bool_)
+    _I = moralize(mask)  # noqa: F841
+    _H = jnp.zeros_like(mask, dtype=jnp.bool_)  # noqa: F841
     
