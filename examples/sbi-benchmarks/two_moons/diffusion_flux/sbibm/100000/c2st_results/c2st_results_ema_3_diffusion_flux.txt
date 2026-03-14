@@ -1,0 +1,11 @@
+C2ST accuracy EMA for observation=1: 0.5360
+C2ST accuracy EMA for observation=2: 0.5360
+C2ST accuracy EMA for observation=3: 0.5469
+C2ST accuracy EMA for observation=4: 0.5360
+C2ST accuracy EMA for observation=5: 0.5464
+C2ST accuracy EMA for observation=6: 0.5353
+C2ST accuracy EMA for observation=7: 0.5430
+C2ST accuracy EMA for observation=8: 0.5308
+C2ST accuracy EMA for observation=9: 0.5370
+C2ST accuracy EMA for observation=10: 0.5682
+Average C2ST accuracy EMA: 0.5415 +- 0.0101
