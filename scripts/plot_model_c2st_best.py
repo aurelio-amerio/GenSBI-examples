@@ -1,4 +1,4 @@
-#%%
+# %%
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -31,7 +31,7 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_IDS = [1, 2]
+EXPERIMENT_IDS = [1, 2, 3]
 
 STATS_DIR = "examples/sbi-benchmarks/stats"
 
@@ -65,10 +65,10 @@ METHOD_COLORS = {
 }
 
 # Marker for each experiment id
-EXPERIMENT_MARKERS = {1: "x", 2: "o"}
+EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*"}
 
 # ---------- load data ----------
-#%%
+# %%
 
 
 def load_all_data():
@@ -88,7 +88,7 @@ def load_all_data():
 data = load_all_data()
 
 # ---------- plotting ----------
-#%%
+# %%
 
 
 def plot_c2st_vs_budget_best(model_methods, model_name, data):
@@ -189,9 +189,9 @@ fig_flux1joint = plot_c2st_vs_budget_best(FLUX1JOINT_METHODS, "Flux1Joint", data
 fig_flux1joint.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1joint_best.png", dpi=150, bbox_inches="tight"
 )
-fig_flux1joint.savefig(
-    # f"{STATS_DIR}/c2st_vs_budget_flux1joint_best.pdf", bbox_inches="tight"
-)
+# fig_flux1joint.savefig(
+#     f"{STATS_DIR}/c2st_vs_budget_flux1joint_best.pdf", bbox_inches="tight"
+# )
 
 plt.show()
 print("Done! Plots saved to:", STATS_DIR)

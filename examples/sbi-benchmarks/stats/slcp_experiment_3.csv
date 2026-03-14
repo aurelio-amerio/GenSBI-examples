@@ -1,0 +1,4 @@
+simulations,flow_flux,flow_flux1joint,diffusion_flux,diffusion_flux1joint,score_matching_flux,score_matching_flux1joint
+10000,0.9954,0.9268,0.9721,0.8955,0.9008,0.8764
+30000,0.8820,0.9157,0.8574,0.8763,0.8826,0.8810
+100000,0.7510,0.9424,0.7696,0.7857,0.8372,0.6010

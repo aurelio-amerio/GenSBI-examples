@@ -35,7 +35,7 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_ID = 1  # matches the experiment_id used during training
+EXPERIMENT_ID = 3  # matches the experiment_id used during training
 
 # regex to extract "Average C2ST accuracy EMA: 0.5771 +- 0.0108"
 PATTERN = re.compile(r"Average C2ST accuracy EMA:\s+([\d.]+)\s*\+-\s*([\d.]+)")
