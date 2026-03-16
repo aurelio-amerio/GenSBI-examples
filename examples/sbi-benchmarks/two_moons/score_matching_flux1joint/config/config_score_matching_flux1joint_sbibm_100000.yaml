@@ -22,7 +22,7 @@ model:
   id_emb_dim: 10
   id_merge_mode: "concat"
   qkv_bias: true
-  params_dtype: "float32"
+  params_dtype: "bfloat16"
 
 training:
   batch_size: 256
