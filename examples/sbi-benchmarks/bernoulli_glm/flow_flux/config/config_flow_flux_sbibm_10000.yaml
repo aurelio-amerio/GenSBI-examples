@@ -18,21 +18,23 @@ model:
   num_heads: 4
   depth: 4
   depth_single_blocks: 8
-  axes_dim: [20]
   qkv_bias: true
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
-  # id_merge_mode: "sum" # "sum" or "concat". Use "concat" for small models to reduce confusion.
-  # val_emb_dim: null # Required if id_merge_mode="concat"
-  # id_emb_dim: null # Required if id_merge_mode="concat". Recommended 1:1 ratio with val_emb_dim.
+  id_merge_mode: "concat" # "sum" or "concat". Use "concat" for small models to reduce confusion.
+  val_emb_dim: 20 # Required if id_merge_mode="concat"
+  id_emb_dim: 10 # Required if id_merge_mode="concat". Recommended 1:1 ratio with val_emb_dim.
+
+  
 
 training:
   batch_size: 256
   nsteps: 50000
   ema_decay: 0.999
   multistep: 1
-  early_stopping: false
+  early_stopping: true
   val_every: 100
-  experiment_id: 4
+  experiment_id: 5
   restore_model: false
   train_model: true
+  val_error_ratio: 1.1

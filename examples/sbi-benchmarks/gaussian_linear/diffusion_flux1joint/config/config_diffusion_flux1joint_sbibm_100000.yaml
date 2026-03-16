@@ -5,7 +5,7 @@
 task_name: gaussian_linear
 
 strategy:
-  method: "diffusion"
+  method: "flow"
   model: "flux1joint"
 
 optimizer:
@@ -20,10 +20,10 @@ model:
   context_in_dim: 1
   mlp_ratio: 4
   num_heads: 4
-  depth_single_blocks: 16
-  val_emb_dim: 10
+  depth_single_blocks: 8
+  val_emb_dim: 8
   cond_emb_dim: 4
-  id_emb_dim: 10
+  id_emb_dim: 8
   id_merge_mode: "concat"
   qkv_bias: true
   params_dtype: "float32"
@@ -33,8 +33,9 @@ training:
   nsteps: 50000
   ema_decay: 0.999
   multistep: 1
-  early_stopping: false
+  early_stopping: true
   val_every: 100
-  experiment_id: 4
+  experiment_id: 5
   restore_model: false
   train_model: true
+  val_error_ratio: 1.1
