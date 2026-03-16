@@ -54,19 +54,24 @@ jobs:
       - name: Test with pytest
         run: |
           uv run pytest --junitxml=reports/junit/junit.xml --cov=gensbi_examples --cov-report=xml:reports/coverage/coverage.xml --cov-report=term-missing
+
+      - name: Generate badges
+        if: github.ref == 'refs/heads/main'
+        run: |
           # Generate coverage badge
           uv run genbadge coverage --input-file reports/coverage/coverage.xml --output-file reports/badges/coverage.svg
           # Generate test results badge
           uv run genbadge tests --input-file reports/junit/junit.xml --output-file reports/badges/tests.svg
 
       - name: Copy badges to img/badges
+        if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p img/badges
           cp reports/badges/*.svg img/badges/
 
       - name: Commit and push badges to main
+        if: github.ref == 'refs/heads/main'
         uses: stefanzweifel/git-auto-commit-action@v6
-
         with:
           commit_message: "Update badges [skip ci]"
           branch: main
