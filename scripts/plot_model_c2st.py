@@ -31,7 +31,7 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_ID = 1
+EXPERIMENT_ID = 4
 
 STATS_DIR = "examples/sbi-benchmarks/stats"
 
@@ -143,9 +143,9 @@ fig_flux1joint.savefig(
     dpi=150,
     bbox_inches="tight",
 )
-fig_flux1joint.savefig(
-    # f"{STATS_DIR}/c2st_vs_budget_flux1joint_{EXPERIMENT_ID}.pdf", bbox_inches="tight"
-)
+# fig_flux1joint.savefig(
+#     f"{STATS_DIR}/c2st_vs_budget_flux1joint_{EXPERIMENT_ID}.pdf", bbox_inches="tight"
+# )
 
 plt.show()
 print("Done! Plots saved to:", STATS_DIR)
