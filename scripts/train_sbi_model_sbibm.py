@@ -154,7 +154,9 @@ def main():
         )
 
     # Task and dataset setup
-    task = get_task(task_name, kind=kind, normalize_data=True)
+    task = get_task(
+        task_name, kind=kind, normalize_data=True, use_prefetching=True, max_workers=2
+    )
 
     # Set checkpoint directory (new structure)
     checkpoint_dir = os.path.join(os.getcwd(), "checkpoints")

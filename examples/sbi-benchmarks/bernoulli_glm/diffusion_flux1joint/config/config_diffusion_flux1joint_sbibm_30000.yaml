@@ -20,7 +20,7 @@ model:
   context_in_dim: 1
   mlp_ratio: 4
   num_heads: 4
-  depth_single_blocks: 16
+  depth_single_blocks: 8
   val_emb_dim: 10
   cond_emb_dim: 4
   id_emb_dim: 10
@@ -35,7 +35,7 @@ training:
   multistep: 1
   early_stopping: true
   val_every: 100
-  experiment_id: 5
+  experiment_id: 6
   restore_model: false
   train_model: true
   val_error_ratio: 1.1

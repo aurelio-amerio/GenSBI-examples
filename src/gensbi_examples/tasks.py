@@ -90,7 +90,8 @@ class Task:
         task_name,
         kind="joint",
         seed=42,
-        use_multiprocessing=True,
+        use_prefetching=True,
+        max_workers=None,
         normalize_data=False,
         obs_mean=None,
         obs_std=None,
@@ -102,7 +103,8 @@ class Task:
 
         self.task_name = task_name
         self.seed = seed
-        self.use_multiprocessing = use_multiprocessing
+        self.use_prefetching = use_prefetching
+        self.max_workers = max_workers
 
         fname = hf_hub_download(
             repo_id=self.repo_name, filename="metadata.json", repo_type="dataset"
@@ -235,13 +237,13 @@ class Task:
 
         performance_config = grain.experimental.pick_performance_config(
             ds=dataset_grain,
-            ram_budget_mb=1024 * 4,
-            max_workers=None,
+            ram_budget_mb=1024,
+            max_workers=self.max_workers,
             max_buffer_size=None,
         )
 
         dataset_batched = dataset_grain.batch(batch_size).map(self.process_fn)
-        if self.use_multiprocessing:
+        if self.use_prefetching:
             dataset_batched = dataset_batched.mp_prefetch(
                 performance_config.multiprocessing_options
             )
@@ -256,12 +258,12 @@ class Task:
         )
         performance_config = grain.experimental.pick_performance_config(
             ds=val_dataset_grain,
-            ram_budget_mb=1024 * 4,
-            max_workers=None,
+            ram_budget_mb=1024,
+            max_workers=self.max_workers,
             max_buffer_size=None,
         )
         val_dataset_grain = val_dataset_grain.batch(batch_size).map(self.process_fn)
-        if self.use_multiprocessing:
+        if self.use_prefetching:
             val_dataset_grain = val_dataset_grain.mp_prefetch(
                 performance_config.multiprocessing_options
             )
