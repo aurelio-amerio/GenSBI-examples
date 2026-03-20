@@ -1,0 +1,37 @@
+task_name: gaussian_linear
+
+strategy:
+  method: "score_matching"
+  model: "flux"
+
+optimizer:
+  warmup_steps: 1000
+  decay_transition: 0.60
+  max_lr: 2.0e-4
+  min_lr: 2.0e-6
+
+model:
+  in_channels: 1
+  vec_in_dim: null
+  context_in_dim: 1
+  mlp_ratio: 4
+  num_heads: 4
+  depth: 4
+  depth_single_blocks: 8
+  axes_dim: [10]
+  qkv_bias: true
+  params_dtype: "bfloat16"
+  id_embedding_strategy: ["absolute", "absolute"]
+
+training:
+  sigma_min: 1.0e-4
+  sigma_max: 15.0
+  batch_size: 1024
+  nsteps: 50000
+  ema_decay: 0.999
+  multistep: 1
+  early_stopping: true
+  val_every: 100
+  experiment_id: 2
+  restore_model: false
+  train_model: true
