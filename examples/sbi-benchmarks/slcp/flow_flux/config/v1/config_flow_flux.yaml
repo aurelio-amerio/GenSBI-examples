@@ -1,4 +1,4 @@
-task_name: gaussian_mixture
+task_name: slcp
 
 strategy:
   method: "flow"
@@ -7,7 +7,6 @@ strategy:
 optimizer:
   warmup_steps: 500
   decay_transition: 0.60
-  rtol: 1.0e-4
   max_lr: 4.0e-4
   min_lr: 4.0e-6
 
@@ -17,11 +16,12 @@ model:
   context_in_dim: 1
   mlp_ratio: 4
   num_heads: 4
-  depth: 8
-  depth_single_blocks: 16
-  axes_dim: [10]
+  depth: 4
+  depth_single_blocks: 8
+  val_emb_dim: 20
+  id_emb_dim: 10
   qkv_bias: true
-  theta: 40
+  id_merge_mode: "concat"
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
 
@@ -30,7 +30,7 @@ training:
   nsteps: 50000
   ema_decay: 0.999
   multistep: 1
-  early_stopping: true
+  early_stopping: false
   val_every: 100
   experiment_id: 1
   restore_model: true
