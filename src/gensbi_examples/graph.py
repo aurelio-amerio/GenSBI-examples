@@ -18,34 +18,38 @@ def find_ancestors_jax(mask, node):
     """
     num_nodes = mask.shape[0]
     is_ancestor = jnp.zeros(num_nodes, dtype=jnp.bool_)
-    stack = jnp.empty(num_nodes, dtype=jnp.int32)
+    stack = jnp.zeros(num_nodes, dtype=jnp.int32)
     stack = stack.at[0].set(node)
     
     def body_fn(carry, i):
-        is_ancestor, stack = carry
+        is_ancestor, stack, write_idx = carry
+
+        is_valid_node = i < write_idx
         current_node = stack[i]
         current_parents = mask[current_node, :]
         
         def inner_body_fn(carry, j):
-            is_ancestor, stack = carry
+            is_ancestor, stack, write_idx = carry
             value = current_parents[j]
-            cond = value & (j != current_node) & (~is_ancestor[j])
+            cond = value & (j != current_node) & (~is_ancestor[j]) & is_valid_node
             
-            def true_fn(is_ancestor, stack):
-                is_ancestor = is_ancestor.at[j].set(True)
-                stack = stack.at[i+1].set(j)
-                return is_ancestor, stack
-            def false_fn(is_ancestor, stack):
-                return is_ancestor, stack
+            def true_fn(carry_inner):
+                is_ancestor_inner, stack_inner, write_idx_inner = carry_inner
+                is_ancestor_inner = is_ancestor_inner.at[j].set(True)
+                stack_inner = stack_inner.at[write_idx_inner].set(j)
+                write_idx_inner = write_idx_inner + 1
+                return is_ancestor_inner, stack_inner, write_idx_inner
+
+            def false_fn(carry_inner):
+                return carry_inner
             
-            is_ancestor, stack = jax.lax.cond(cond, true_fn, false_fn, is_ancestor, stack)
-            return (is_ancestor, stack), None
+            out_carry = jax.lax.cond(cond, true_fn, false_fn, (is_ancestor, stack, write_idx))
+            return out_carry, None
         
-        (is_ancestor, stack), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-        return (is_ancestor, stack), None
+        (is_ancestor, stack, write_idx), _ = jax.lax.scan(inner_body_fn, (is_ancestor, stack, write_idx), jnp.arange(num_nodes))
+        return (is_ancestor, stack, write_idx), None
     
-    (is_ancestor, stack), _ = jax.lax.scan(body_fn, (is_ancestor, stack), jnp.arange(num_nodes))
-    
+    (is_ancestor, stack, write_idx), _ = jax.lax.scan(body_fn, (is_ancestor, stack, jnp.int32(1)), jnp.arange(num_nodes))
 
     return is_ancestor
 
