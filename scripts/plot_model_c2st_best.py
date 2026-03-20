@@ -31,9 +31,11 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_IDS = [1, 2, 3]
+EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6]
 
-STATS_DIR = "examples/sbi-benchmarks/stats"
+STATS_DIR = (
+    "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
+)
 
 # ---------- group methods by model ----------
 
@@ -65,7 +67,7 @@ METHOD_COLORS = {
 }
 
 # Marker for each experiment id
-EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*"}
+EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*", 4: "s", 5: "d", 6: "p"}
 
 # ---------- load data ----------
 # %%

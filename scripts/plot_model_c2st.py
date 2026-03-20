@@ -31,9 +31,11 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_ID = 4
+EXPERIMENT_ID = 6
 
-STATS_DIR = "examples/sbi-benchmarks/stats"
+STATS_DIR = (
+    "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
+)
 
 # ---------- group methods by model ----------
 
