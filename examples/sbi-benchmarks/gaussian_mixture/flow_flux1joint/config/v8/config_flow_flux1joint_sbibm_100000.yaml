@@ -30,12 +30,12 @@ model:
 
 training:
   batch_size: 256
-  nsteps: 50000
-  ema_decay: 0.999
+  nsteps: 100000
+  ema_decay: 0.9999
   multistep: 1
   early_stopping: true
-  val_every: 100
-  experiment_id: 7
+  val_every: 500
+  experiment_id: 8
   restore_model: false
   train_model: true
-  val_error_ratio: 1.1
+  val_error_ratio: 1.3

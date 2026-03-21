@@ -1,4 +1,5 @@
 experiment_name = two_moons
+version = v8
 
 universe = vanilla
 
@@ -18,7 +19,7 @@ error                   = condor_logs/errors_$(experiment_name)_$(method)_$(mode
 # New variant path structure
 variant = $(method)_$(model)
 experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)/$(variant)
-config_file = $(experiment_path)/config/config_$(method)_$(model)_sbibm_$(dsize).yaml
+config_file = $(experiment_path)/config/$(version)/config_$(method)_$(model)_sbibm_$(dsize).yaml
 
 #########
 dsize = 100000
