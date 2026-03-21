@@ -31,7 +31,7 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_ID = 6
+EXPERIMENT_ID = 7
 
 STATS_DIR = (
     "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"

@@ -206,7 +206,12 @@ def main():
         if key is None:
             key = jax.random.PRNGKey(42)
 
-        samples = pipeline.sample(key, observation, nsamples, use_ema=use_ema)
+        # For diffusion EDM, use S_churn=30 for stochastic sampling
+        sampler_kwargs = {}
+        if method == "diffusion":
+            sampler_kwargs["solver_params"] = {"S_churn": 30, "S_noise": 1.0}
+
+        samples = pipeline.sample(key, observation, nsamples, use_ema=use_ema, **sampler_kwargs)
 
         return samples, true_param, reference_samples
 
