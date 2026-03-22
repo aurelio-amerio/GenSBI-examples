@@ -3,6 +3,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from gensbi.utils.plotting import set_default_style
+
+set_default_style()
+
 TASKS = [
     "two_moons",
     "bernoulli_glm",
@@ -148,11 +152,14 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data):
                     markeredgewidth=2,
                 )
 
-        ax.set_title(TASK_LABELS[task], fontsize=12)
+        ax.set_title(TASK_LABELS[task], fontsize=18)
         ax.set_xlabel("Simulation Budget")
         ax.set_xscale("log")
         ax.set_xticks(BUDGETS)
         ax.set_xticklabels([f"{b // 1000}k" for b in BUDGETS])
+        ax.xaxis.set_minor_formatter(plt.NullFormatter())
+        ax.set_ylim(0.45, 1.0)
+        ax.set_xlim(10_000, 100_000)
         ax.axhline(0.5, color="gray", linestyle="--", alpha=0.5, linewidth=0.8)
 
     axes[0].set_ylabel("C2ST")
@@ -175,8 +182,8 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data):
         handles.append(h)
         labels.append(f"Experiment {exp_id}")
 
-    fig.legend(handles, labels, loc="upper center", ncol=5, bbox_to_anchor=(0.5, 1.08))
-    fig.suptitle(f"Best C2ST vs Budget — {model_name}", fontsize=14, y=1.12)
+    fig.legend(handles, labels, loc="upper center", ncol=5, bbox_to_anchor=(0.5, 1.15), framealpha=0)
+    fig.suptitle(f"Best C2ST vs Budget — {model_name}", y=1.25, fontsize=20)
     fig.tight_layout()
     return fig
 

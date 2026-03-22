@@ -3,6 +3,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from gensbi.utils.plotting import set_default_style
+
+set_default_style()
+
 TASKS = [
     "two_moons",
     "bernoulli_glm",
@@ -31,7 +35,7 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_ID = 7
+EXPERIMENT_ID = 8
 
 STATS_DIR = (
     "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
@@ -108,25 +112,39 @@ def plot_c2st_vs_budget(model_methods, model_name, data):
             ax.plot(
                 BUDGETS,
                 vals,
-                marker="o",
+                # marker="o",
                 label=label,
                 color=color,
                 linewidth=1.5,
-                markersize=5,
+                # markersize=5,
             )
 
-        ax.set_title(TASK_LABELS[task], fontsize=12)
+        ax.set_title(TASK_LABELS[task], fontsize=18)
         ax.set_xlabel("Simulation Budget")
         ax.set_xscale("log")
         ax.set_xticks(BUDGETS)
+        ax.set_yticks([0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax.set_xticklabels([f"{b // 1000}k" for b in BUDGETS])
-        ax.axhline(0.5, color="gray", linestyle="--", alpha=0.5, linewidth=0.8)
+        ax.xaxis.set_minor_formatter(plt.NullFormatter())
+        ax.set_ylim(0.45, 1.0)
+        ax.set_xlim(10_000, 100_000)
+        ax.axhline(0.5, color="gray", linestyle="--", alpha=0.5, linewidth=1)
+        ax.grid(lw=1.0)
 
     axes[0].set_ylabel("C2ST")
     # Single legend from first panel (all panels have the same lines)
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=3, bbox_to_anchor=(0.5, 1.08))
-    fig.suptitle(f"C2ST vs Budget — {model_name}", fontsize=14, y=1.12)
+
+    fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        ncol=3,
+        bbox_to_anchor=(0.5, 1.05),
+        framealpha=0,
+        fontsize=18,
+    )
+    fig.suptitle(f"C2ST vs Budget — {model_name}", y=1.15, fontsize=20)
     fig.tight_layout()
     return fig
 
