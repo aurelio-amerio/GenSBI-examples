@@ -35,7 +35,8 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6]
+EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6, 7, 8]
+# EXPERIMENT_IDS = [1, 2, 4, 5, 6, 8]
 
 STATS_DIR = (
     "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
@@ -71,7 +72,7 @@ METHOD_COLORS = {
 }
 
 # Marker for each experiment id
-EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*", 4: "s", 5: "d", 6: "p"}
+EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*", 4: "s", 5: "d", 6: "p", 7: "h", 8: "H"}
 
 # ---------- load data ----------
 # %%
@@ -108,6 +109,9 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data):
     """
     fig, axes = plt.subplots(1, 5, figsize=(20, 4), sharey=True)
 
+    # Track which experiment IDs actually appear as best
+    used_exp_ids = set()
+
     for ax, task in zip(axes, TASKS):
         for method in model_methods:
             label = METHOD_LABELS[method]
@@ -131,6 +135,8 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data):
 
                 best_vals.append(min_val)
                 best_exp_ids.append(min_exp)
+                if min_exp is not None:
+                    used_exp_ids.add(min_exp)
 
             # Draw the connecting line (no markers)
             ax.plot(
@@ -148,7 +154,7 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data):
                     val,
                     marker=EXPERIMENT_MARKERS[exp_id],
                     color=color,
-                    markersize=7,
+                    markersize=10,
                     markeredgewidth=2,
                 )
 
@@ -164,11 +170,18 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data):
 
     axes[0].set_ylabel("C2ST")
 
+    # Print experiments that are never the best
+    unused_exp_ids = set(EXPERIMENT_IDS) - used_exp_ids
+    if unused_exp_ids:
+        print(f"[{model_name}] Experiments never best in any task/budget: {sorted(unused_exp_ids)}")
+
     # Build legend: method lines + marker legend for experiments
     handles, labels = axes[0].get_legend_handles_labels()
 
-    # Add marker legend entries
+    # Add marker legend entries only for experiments that were actually best
     for exp_id, marker in EXPERIMENT_MARKERS.items():
+        if exp_id not in used_exp_ids:
+            continue
         h = plt.Line2D(
             [],
             [],
