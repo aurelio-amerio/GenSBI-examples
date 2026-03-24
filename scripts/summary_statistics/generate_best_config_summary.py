@@ -2,6 +2,8 @@
 generate_best_config_summary.py
 Generates a markdown summary of the best model configuration version per task, model, and budget.
 Only shows parameters that vary across versions for a given task/method.
+
+All configs are expected to live in config/v{N}/ directories with budget-specific filenames.
 """
 
 import os
@@ -10,13 +12,13 @@ import glob
 from collections import defaultdict
 
 stats_dir = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
-output_md = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats/best_configurations_summary.md"
+output_md = os.path.join(stats_dir, "best_configurations_summary.md")
 base_dir = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks"
 
 tasks = ["two_moons", "bernoulli_glm", "gaussian_linear", "gaussian_mixture", "slcp"]
 models = {
     "Flux1": ["flow_flux", "diffusion_flux", "score_matching_flux"],
-    "Flux1Joint": ["flow_flux1joint", "diffusion_flux1joint", "score_matching_flux1joint"]
+    "Flux1Joint": ["flow_flux1joint", "diffusion_flux1joint", "score_matching_flux1joint"],
 }
 budgets = [10_000, 30_000, 100_000]
 
@@ -35,6 +37,7 @@ def flatten(d, parent_key="", sep="."):
 
 
 def get_best_version(task, method, budget):
+    """Find the experiment version with the lowest C2ST for a given task/method/budget."""
     best_v = None
     min_c2st = float("inf")
     for exp in range(1, 15):
@@ -48,7 +51,8 @@ def get_best_version(task, method, budget):
                     continue
                 m_idx = headers.index(method)
                 b_idx = next(
-                    (headers.index(x) for x in ["num_simulations", "simulations", "budget"] if x in headers), -1
+                    (headers.index(x) for x in ["num_simulations", "simulations", "budget"] if x in headers),
+                    -1,
                 )
                 if b_idx == -1:
                     continue
@@ -70,50 +74,22 @@ def get_best_version(task, method, budget):
 
 
 def get_config_for_version(task, method, budget, v):
-    """
-    Get the config file path for a specific version v.
-    v=1: fall back to root-level config (same for all budgets).
-    v>1: look in config/v{v}/ for a file with the budget in the name, then any yaml.
-    """
-    config_dir = f"{base_dir}/{task}/{method}/config"
-
-    if v == 1:
-        # root level files are the v1 configs (budget-agnostic)
-        root_yamls = [y for y in glob.glob(f"{config_dir}/*.yaml") if not os.path.isdir(y)]
-        if root_yamls:
-            return root_yamls[0]
-        return None
-
-    v_dir = f"{config_dir}/v{v}"
+    """Get config yaml path from config/v{v}/ for a given budget."""
+    v_dir = f"{base_dir}/{task}/{method}/config/v{v}"
     if not os.path.isdir(v_dir):
         return None
-
     yamls = glob.glob(f"{v_dir}/*.yaml")
     if not yamls:
         return None
-
-    # Prefer budget-specific file
+    # Prefer budget-specific
     b_yamls = [y for y in yamls if str(budget) in os.path.basename(y)]
-    if b_yamls:
-        return b_yamls[0]
-
-    return yamls[0]
+    return b_yamls[0] if b_yamls else yamls[0]
 
 
 def get_all_version_configs(task, method, budget):
-    """
-    Collect one config file per version (v1 = root file, v2..vN = versioned dirs).
-    Returns dict: {v_str: filepath}
-    """
+    """Collect one config file per version directory. Returns dict {v_num_str: filepath}."""
     config_dir = f"{base_dir}/{task}/{method}/config"
     version_files = {}
-
-    # v1 = root-level files
-    root_yamls = [y for y in glob.glob(f"{config_dir}/*.yaml") if not os.path.isdir(y)]
-    if root_yamls:
-        version_files["1"] = root_yamls[0]
-
-    # v2+ = versioned subdirectories
     for v_dir in sorted(glob.glob(f"{config_dir}/v*")):
         v_num = os.path.basename(v_dir).lstrip("v")
         yamls = glob.glob(f"{v_dir}/*.yaml")
@@ -121,15 +97,15 @@ def get_all_version_configs(task, method, budget):
             continue
         b_yamls = [y for y in yamls if str(budget) in os.path.basename(y)]
         version_files[v_num] = b_yamls[0] if b_yamls else yamls[0]
-
     return version_files
 
 
+# --- Main ---
 with open(output_md, "w") as out:
     out.write("# Best Model Configurations\n\n")
     out.write(
         "Only showing parameters that vary across configuration versions for a given task/method. "
-        "Rows show the best configuration version for each simulation budget.\n\n"
+        "Rows show the best configuration version for each training method.\n\n"
     )
 
     for task in tasks:
@@ -141,7 +117,7 @@ with open(output_md, "w") as out:
             for budget in budgets:
                 out.write(f"#### Budget: {budget // 1000}k\n\n")
 
-                table_data = {}  # method -> {k: v}
+                table_data = {}
                 all_varying_keys = set()
 
                 for method in methods:
@@ -164,12 +140,15 @@ with open(output_md, "w") as out:
                         except:
                             pass
 
-                    varying_params = [k for k, vals in all_params.items() if len(set(vals.values())) > 1]
+                    varying_params = [
+                        k for k, vals in all_params.items()
+                        if len(set(vals.values())) > 1 and k != "training.experiment_id"
+                    ]
 
                     # Load the best version's config
                     best_cf = get_config_for_version(task, method, budget, best_v)
                     if best_cf is None:
-                        print(f"WARNING: [{task} - {method} - {budget}] config for best_v={best_v} not found")
+                        print(f"WARNING: [{task} - {method} - {budget}] config for v{best_v} not found")
                         continue
 
                     try:
@@ -189,7 +168,7 @@ with open(output_md, "w") as out:
 
                 sorted_keys = sorted(list(all_varying_keys))
 
-                headers = ["Method", "Best Exp Version"] + sorted_keys
+                headers = ["Method", "Best Version"] + sorted_keys
                 out.write("| " + " | ".join(headers) + " |\n")
                 out.write("|" + "|".join(["---"] * len(headers)) + "|\n")
 
