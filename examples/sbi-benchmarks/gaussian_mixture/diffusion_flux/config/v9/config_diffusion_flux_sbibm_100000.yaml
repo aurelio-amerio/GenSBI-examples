@@ -20,9 +20,9 @@ model:
   depth_single_blocks: 16
   axes_dim: [10]
   qkv_bias: true
-
   params_dtype: "bfloat16"
   id_embedding_strategy: ["absolute", "absolute"]
+  id_merge_mode: "sum"
 
 training:
   batch_size: 256
