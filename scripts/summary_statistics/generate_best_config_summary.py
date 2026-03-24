@@ -36,10 +36,10 @@ def flatten(d, parent_key="", sep="."):
     return dict(items)
 
 
-def get_best_version(task, method, budget):
-    """Find the experiment version with the lowest C2ST for a given task/method/budget."""
-    best_v = None
-    min_c2st = float("inf")
+def get_best_versions(task, method, budget, top_n=2):
+    """Find the top N experiment versions with the lowest C2ST for a given task/method/budget.
+    Returns list of (version, c2st) tuples sorted by c2st ascending."""
+    results = []  # list of (exp, c2st)
     for exp in range(1, 15):
         csv_path = f"{stats_dir}/{task}_experiment_{exp}.csv"
         if not os.path.exists(csv_path):
@@ -63,14 +63,15 @@ def get_best_version(task, method, budget):
                     if parts[b_idx] == str(budget):
                         try:
                             c2st_f = float(parts[m_idx])
-                            if c2st_f < min_c2st:
-                                min_c2st = c2st_f
-                                best_v = exp
+                            import math
+                            if not math.isnan(c2st_f):
+                                results.append((exp, c2st_f))
                         except:
                             pass
         except:
             pass
-    return best_v
+    results.sort(key=lambda x: x[1])
+    return results[:top_n]
 
 
 def get_config_for_version(task, method, budget, v):
@@ -121,9 +122,11 @@ with open(output_md, "w") as out:
                 all_varying_keys = set()
 
                 for method in methods:
-                    best_v = get_best_version(task, method, budget)
-                    if best_v is None:
+                    top_versions = get_best_versions(task, method, budget)
+                    if not top_versions:
                         continue
+                    best_v, best_c2st = top_versions[0]
+                    second_v, second_c2st = top_versions[1] if len(top_versions) > 1 else (None, None)
 
                     version_files = get_all_version_configs(task, method, budget)
                     if not version_files:
@@ -154,7 +157,10 @@ with open(output_md, "w") as out:
                     try:
                         with open(best_cf, "r") as f:
                             best_flat = flatten(yaml.safe_load(f))
-                            row_data = {"__best_v__": best_v}
+                            row_data = {
+                                "__best_v__": best_v, "__c2st__": best_c2st,
+                                "__2nd_v__": second_v, "__2nd_c2st__": second_c2st,
+                            }
                             for k in varying_params:
                                 row_data[k] = best_flat.get(k, "N/A")
                                 all_varying_keys.add(k)
@@ -168,7 +174,7 @@ with open(output_md, "w") as out:
 
                 sorted_keys = sorted(list(all_varying_keys))
 
-                headers = ["Method", "Best Version"] + sorted_keys
+                headers = ["Method", "Best", "2nd Best"] + sorted_keys
                 out.write("| " + " | ".join(headers) + " |\n")
                 out.write("|" + "|".join(["---"] * len(headers)) + "|\n")
 
@@ -176,7 +182,12 @@ with open(output_md, "w") as out:
                     if method not in table_data:
                         continue
                     row = table_data[method]
-                    cols = [method, f"v{row['__best_v__']}"]
+                    best_str = f"v{row['__best_v__']} ({row['__c2st__']:.3f})"
+                    if row["__2nd_v__"] is not None:
+                        second_str = f"v{row['__2nd_v__']} ({row['__2nd_c2st__']:.3f})"
+                    else:
+                        second_str = "-"
+                    cols = [method, best_str, second_str]
                     for k in sorted_keys:
                         cols.append(str(row.get(k, "-")))
                     out.write("| " + " | ".join(cols) + " |\n")
