@@ -211,7 +211,11 @@ def main():
         # Normalize observation before feeding to the model
         obs_for_model = task.normalize_cond(obs_for_model)
 
-        samples = pipeline.sample(key, obs_for_model, nsamples, use_ema=use_ema)
+        sampler_kwargs = {}
+        if method == "diffusion":
+            sampler_kwargs["solver_params"] = {"S_churn": 30, "S_noise": 1.0}
+
+        samples = pipeline.sample(key, obs_for_model, nsamples, use_ema=use_ema, **sampler_kwargs)
 
         # Unnormalize model output back to physical space
         samples = task.unnormalize_obs(samples)
