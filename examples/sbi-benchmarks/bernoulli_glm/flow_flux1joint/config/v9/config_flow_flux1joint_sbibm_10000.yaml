@@ -5,7 +5,7 @@
 task_name: bernoulli_glm
 
 strategy:
-  method: "diffusion"
+  method: "flow"
   model: "flux1joint"
 
 optimizer:
@@ -20,7 +20,7 @@ model:
   context_in_dim: 1
   mlp_ratio: 4
   num_heads: 4
-  depth_single_blocks: 8
+  depth_single_blocks: 16
   val_emb_dim: 10
   cond_emb_dim: 4
   id_emb_dim: 10
