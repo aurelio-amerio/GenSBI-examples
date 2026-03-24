@@ -1,5 +1,5 @@
 experiment_name = bernoulli_glm
-version = v8
+version = v9
 
 universe = vanilla
 
