@@ -20,10 +20,10 @@ model:
   context_in_dim: 1
   mlp_ratio: 4
   num_heads: 4
-  depth_single_blocks: 8
-  val_emb_dim: 8
+  depth_single_blocks: 16
+  val_emb_dim: 10
   cond_emb_dim: 4
-  id_emb_dim: 8
+  id_emb_dim: 10
   id_merge_mode: "concat"
   qkv_bias: true
   params_dtype: "bfloat16"
