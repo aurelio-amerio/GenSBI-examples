@@ -161,6 +161,8 @@ with open(output_md, "w") as out:
                                 "__best_v__": best_v, "__c2st__": best_c2st,
                                 "__2nd_v__": second_v, "__2nd_c2st__": second_c2st,
                             }
+                            # Always include id_merge_mode; default to "sum" when absent
+                            row_data["model.id_merge_mode"] = best_flat.get("model.id_merge_mode", "sum")
                             for k in varying_params:
                                 row_data[k] = best_flat.get(k, "N/A")
                                 all_varying_keys.add(k)
@@ -172,9 +174,11 @@ with open(output_md, "w") as out:
                     out.write("*No data available.*\n\n")
                     continue
 
+                # Remove model.id_merge_mode from varying keys if present (we handle it as fixed column)
+                all_varying_keys.discard("model.id_merge_mode")
                 sorted_keys = sorted(list(all_varying_keys))
 
-                headers = ["Method", "Best", "2nd Best"] + sorted_keys
+                headers = ["Method", "Best", "2nd Best", "model.id_merge_mode"] + sorted_keys
                 out.write("| " + " | ".join(headers) + " |\n")
                 out.write("|" + "|".join(["---"] * len(headers)) + "|\n")
 
@@ -187,7 +191,7 @@ with open(output_md, "w") as out:
                         second_str = f"v{row['__2nd_v__']} ({row['__2nd_c2st__']:.3f})"
                     else:
                         second_str = "-"
-                    cols = [method, best_str, second_str]
+                    cols = [method, best_str, second_str, str(row.get("model.id_merge_mode", "sum"))]
                     for k in sorted_keys:
                         cols.append(str(row.get(k, "-")))
                     out.write("| " + " | ".join(cols) + " |\n")
