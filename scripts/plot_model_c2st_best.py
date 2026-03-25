@@ -35,7 +35,7 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6, 7, 8]
+EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 # EXPERIMENT_IDS = [1, 2, 4, 5, 6, 8]
 
 STATS_DIR = (
@@ -72,7 +72,7 @@ METHOD_COLORS = {
 }
 
 # Marker for each experiment id
-EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*", 4: "s", 5: "d", 6: "p", 7: "h", 8: "H"}
+EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*", 4: "s", 5: "d", 6: "p", 7: "h", 8: "H", 9: "v"}
 
 # ---------- load data ----------
 # %%
@@ -98,7 +98,7 @@ data = load_all_data()
 # %%
 
 
-def plot_c2st_vs_budget_best(model_methods, model_name, data):
+def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False):
     """
     Create a 1×5 figure with one panel per task.
     Each panel plots the best (minimum) C2ST vs budget for the given methods.
@@ -147,26 +147,29 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data):
                 label=label,
             )
 
-            # Draw individual markers based on which experiment was best
-            for budget, val, exp_id in zip(BUDGETS, best_vals, best_exp_ids):
-                ax.plot(
-                    budget,
-                    val,
-                    marker=EXPERIMENT_MARKERS[exp_id],
-                    color=color,
-                    markersize=10,
-                    markeredgewidth=2,
-                )
+            if with_markers:
+                # Draw individual markers based on which experiment was best
+                for budget, val, exp_id in zip(BUDGETS, best_vals, best_exp_ids):
+                    ax.plot(
+                        budget,
+                        val,
+                        marker=EXPERIMENT_MARKERS[exp_id],
+                        color=color,
+                        markersize=10,
+                        markeredgewidth=2,
+                    )
 
         ax.set_title(TASK_LABELS[task], fontsize=18)
         ax.set_xlabel("Simulation Budget")
         ax.set_xscale("log")
         ax.set_xticks(BUDGETS)
+        ax.set_yticks([0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
         ax.set_xticklabels([f"{b // 1000}k" for b in BUDGETS])
         ax.xaxis.set_minor_formatter(plt.NullFormatter())
         ax.set_ylim(0.45, 1.0)
         ax.set_xlim(10_000, 100_000)
-        ax.axhline(0.5, color="gray", linestyle="--", alpha=0.5, linewidth=0.8)
+        ax.axhline(0.5, color="gray", linestyle="--", alpha=0.5, linewidth=1)
+        ax.grid(lw=1.0)
 
     axes[0].set_ylabel("C2ST")
 
@@ -175,45 +178,76 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data):
     if unused_exp_ids:
         print(f"[{model_name}] Experiments never best in any task/budget: {sorted(unused_exp_ids)}")
 
-    # Build legend: method lines + marker legend for experiments
+    # Single legend from first panel (all panels have the same lines)
     handles, labels = axes[0].get_legend_handles_labels()
 
-    # Add marker legend entries only for experiments that were actually best
-    for exp_id, marker in EXPERIMENT_MARKERS.items():
-        if exp_id not in used_exp_ids:
-            continue
-        h = plt.Line2D(
-            [],
-            [],
-            color="gray",
-            marker=marker,
-            linestyle="None",
-            markersize=7,
-            markeredgewidth=2,
-            label=f"Experiment {exp_id}",
-        )
-        handles.append(h)
-        labels.append(f"Experiment {exp_id}")
+    if with_markers:
+        # Add marker legend entries only for experiments that were actually best
+        for exp_id, marker in EXPERIMENT_MARKERS.items():
+            if exp_id not in used_exp_ids:
+                continue
+            h = plt.Line2D(
+                [],
+                [],
+                color="gray",
+                marker=marker,
+                linestyle="None",
+                markersize=7,
+                markeredgewidth=2,
+                label=f"Experiment {exp_id}",
+            )
+            handles.append(h)
+            labels.append(f"Experiment {exp_id}")
 
-    fig.legend(handles, labels, loc="upper center", ncol=5, bbox_to_anchor=(0.5, 1.15), framealpha=0)
-    fig.suptitle(f"Best C2ST vs Budget — {model_name}", y=1.25, fontsize=20)
+        fig.legend(handles, labels, loc="upper center", ncol=5, bbox_to_anchor=(0.5, 1.15), framealpha=0)
+        fig.suptitle(f"Best C2ST vs Budget — {model_name}", y=1.25, fontsize=20)
+    else:
+        fig.legend(
+            handles,
+            labels,
+            loc="upper center",
+            ncol=3,
+            bbox_to_anchor=(0.5, 1.05),
+            framealpha=0,
+            fontsize=18,
+        )
+        fig.suptitle(f"Best C2ST vs Budget — {model_name}", y=1.15, fontsize=20)
+        
     fig.tight_layout()
     return fig
 
 
-fig_flux = plot_c2st_vs_budget_best(FLUX_METHODS, "Flux1", data)
-fig_flux.savefig(
+fig_flux_paper = plot_c2st_vs_budget_best(FLUX_METHODS, "Flux1", data, with_markers=False)
+fig_flux_paper.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1_best.png", dpi=150, bbox_inches="tight"
 )
-# fig_flux.savefig(f"{STATS_DIR}/c2st_vs_budget_flux1_best.pdf", bbox_inches="tight")
+fig_flux_paper.savefig(
+    f"{STATS_DIR}/c2st_vs_budget_flux1_best.pdf", dpi=150, bbox_inches="tight"
+)
 
-fig_flux1joint = plot_c2st_vs_budget_best(FLUX1JOINT_METHODS, "Flux1Joint", data)
-fig_flux1joint.savefig(
+fig_flux_comp = plot_c2st_vs_budget_best(FLUX_METHODS, "Flux1", data, with_markers=True)
+fig_flux_comp.savefig(
+    f"{STATS_DIR}/c2st_vs_budget_flux1_best_comparison.png", dpi=150, bbox_inches="tight"
+)
+fig_flux_comp.savefig(
+    f"{STATS_DIR}/c2st_vs_budget_flux1_best_comparison.pdf", dpi=150, bbox_inches="tight"
+)
+
+fig_flux1joint_paper = plot_c2st_vs_budget_best(FLUX1JOINT_METHODS, "Flux1Joint", data, with_markers=False)
+fig_flux1joint_paper.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1joint_best.png", dpi=150, bbox_inches="tight"
 )
-# fig_flux1joint.savefig(
-#     f"{STATS_DIR}/c2st_vs_budget_flux1joint_best.pdf", bbox_inches="tight"
-# )
+fig_flux1joint_paper.savefig(
+    f"{STATS_DIR}/c2st_vs_budget_flux1joint_best.pdf", dpi=150, bbox_inches="tight"
+)
+
+fig_flux1joint_comp = plot_c2st_vs_budget_best(FLUX1JOINT_METHODS, "Flux1Joint", data, with_markers=True)
+fig_flux1joint_comp.savefig(
+    f"{STATS_DIR}/c2st_vs_budget_flux1joint_best_comparison.png", dpi=150, bbox_inches="tight"
+)
+fig_flux1joint_comp.savefig(
+    f"{STATS_DIR}/c2st_vs_budget_flux1joint_best_comparison.pdf", dpi=150, bbox_inches="tight"
+)
 
 plt.show()
 print("Done! Plots saved to:", STATS_DIR)
