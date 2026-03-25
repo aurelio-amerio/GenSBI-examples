@@ -61,6 +61,15 @@ METHOD_LABELS = {
     "score_matching_flux1joint": "Score Matching",
 }
 
+METHOD_CSV_LABELS = {
+    "flow_flux": "flow matching",
+    "flow_flux1joint": "flow matching",
+    "diffusion_flux": "edm",
+    "diffusion_flux1joint": "edm",
+    "score_matching_flux": "score matching",
+    "score_matching_flux1joint": "score matching",
+}
+
 # Colors for each training method
 METHOD_COLORS = {
     "flow_flux": "#1f77b4",
@@ -111,6 +120,7 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
 
     # Track which experiment IDs actually appear as best
     used_exp_ids = set()
+    csv_data = []
 
     for ax, task in zip(axes, TASKS):
         for method in model_methods:
@@ -137,6 +147,14 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
                 best_exp_ids.append(min_exp)
                 if min_exp is not None:
                     used_exp_ids.add(min_exp)
+                csv_data.append({
+                    "task": task,
+                    "model": model_name,
+                    "method": METHOD_CSV_LABELS[method],
+                    "budget": BUDGETS[i_budget],
+                    "best_c2st": min_val,
+                    "best_exp_id": min_exp
+                })
 
             # Draw the connecting line (no markers)
             ax.plot(
@@ -214,18 +232,23 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
         fig.suptitle(f"Best C2ST vs Budget — {model_name}", y=1.15, fontsize=20)
         
     fig.tight_layout()
-    return fig
+    
+    df_long = pd.DataFrame(csv_data)
+    df_best = df_long.pivot(index=["task", "model", "method"], columns="budget", values="best_c2st").reset_index()
+    
+    return fig, df_best
 
 
-fig_flux_paper = plot_c2st_vs_budget_best(FLUX_METHODS, "Flux1", data, with_markers=False)
+fig_flux_paper, df_flux_best = plot_c2st_vs_budget_best(FLUX_METHODS, "Flux1", data, with_markers=False)
 fig_flux_paper.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1_best.png", dpi=150, bbox_inches="tight"
 )
 fig_flux_paper.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1_best.pdf", dpi=150, bbox_inches="tight"
 )
+df_flux_best.to_csv(f"{STATS_DIR}/best_c2st_flux1.csv", index=False)
 
-fig_flux_comp = plot_c2st_vs_budget_best(FLUX_METHODS, "Flux1", data, with_markers=True)
+fig_flux_comp, _ = plot_c2st_vs_budget_best(FLUX_METHODS, "Flux1", data, with_markers=True)
 fig_flux_comp.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1_best_comparison.png", dpi=150, bbox_inches="tight"
 )
@@ -233,15 +256,16 @@ fig_flux_comp.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1_best_comparison.pdf", dpi=150, bbox_inches="tight"
 )
 
-fig_flux1joint_paper = plot_c2st_vs_budget_best(FLUX1JOINT_METHODS, "Flux1Joint", data, with_markers=False)
+fig_flux1joint_paper, df_flux1joint_best = plot_c2st_vs_budget_best(FLUX1JOINT_METHODS, "Flux1Joint", data, with_markers=False)
 fig_flux1joint_paper.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1joint_best.png", dpi=150, bbox_inches="tight"
 )
 fig_flux1joint_paper.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1joint_best.pdf", dpi=150, bbox_inches="tight"
 )
+df_flux1joint_best.to_csv(f"{STATS_DIR}/best_c2st_flux1joint.csv", index=False)
 
-fig_flux1joint_comp = plot_c2st_vs_budget_best(FLUX1JOINT_METHODS, "Flux1Joint", data, with_markers=True)
+fig_flux1joint_comp, _ = plot_c2st_vs_budget_best(FLUX1JOINT_METHODS, "Flux1Joint", data, with_markers=True)
 fig_flux1joint_comp.savefig(
     f"{STATS_DIR}/c2st_vs_budget_flux1joint_best_comparison.png", dpi=150, bbox_inches="tight"
 )
