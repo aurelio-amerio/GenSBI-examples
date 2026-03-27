@@ -1,0 +1,28 @@
+\begin{table}[t]
+\centering
+\caption{\aure{to be updated} Training configuration for the benchmark experiments. All models use AdamW with cosine learning rate decay and EMA. Parameters that differ across individual tasks are noted.}
+\label{tab:training_config}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Parameter} & \textbf{SBIBM tasks} & \textbf{Advanced tasks} \\
+\midrule
+Architecture & Flux1Joint & Flux1 \\
+Generative method & Flow Matching & Flow Matching \\
+Pipeline & Joint & Conditional \\
+Simulation budget & $10^5$ & $10^5$ \\
+Batch size & 4096 & 256 \\
+Training steps & 50\,000 & 10\,000 \\
+Peak learning rate & $4 \times 10^{-4}$ & $1 \times 10^{-4}$ \\
+Minimum learning rate & $4 \times 10^{-6}$ & $1 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 \\
+EMA decay & 0.999 & 0.999 \\
+Single-stream blocks & 16 & 16 \\
+Double-stream blocks & --- & 8 \\
+Attention heads & 4\textsuperscript{$\dagger$} & 4 \\
+Precision & float32 & bfloat16 \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+{\footnotesize \textsuperscript{$\dagger$}SLCP uses 6 attention heads.}
+\end{table}

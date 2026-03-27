@@ -1,0 +1,362 @@
+% Auto-generated configuration tables for Flux1
+% One table per (task × method), 3 budget columns
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Two Moons — Flow Matching.}
+\label{tab:config_flux1_two_moons_flow_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 1\,024 \\
+Training steps & 50\,000 & 100\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $2 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 1\,000 \\
+EMA decay & 0.999 & 0.9999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 16 \\
+Double-stream blocks & 4 & 4 & 8 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.5489 & 0.5290 & 0.5251 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Two Moons — Diffusion (EDM).}
+\label{tab:config_flux1_two_moons_diffusion_edm}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 4\,096 & 1\,024 & 1\,024 \\
+Training steps & 50\,000 & 90\,000 & 100\,000 \\
+Peak learning rate & $4 \times 10^{-4}$ & $2 \times 10^{-4}$ & $2 \times 10^{-4}$ \\
+Minimum learning rate & $4 \times 10^{-6}$ & $2 \times 10^{-6}$ & $2 \times 10^{-6}$ \\
+Warmup steps & 500 & 1\,000 & 1\,000 \\
+EMA decay & 0.999 & 0.999 & 0.999 \\
+Single-stream blocks & 16 & 16 & 16 \\
+Double-stream blocks & 8 & 8 & 8 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.5539 & 0.5343 & 0.5233 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Two Moons — Score Matching.}
+\label{tab:config_flux1_two_moons_score_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 4\,096 \\
+Training steps & 100\,000 & 100\,000 & 50\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $4 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $4 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.9999 & 0.9999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 16 \\
+Double-stream blocks & 4 & 4 & 8 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.5294 & 0.5159 & 0.5072 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Bernoulli GLM — Flow Matching.}
+\label{tab:config_flux1_bernoulli_glm_flow_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 256 \\
+Training steps & 50\,000 & 50\,000 & 50\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.999 & 0.999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.7218 & 0.6959 & 0.5504 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Bernoulli GLM — Diffusion (EDM).}
+\label{tab:config_flux1_bernoulli_glm_diffusion_edm}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 4\,096 & 256 \\
+Training steps & 50\,000 & 50\,000 & 50\,000 \\
+Peak learning rate & $10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.999 & 0.999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.7010 & 0.6733 & 0.5754 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Bernoulli GLM — Score Matching.}
+\label{tab:config_flux1_bernoulli_glm_score_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 4\,096 & 256 & 256 \\
+Training steps & 50\,000 & 50\,000 & 100\,000 \\
+Peak learning rate & $4 \times 10^{-4}$ & $10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $4 \times 10^{-6}$ & $10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.999 & 0.999 & 0.9999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.6923 & 0.5790 & 0.5456 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Gaussian Linear — Flow Matching.}
+\label{tab:config_flux1_gaussian_linear_flow_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 256 \\
+Training steps & 50\,000 & 50\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.999 & 0.999 & 0.9999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.7143 & 0.5078 & 0.5012 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Gaussian Linear — Diffusion (EDM).}
+\label{tab:config_flux1_gaussian_linear_diffusion_edm}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 1\,024 & 4\,096 & 256 \\
+Training steps & 50\,000 & 50\,000 & 50\,000 \\
+Peak learning rate & $2 \times 10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $2 \times 10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 1\,000 & 500 & 500 \\
+EMA decay & 0.999 & 0.999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.7184 & 0.5264 & 0.5228 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Gaussian Linear — Score Matching.}
+\label{tab:config_flux1_gaussian_linear_score_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 1\,024 \\
+Training steps & 50\,000 & 50\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $2 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 1\,000 \\
+EMA decay & 0.999 & 0.999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.6659 & 0.5088 & 0.5000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Gaussian Mixture — Flow Matching.}
+\label{tab:config_flux1_gaussian_mixture_flow_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 256 \\
+Training steps & 50\,000 & 100\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.999 & 0.9999 & 0.9999 \\
+Single-stream blocks & 16 & 16 & 16 \\
+Double-stream blocks & 8 & 8 & 8 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.5535 & 0.5204 & 0.5101 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Gaussian Mixture — Diffusion (EDM).}
+\label{tab:config_flux1_gaussian_mixture_diffusion_edm}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 4\,096 & 256 & 1\,024 \\
+Training steps & 50\,000 & 50\,000 & 100\,000 \\
+Peak learning rate & $4 \times 10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
+Minimum learning rate & $4 \times 10^{-6}$ & $10^{-6}$ & $2 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 1\,000 \\
+EMA decay & 0.999 & 0.999 & 0.999 \\
+Single-stream blocks & 16 & 16 & 16 \\
+Double-stream blocks & 8 & 8 & 8 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.5621 & 0.5201 & 0.5103 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — Gaussian Mixture — Score Matching.}
+\label{tab:config_flux1_gaussian_mixture_score_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 1\,024 \\
+Training steps & 50\,000 & 100\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $2 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 1\,000 \\
+EMA decay & 0.999 & 0.9999 & 0.999 \\
+Single-stream blocks & 16 & 16 & 16 \\
+Double-stream blocks & 8 & 8 & 8 \\
+Attention heads & 4 & 4 & 4 \\
+\midrule
+Best C2ST & 0.5242 & 0.5103 & 0.5021 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — SLCP — Flow Matching.}
+\label{tab:config_flux1_slcp_flow_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 256 \\
+Training steps & 50\,000 & 50\,000 & 50\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.999 & 0.999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 6 & 6 & 6 \\
+\midrule
+Best C2ST & 0.8334 & 0.7248 & 0.6018 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — SLCP — Diffusion (EDM).}
+\label{tab:config_flux1_slcp_diffusion_edm}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 256 & 4\,096 \\
+Training steps & 50\,000 & 50\,000 & 50\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $4 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $4 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.999 & 0.999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 6 & 6 & 4 \\
+\midrule
+Best C2ST & 0.8476 & 0.7465 & 0.6173 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Training configuration for Flux1 — SLCP — Score Matching.}
+\label{tab:config_flux1_slcp_score_matching}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
+\midrule
+Batch size & 256 & 4\,096 & 256 \\
+Training steps & 50\,000 & 50\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 \\
+EMA decay & 0.999 & 0.999 & 0.9999 \\
+Single-stream blocks & 8 & 8 & 8 \\
+Double-stream blocks & 4 & 4 & 4 \\
+Attention heads & 6 & 4 & 6 \\
+\midrule
+Best C2ST & 0.8456 & 0.6922 & 0.6777 \\
+\bottomrule
+\end{tabular}
+\end{table}
