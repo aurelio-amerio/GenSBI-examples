@@ -218,7 +218,7 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
             labels.append(f"Experiment {exp_id}")
 
         fig.legend(handles, labels, loc="upper center", ncol=5, bbox_to_anchor=(0.5, 1.15), framealpha=0)
-        fig.suptitle(f"Best C2ST vs Budget — {model_name}", y=1.25, fontsize=20)
+        fig.suptitle(f"C2ST vs Budget — {model_name}", y=1.25, fontsize=20)
     else:
         fig.legend(
             handles,
@@ -229,7 +229,7 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
             framealpha=0,
             fontsize=18,
         )
-        fig.suptitle(f"Best C2ST vs Budget — {model_name}", y=1.15, fontsize=20)
+        fig.suptitle(f"C2ST vs Budget — {model_name}", y=1.15, fontsize=20)
         
     fig.tight_layout()
     
