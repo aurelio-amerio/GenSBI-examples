@@ -263,6 +263,7 @@ def generate_wide_table(task, model_name, methods, all_configs, all_c2st):
     )
     lines.append(f"\\label{{tab:config_{model_name.lower()}_{task}}}")
     lines.append(r"\scriptsize")
+    lines.append(r"\resizebox{\textwidth}{!}{%")
 
     # Column spec: l | ccc | ccc | ccc
     col_spec = "@{}l|" + "|".join(["ccc"] * len(methods)) + "@{}"
@@ -313,7 +314,8 @@ def generate_wide_table(task, model_name, methods, all_configs, all_c2st):
     lines.append("Best C2ST & " + " & ".join(c2st_vals) + r" \\")
 
     lines.append(r"\bottomrule")
-    lines.append(r"\end{tabular}")
+    lines.append(r"\end{tabular}%")
+    lines.append(r"}")
     lines.append(r"\end{table}")
 
     return "\n".join(lines)
