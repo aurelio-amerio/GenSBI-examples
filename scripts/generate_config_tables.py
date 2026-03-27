@@ -3,8 +3,9 @@
 Generate LaTeX tables showing training hyperparameters for the best-performing
 C2ST model configurations.
 
-Produces 30 tables:  2 models × 5 tasks × 3 methods.
-Each table has 3 budget columns (10k, 30k, 100k) with parameter rows.
+Produces 10 wide tables: 2 models × 5 tasks.
+Each table has 10 columns: 1 parameter name + 3 methods × 3 budgets.
+Methods are separated by vertical lines, with multicolumn headers.
 
 Usage:
     python scripts/generate_config_tables.py
@@ -140,11 +141,8 @@ def read_config(task, method, exp_id, budget):
 
 
 # ---------------------------------------------------------------------------
-# Parameter extraction
+# Parameter extraction helpers
 # ---------------------------------------------------------------------------
-
-# Parameters to display, in order: (display_name, extractor_function)
-# Each extractor takes the full YAML dict and returns a string.
 
 
 def _fmt_lr(val):
@@ -165,12 +163,46 @@ def _fmt_int(val):
         return "---"
     val = int(val)
     if val >= 1000:
-        # e.g. 50000 → "50\\,000", 4096 → "4096"
         s = f"{val:,}".replace(",", "\\,")
         return s
     return str(val)
 
 
+def _get_merge_mode(cfg):
+    """Return the id_merge_mode; defaults to 'sum' if absent."""
+    if cfg is None:
+        return "---"
+    model = cfg.get("model", {})
+    return model.get("id_merge_mode", "sum")
+
+
+def _get_val_emb_dim(cfg):
+    """Return val_emb_dim. For 'sum' mode, use axes_dim[0] instead."""
+    if cfg is None:
+        return "---"
+    model = cfg.get("model", {})
+    mode = _get_merge_mode(cfg)
+    if mode == "sum":
+        axes = model.get("axes_dim")
+        if axes is not None:
+            return str(axes[0]) if isinstance(axes, list) else str(axes)
+        return "---"
+    val = model.get("val_emb_dim")
+    return str(val) if val is not None else "---"
+
+
+def _get_id_emb_dim(cfg):
+    """Return id_emb_dim. For 'sum' mode, return '---' (not applicable)."""
+    if cfg is None:
+        return "---"
+    mode = _get_merge_mode(cfg)
+    if mode == "sum":
+        return "---"
+    val = cfg.get("model", {}).get("id_emb_dim")
+    return str(val) if val is not None else "---"
+
+
+# Base parameters (common to both models)
 PARAMETERS = [
     ("Batch size", lambda c: _fmt_int(c.get("training", {}).get("batch_size"))),
     ("Training steps", lambda c: _fmt_int(c.get("training", {}).get("nsteps"))),
@@ -184,76 +216,101 @@ PARAMETERS = [
     ),
     (
         "Double-stream blocks",
-        lambda c: _fmt_int(c.get("model", {}).get("depth")) if c.get("model", {}).get("depth") is not None else "---",
+        lambda c: _fmt_int(c.get("model", {}).get("depth"))
+        if c.get("model", {}).get("depth") is not None
+        else "---",
     ),
     ("Attention heads", lambda c: _fmt_int(c.get("model", {}).get("num_heads"))),
 ]
 
+# Extra parameters for Flux1 only
+FLUX1_EXTRA_PARAMETERS = [
+    ("ID merge mode", lambda c: _get_merge_mode(c)),
+    ("Val.~emb.~dim", lambda c: _get_val_emb_dim(c)),
+    ("ID emb.~dim", lambda c: _get_id_emb_dim(c)),
+]
+
 
 # ---------------------------------------------------------------------------
-# LaTeX generation
+# LaTeX generation — wide combined table
 # ---------------------------------------------------------------------------
 
 
-def generate_table(task, method, model_name, configs, c2st_values):
+def generate_wide_table(task, model_name, methods, all_configs, all_c2st):
     """
-    Generate a single LaTeX table string.
+    Generate a single wide LaTeX table with 10 columns:
+    Parameter | 10k 30k 100k | 10k 30k 100k | 10k 30k 100k
+              | -- method1 -- | -- method2 -- | -- method3 --
 
-    Parameters
-    ----------
-    task : str
-    method : str          e.g. "flow_flux"
-    model_name : str      e.g. "Flux1"
-    configs : dict        {budget: yaml_dict}  (one per budget)
-    c2st_values : dict    {budget: float}
+    Methods separated by vertical lines, multicolumn headers on top.
     """
-    method_label = METHOD_LABELS[method]
     task_label = TASK_LABELS[task]
+    method_labels = [METHOD_LABELS[m] for m in methods]
+    n_budgets = len(BUDGETS)
 
-    budget_headers = " & ".join(
-        [f"\\textbf{{{b // 1000}k}}" for b in BUDGETS]
-    )
+    # Determine which parameters to show
+    params = list(PARAMETERS)
+    is_flux1 = model_name == "Flux1"
+    if is_flux1:
+        params.extend(FLUX1_EXTRA_PARAMETERS)
 
     lines = []
     lines.append(r"\begin{table}[t]")
     lines.append(r"\centering")
     lines.append(
         f"\\caption{{Training configuration for {model_name} — "
-        f"{task_label} — {method_label}.}}"
+        f"{task_label}.}}"
     )
-    lines.append(
-        f"\\label{{tab:config_{model_name.lower()}_{task}_{method_label.lower().replace(' ', '_').replace('(', '').replace(')', '')}}}"
-    )
-    lines.append(r"\small")
-    lines.append(r"\begin{tabular}{@{}l" + "c" * len(BUDGETS) + r"@{}}")
+    lines.append(f"\\label{{tab:config_{model_name.lower()}_{task}}}")
+    lines.append(r"\scriptsize")
+
+    # Column spec: l | ccc | ccc | ccc
+    col_spec = "@{}l|" + "|".join(["ccc"] * len(methods)) + "@{}"
+    lines.append(f"\\begin{{tabular}}{{{col_spec}}}")
     lines.append(r"\toprule")
-    lines.append(
-        f"\\textbf{{Parameter}} & {budget_headers} \\\\"
-    )
+
+    # Row 1: multicolumn method headers
+    header_parts = [""]
+    for i, label in enumerate(method_labels):
+        # Add right vertical line for all but the last method group
+        col_fmt = "c|" if i < len(method_labels) - 1 else "c"
+        header_parts.append(
+            f"\\multicolumn{{{n_budgets}}}{{{col_fmt}}}{{{label}}}"
+        )
+    lines.append(" & ".join(header_parts) + r" \\")
+
+    # Row 2: budget sub-headers
+    budget_strs = [f"\\textbf{{{b // 1000}k}}" for b in BUDGETS]
+    sub_header_parts = ["\\textbf{Parameter}"]
+    for _ in methods:
+        sub_header_parts.extend(budget_strs)
+    lines.append(" & ".join(sub_header_parts) + r" \\")
     lines.append(r"\midrule")
 
     # Parameter rows
-    for param_name, extractor in PARAMETERS:
+    for param_name, extractor in params:
         vals = []
-        for budget in BUDGETS:
-            cfg = configs.get(budget)
-            if cfg is None:
-                vals.append("---")
-            else:
-                vals.append(extractor(cfg))
+        for method in methods:
+            for budget in BUDGETS:
+                cfg = all_configs[method].get(budget)
+                if cfg is None:
+                    vals.append("---")
+                else:
+                    vals.append(extractor(cfg))
         row = f"{param_name} & " + " & ".join(vals) + r" \\"
         lines.append(row)
 
     # C2ST row
     lines.append(r"\midrule")
-    c2st_strs = []
-    for budget in BUDGETS:
-        v = c2st_values.get(budget)
-        if v is not None:
-            c2st_strs.append(f"{v:.4f}")
-        else:
-            c2st_strs.append("---")
-    lines.append(f"Best C2ST & " + " & ".join(c2st_strs) + r" \\")
+    c2st_vals = []
+    for method in methods:
+        for budget in BUDGETS:
+            v = all_c2st[method].get(budget)
+            if v is not None:
+                c2st_vals.append(f"{v:.3f}")
+            else:
+                c2st_vals.append("---")
+    lines.append("Best C2ST & " + " & ".join(c2st_vals) + r" \\")
 
     lines.append(r"\bottomrule")
     lines.append(r"\end{tabular}")
@@ -274,6 +331,9 @@ def main():
         all_tables = []
 
         for task in TASKS:
+            all_configs = {}  # {method: {budget: yaml_dict}}
+            all_c2st = {}     # {method: {budget: float}}
+
             for method in methods:
                 configs = {}
                 c2st_values = {}
@@ -293,10 +353,13 @@ def main():
                             f"at budget {budget}"
                         )
 
-                table_tex = generate_table(
-                    task, method, model_name, configs, c2st_values
-                )
-                all_tables.append(table_tex)
+                all_configs[method] = configs
+                all_c2st[method] = c2st_values
+
+            table_tex = generate_wide_table(
+                task, model_name, methods, all_configs, all_c2st
+            )
+            all_tables.append(table_tex)
 
         # Write all tables for this model to one .tex file
         out_path = os.path.join(
@@ -305,7 +368,7 @@ def main():
         with open(out_path, "w") as f:
             f.write(
                 f"% Auto-generated configuration tables for {model_name}\n"
-                f"% One table per (task × method), 3 budget columns\n\n"
+                f"% One wide table per task, 3 methods side-by-side\n\n"
             )
             f.write("\n\n".join(all_tables))
             f.write("\n")
