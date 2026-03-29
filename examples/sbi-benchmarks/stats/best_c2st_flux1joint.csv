@@ -5,12 +5,12 @@ bernoulli_glm,Flux1Joint,score matching,0.6297,0.5761,0.5604
 gaussian_linear,Flux1Joint,edm,0.7074,0.6004,0.6014
 gaussian_linear,Flux1Joint,flow matching,0.5639,0.5118,0.5
 gaussian_linear,Flux1Joint,score matching,0.5085,0.5,0.501
-gaussian_mixture,Flux1Joint,edm,0.5579,0.516,0.5205
+gaussian_mixture,Flux1Joint,edm,0.5404,0.516,0.5205
 gaussian_mixture,Flux1Joint,flow matching,0.5221,0.5155,0.5127
 gaussian_mixture,Flux1Joint,score matching,0.5105,0.5037,0.5008
 slcp,Flux1Joint,edm,0.8262,0.6803,0.655
 slcp,Flux1Joint,flow matching,0.6569,0.5857,0.5657
-slcp,Flux1Joint,score matching,0.6631,0.6864,0.5345
+slcp,Flux1Joint,score matching,0.6631,0.5679,0.5345
 two_moons,Flux1Joint,edm,0.598,0.5798,0.5712
 two_moons,Flux1Joint,flow matching,0.542,0.5286,0.5242
 two_moons,Flux1Joint,score matching,0.5222,0.5129,0.5023

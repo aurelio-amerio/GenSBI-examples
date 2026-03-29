@@ -8,7 +8,7 @@ gaussian_linear,Flux1,score matching,0.6659,0.5088,0.5
 gaussian_mixture,Flux1,edm,0.5621,0.5201,0.5103
 gaussian_mixture,Flux1,flow matching,0.5535,0.5204,0.5101
 gaussian_mixture,Flux1,score matching,0.5242,0.5103,0.5021
-slcp,Flux1,edm,0.8476,0.7465,0.6173
+slcp,Flux1,edm,0.8476,0.7413,0.6173
 slcp,Flux1,flow matching,0.8334,0.7248,0.6018
 slcp,Flux1,score matching,0.8456,0.6922,0.6777
 two_moons,Flux1,edm,0.5539,0.5343,0.5233
