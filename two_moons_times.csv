@@ -1,0 +1,7 @@
+Task Name,Model Name,Training Time (s),Training (it/s),Average Sampling Time per 10000 samples (s)
+two moons,diffusion_flux,2114.93,4.73,8.31
+two moons,diffusion_flux1joint,868.64,11.51,5.29
+two moons,flow_flux,2182.35,4.58,6.89
+two moons,flow_flux1joint,865.14,11.56,6.43
+two moons,score_matching_flux,2220.45,4.5,24.1
+two moons,score_matching_flux1joint,859.56,11.63,42.28

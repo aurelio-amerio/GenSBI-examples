@@ -25,6 +25,8 @@ import jax
 import jax.numpy as jnp
 from flax import nnx
 
+from time import time
+
 from gensbi_examples.tasks import get_task
 from gensbi.diagnostics.metrics import c2st
 
@@ -195,8 +197,11 @@ def main():
 
     if train_model:
         print("Starting training...")
+        t0 = time()
         pipeline.train(nnx.Rngs(0))
+        t1 = time()
         print("Training complete.")
+        print(f"Training time: {t1 - t0} seconds")
 
     # --------- Define sampling function ----------
     def get_samples(idx, nsamples=10_000, use_ema=True, key=None):
@@ -246,9 +251,12 @@ def main():
 
     c2st_accuracies = []
     for idx in range(1, 11):
+        t0 = time()
         samples, true_param, reference_samples = get_samples(
             idx, nsamples=10_000, use_ema=False
         )
+        t1 = time()
+        print(f"Sampling time for observation={idx}: {t1 - t0} seconds\n")
         c2st_accuracy = c2st(reference_samples, samples[..., 0])
         c2st_accuracies.append(c2st_accuracy)
         print(f"C2ST accuracy for observation={idx}: {c2st_accuracy:.4f}\n")
@@ -272,9 +280,12 @@ def main():
     # repeat for the ema model
     c2st_accuracies_ema = []
     for idx in range(1, 11):
+        t0 = time()
         samples, true_param, reference_samples = get_samples(
             idx, nsamples=10_000, use_ema=True
         )
+        t1 = time()
+        print(f"Sampling time for observation={idx}: {t1 - t0} seconds\n")
         c2st_accuracy = c2st(reference_samples, samples[..., 0])
         c2st_accuracies_ema.append(c2st_accuracy)
         print(f"C2ST accuracy EMA for observation={idx}: {c2st_accuracy:.4f}\n")
