@@ -1,0 +1,91 @@
+task,model,method,budget,host,gpu,percent,completed,training_time_hms,training_time_s,time_per_step_ms,its,steps
+bernoulli_glm,Flux1,EDM,10000,mlwn09.ific.uv.es,Tesla V100-PCIE-32GB,14,False,00:24:25,1465.0,104.635,9.557,14001
+bernoulli_glm,Flux1,EDM,30000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,76,False,02:03:16,7396.0,97.315,10.276,76001
+bernoulli_glm,Flux1,EDM,100000,mlwn08.ific.uv.es,Tesla V100-PCIE-32GB,100,True,05:28:35,19715.0,197.15,5.072,100000
+bernoulli_glm,Flux1,FM,10000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,13,False,00:22:42,1362.0,104.761,9.546,13001
+bernoulli_glm,Flux1,FM,30000,mlwn17.ific.uv.es,Tesla V100-PCIE-32GB,81,False,02:10:29,7829.0,97.253,10.282,80501
+bernoulli_glm,Flux1,FM,100000,mlwn08.ific.uv.es,Tesla V100-PCIE-32GB,100,True,05:32:16,19936.0,199.36,5.016,100000
+bernoulli_glm,Flux1,SM,10000,mlwn17.ific.uv.es,Tesla V100-PCIE-32GB,19,False,00:54:35,3275.0,172.359,5.802,19001
+bernoulli_glm,Flux1,SM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:56:31,10591.0,105.91,9.442,100000
+bernoulli_glm,Flux1,SM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,06:00:09,21609.0,216.09,4.628,100000
+bernoulli_glm,Flux1Joint,EDM,10000,mlwn07.ific.uv.es,Tesla V100-PCIE-32GB,58,False,01:15:03,4503.0,78.312,12.769,57501
+bernoulli_glm,Flux1Joint,EDM,30000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,15,False,02:50:31,10231.0,682.021,1.466,15001
+bernoulli_glm,Flux1Joint,EDM,100000,mlwn36.ific.uv.es,NVIDIA H100 NVL,42,False,04:36:46,16606.0,400.135,2.499,41501
+bernoulli_glm,Flux1Joint,FM,10000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,98,False,02:05:55,7555.0,77.486,12.905,97501
+bernoulli_glm,Flux1Joint,FM,30000,mlwn25.ific.uv.es,NVIDIA A100-PCIE-40GB,23,False,05:00:11,18011.0,800.453,1.249,22501
+bernoulli_glm,Flux1Joint,FM,100000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,73,False,13:57:10,50230.0,692.818,1.443,72501
+bernoulli_glm,Flux1Joint,SM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:16:24,8184.0,81.84,12.219,100000
+bernoulli_glm,Flux1Joint,SM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,47,False,09:27:53,34073.0,724.942,1.379,47001
+bernoulli_glm,Flux1Joint,SM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,97,False,19:18:56,69536.0,716.859,1.395,97001
+gaussian_linear,Flux1,EDM,10000,mlwn07.ific.uv.es,Tesla V100-PCIE-32GB,17,False,00:29:19,1759.0,106.6,9.381,16501
+gaussian_linear,Flux1,EDM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,03:07:06,11226.0,112.26,8.908,100000
+gaussian_linear,Flux1,EDM,100000,mlwn16.ific.uv.es,Tesla V100-PCIE-32GB,100,True,05:28:25,19705.0,197.05,5.075,100000
+gaussian_linear,Flux1,FM,10000,mlwn07.ific.uv.es,Tesla V100-PCIE-32GB,14,False,00:24:45,1485.0,106.064,9.428,14001
+gaussian_linear,Flux1,FM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,03:06:11,11171.0,111.71,8.952,100000
+gaussian_linear,Flux1,FM,100000,mlwn36.ific.uv.es,NVIDIA H100 NVL,100,True,02:24:25,8665.0,86.65,11.541,100000
+gaussian_linear,Flux1,SM,10000,mlwn16.ific.uv.es,Tesla V100-PCIE-32GB,93,False,02:33:01,9181.0,98.719,10.13,93001
+gaussian_linear,Flux1,SM,30000,mlwn16.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:48:16,10096.0,100.96,9.905,100000
+gaussian_linear,Flux1,SM,100000,mlwn16.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:48:37,10117.0,101.17,9.884,100000
+gaussian_linear,Flux1Joint,EDM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,99,False,02:13:41,8021.0,81.019,12.343,99001
+gaussian_linear,Flux1Joint,EDM,30000,mlwn20.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:13:58,8038.0,80.38,12.441,100000
+gaussian_linear,Flux1Joint,EDM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,20:16:50,73010.0,730.1,1.37,100000
+gaussian_linear,Flux1Joint,FM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,91,False,01:06:42,4002.0,43.978,22.739,91001
+gaussian_linear,Flux1Joint,FM,30000,mlwn07.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:07:56,7676.0,76.76,13.028,100000
+gaussian_linear,Flux1Joint,FM,100000,mlwn07.ific.uv.es,Tesla V100-PCIE-32GB,62,False,11:19:35,40775.0,657.651,1.521,62001
+gaussian_linear,Flux1Joint,SM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,01:18:52,4732.0,47.32,21.133,100000
+gaussian_linear,Flux1Joint,SM,30000,mlwn16.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:10:09,7809.0,78.09,12.806,100000
+gaussian_linear,Flux1Joint,SM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,19:03:45,68625.0,686.25,1.457,100000
+gaussian_mixture,Flux1,EDM,10000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,92,False,02:29:29,8969.0,97.488,10.258,92001
+gaussian_mixture,Flux1,EDM,30000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,100,True,05:34:39,20079.0,200.79,4.98,100000
+gaussian_mixture,Flux1,EDM,100000,mlwn34.ific.uv.es,NVIDIA A100-PCIE-40GB,100,True,06:25:38,23138.0,231.38,4.322,100000
+gaussian_mixture,Flux1,FM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:54:53,10493.0,104.93,9.53,100000
+gaussian_mixture,Flux1,FM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,05:51:50,21110.0,211.1,4.737,100000
+gaussian_mixture,Flux1,FM,100000,mlwn25.ific.uv.es,NVIDIA A100-PCIE-40GB,100,True,06:07:22,22042.0,220.42,4.537,100000
+gaussian_mixture,Flux1,SM,10000,mlwn08.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:40:31,9631.0,96.31,10.383,100000
+gaussian_mixture,Flux1,SM,30000,mlwn15.ific.uv.es,Tesla V100-PCIE-32GB,100,True,05:26:41,19601.0,196.01,5.102,100000
+gaussian_mixture,Flux1,SM,100000,mlwn15.ific.uv.es,Tesla V100-PCIE-32GB,100,True,05:27:17,19637.0,196.37,5.092,100000
+gaussian_mixture,Flux1Joint,EDM,10000,mlwn08.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:15:10,8110.0,81.1,12.33,100000
+gaussian_mixture,Flux1Joint,EDM,30000,mlwn08.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:09:29,7769.0,77.69,12.872,100000
+gaussian_mixture,Flux1Joint,EDM,100000,mlwn37.ific.uv.es,NVIDIA H100 NVL,100,True,09:42:01,34921.0,349.21,2.864,100000
+gaussian_mixture,Flux1Joint,FM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,01:15:49,4549.0,45.49,21.983,100000
+gaussian_mixture,Flux1Joint,FM,30000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,100,True,01:05:46,3946.0,39.46,25.342,100000
+gaussian_mixture,Flux1Joint,FM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,19:33:38,70418.0,704.18,1.42,100000
+gaussian_mixture,Flux1Joint,SM,10000,mlwn13.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:09:27,7767.0,77.67,12.875,100000
+gaussian_mixture,Flux1Joint,SM,30000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:08:01,7681.0,76.81,13.019,100000
+gaussian_mixture,Flux1Joint,SM,100000,mlwn08.ific.uv.es,Tesla V100-PCIE-32GB,100,True,18:09:24,65364.0,653.64,1.53,100000
+slcp,Flux1,EDM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,16,False,00:31:07,1867.0,116.68,8.57,16001
+slcp,Flux1,EDM,30000,mlwn14.ific.uv.es,Tesla V100-PCIE-32GB,39,False,01:05:48,3948.0,101.228,9.879,39001
+slcp,Flux1,EDM,100000,mlwn13.ific.uv.es,Tesla V100-PCIE-32GB,16,False,02:58:02,10682.0,667.583,1.498,16001
+slcp,Flux1,FM,10000,mlwn13.ific.uv.es,Tesla V100-PCIE-32GB,11,False,00:19:26,1166.0,105.99,9.435,11001
+slcp,Flux1,FM,30000,mlwn36.ific.uv.es,NVIDIA H100 NVL,22,False,00:29:18,1758.0,79.905,12.515,22001
+slcp,Flux1,FM,100000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,13,False,02:21:10,8470.0,677.546,1.476,12501
+slcp,Flux1,SM,10000,mlwn14.ific.uv.es,Tesla V100-PCIE-32GB,48,False,01:19:30,4770.0,100.419,9.958,47501
+slcp,Flux1,SM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:57:23,10643.0,106.43,9.396,100000
+slcp,Flux1,SM,100000,mlwn17.ific.uv.es,Tesla V100-PCIE-32GB,63,False,11:32:32,41552.0,664.821,1.504,62501
+slcp,Flux1Joint,EDM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,65,False,01:30:01,5401.0,83.735,11.942,64501
+slcp,Flux1Joint,EDM,30000,mlwn07.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:10:12,7812.0,78.12,12.801,100000
+slcp,Flux1Joint,EDM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,52,False,10:23:59,37439.0,726.957,1.376,51501
+slcp,Flux1Joint,FM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,67,False,01:35:15,5715.0,85.939,11.636,66501
+slcp,Flux1Joint,FM,30000,mlwn18.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:09:19,7759.0,77.59,12.888,100000
+slcp,Flux1Joint,FM,100000,mlwn07.ific.uv.es,Tesla V100-PCIE-32GB,44,False,07:55:31,28531.0,655.87,1.525,43501
+slcp,Flux1Joint,SM,10000,mlwn08.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:06:45,7605.0,76.05,13.149,100000
+slcp,Flux1Joint,SM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:19:29,8369.0,83.69,11.949,100000
+slcp,Flux1Joint,SM,100000,mlwn09.ific.uv.es,Tesla V100-PCIE-32GB,86,False,15:47:37,56857.0,664.986,1.504,85501
+two_moons,Flux1,EDM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,06:00:22,21622.0,216.22,4.625,100000
+two_moons,Flux1,EDM,30000,mlwn16.ific.uv.es,Tesla V100-PCIE-32GB,100,True,05:33:33,20013.0,200.13,4.997,100000
+two_moons,Flux1,EDM,100000,mlwn36.ific.uv.es,NVIDIA H100 NVL,100,True,04:15:31,15331.0,153.31,6.523,100000
+two_moons,Flux1,FM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:54:03,10443.0,104.43,9.576,100000
+two_moons,Flux1,FM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,03:09:10,11350.0,113.5,8.811,100000
+two_moons,Flux1,FM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,06:05:05,21905.0,219.05,4.565,100000
+two_moons,Flux1,SM,10000,mlwn36.ific.uv.es,NVIDIA H100 NVL,100,True,02:05:39,7539.0,75.39,13.264,100000
+two_moons,Flux1,SM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,03:08:00,11280.0,112.8,8.865,100000
+two_moons,Flux1,SM,100000,mlwn22.ific.uv.es,Tesla V100-PCIE-32GB,100,True,05:30:59,19859.0,198.59,5.036,100000
+two_moons,Flux1Joint,EDM,10000,mlwn07.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:12:36,7956.0,79.56,12.569,100000
+two_moons,Flux1Joint,EDM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:29:24,8964.0,89.64,11.156,100000
+two_moons,Flux1Joint,EDM,100000,mlwn37.ific.uv.es,NVIDIA H100 NVL,100,True,09:35:27,34527.0,345.27,2.896,100000
+two_moons,Flux1Joint,FM,10000,mlwn16.ific.uv.es,Tesla V100-PCIE-32GB,100,True,02:16:34,8194.0,81.94,12.204,100000
+two_moons,Flux1Joint,FM,30000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:30:13,9013.0,90.13,11.095,100000
+two_moons,Flux1Joint,FM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,19:16:44,69404.0,694.04,1.441,100000
+two_moons,Flux1Joint,SM,10000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,02:26:47,8807.0,88.07,11.355,100000
+two_moons,Flux1Joint,SM,30000,mlwn37.ific.uv.es,NVIDIA H100 NVL,100,True,01:39:19,5959.0,59.59,16.781,100000
+two_moons,Flux1Joint,SM,100000,mlwn03.ific.uv.es,Tesla V100-SXM2-32GB,100,True,20:31:51,73911.0,739.11,1.353,100000
