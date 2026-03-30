@@ -19,7 +19,7 @@ Only showing parameters that vary across configuration versions for a given task
 | Method | Best | 2nd Best | model.id_merge_mode | model.depth | model.depth_single_blocks | optimizer.decay_transition | optimizer.max_lr | optimizer.min_lr | optimizer.warmup_steps | training.batch_size | training.early_stopping | training.ema_decay | training.nsteps | training.restore_model | training.train_model | training.val_error_ratio | training.val_every |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | flow_flux | v9 (0.529) | v5 (0.538) | concat | 4 | 8 | 0.8 | 0.0001 | 1e-06 | 500 | 256 | True | 0.9999 | 100000 | False | True | 1.3 | 500 |
-| diffusion_flux | v2 (0.534) | v1 (0.543) | sum | 8 | 16 | 0.6 | 0.0002 | 2e-06 | 1000 | 1024 | True | 0.999 | 90000 | False | True | N/A | 100 |
+| diffusion_flux | v2 (0.534) | v1 (0.543) | N/A | 8 | 16 | 0.6 | 0.0002 | 2e-06 | 1000 | 1024 | True | 0.999 | 90000 | False | True | N/A | 100 |
 | score_matching_flux | v9 (0.516) | v6 (0.517) | concat | 4 | 8 | 0.8 | 0.0001 | 1e-06 | 500 | 256 | True | 0.9999 | 100000 | False | True | 1.3 | 500 |
 
 #### Budget: 100k
