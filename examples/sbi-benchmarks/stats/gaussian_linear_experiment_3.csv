@@ -1,4 +1,4 @@
-simulations,flow_flux,flow_flux1joint,diffusion_flux,diffusion_flux1joint,score_matching_flux,score_matching_flux1joint
-10000,0.7615,0.9712,0.7294,0.9376,0.9453,0.8783
-30000,0.8094,0.9608,0.7675,0.9452,0.7684,0.7699
-100000,0.7907,0.9389,0.6870,0.8692,0.9238,0.5027
+simulations,flow_flux,flow_flux_err,flow_flux1joint,flow_flux1joint_err,diffusion_flux,diffusion_flux_err,diffusion_flux1joint,diffusion_flux1joint_err,score_matching_flux,score_matching_flux_err,score_matching_flux1joint,score_matching_flux1joint_err
+10000,0.7615,0.1054,0.9712,0.0197,0.7294,0.1167,0.9376,0.0209,0.9453,0.0314,0.8783,0.0240
+30000,0.8094,0.1233,0.9608,0.0328,0.7675,0.1087,0.9452,0.0134,0.7684,0.1111,0.7699,0.0384
+100000,0.7907,0.1153,0.9389,0.0410,0.6870,0.1161,0.8692,0.0202,0.9238,0.0281,0.5027,0.0038

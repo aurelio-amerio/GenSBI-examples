@@ -44,17 +44,17 @@ PATTERN = re.compile(r"Average C2ST accuracy EMA:\s+([\d.]+)\s*\+-\s*([\d.]+)")
 # ---------- helpers ----------
 
 
-def read_c2st_ema(filepath: str) -> str:
-    """Return 'mean +- std' string from a c2st results file, or 'NaN'."""
+def read_c2st_ema(filepath: str) -> tuple[str, str]:
+    """Return (mean, std) strings from a c2st results file, or ('NaN', 'NaN')."""
     try:
         with open(filepath, "r") as f:
             for line in f:
                 m = PATTERN.search(line)
                 if m:
-                    return m.group(1)
+                    return m.group(1), m.group(2)
     except FileNotFoundError:
-        return "NaN"
-    return "NaN"
+        return "NaN", "NaN"
+    return "NaN", "NaN"
 
 
 def build_result_path(base_dir: str, task: str, method: str, budget: int) -> str:
@@ -101,16 +101,19 @@ def main():
             row = {"simulations": budget}
             for method in METHODS:
                 fpath = build_result_path(base_dir, task, method, budget)
-                value = read_c2st_ema(fpath)
-                if value == "NaN":
+                mean_val, std_val = read_c2st_ema(fpath)
+                if mean_val == "NaN":
                     missing.append(f"  MISSING: {task} / {method} / {budget}")
-                row[method] = value
+                row[method] = mean_val
+                row[f"{method}_err"] = std_val
             rows.append(row)
 
         # Write CSV inside the task directory
         task_dir = os.path.join(base_dir, "stats")
         csv_path = os.path.join(task_dir, f"{task}_experiment_{EXPERIMENT_ID}.csv")
-        fieldnames = ["simulations"] + METHODS
+        fieldnames = ["simulations"]
+        for method in METHODS:
+            fieldnames.extend([method, f"{method}_err"])
         with open(csv_path, "w", newline="") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()

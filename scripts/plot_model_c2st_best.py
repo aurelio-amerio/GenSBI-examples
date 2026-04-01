@@ -133,6 +133,7 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
             for i_budget in range(len(BUDGETS)):
                 # Find the experiment with the smallest C2ST at this budget
                 min_val = np.inf
+                min_err = np.nan
                 min_exp = None
                 for exp_id in EXPERIMENT_IDS:
                     key = (task, exp_id)
@@ -142,6 +143,10 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
                     if val < min_val:
                         min_val = val
                         min_exp = exp_id
+                        if f"{method}_err" in data[key].columns:
+                            min_err = float(data[key][f"{method}_err"].values[i_budget])
+                        else:
+                            min_err = np.nan
 
                 best_vals.append(min_val)
                 best_exp_ids.append(min_exp)
@@ -153,6 +158,7 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
                     "method": METHOD_CSV_LABELS[method],
                     "budget": BUDGETS[i_budget],
                     "best_c2st": min_val,
+                    "best_c2st_err": min_err,
                     "best_exp_id": min_exp
                 })
 
@@ -234,7 +240,9 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
     fig.tight_layout()
     
     df_long = pd.DataFrame(csv_data)
-    df_best = df_long.pivot(index=["task", "model", "method"], columns="budget", values="best_c2st").reset_index()
+    df_best = df_long.pivot(index=["task", "model", "method"], columns="budget", values=["best_c2st", "best_c2st_err"])
+    df_best.columns = [str(val) if col == "best_c2st" else f"{val}_err" for col, val in df_best.columns]
+    df_best = df_best.reset_index()
     
     return fig, df_best
 
