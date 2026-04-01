@@ -137,14 +137,14 @@ plot_range = [(1, 3), (1, 3), (-0.6, 0.5)]
 # from a simple prior (Gaussian noise at $t=0$) to the data distribution (at $t=1$)
 # via an ordinary differential equation (ODE).
 #
-# - **Default solver**: `ODESolver` — deterministic ODE integration (Euler or Dopri5).
+# - **Default solver**: `FMODESolver` — deterministic ODE integration (Euler or Dopri5).
 # - **Alternative solvers** (SDE-based, stochastic):
 #   - `ZeroEndsSolver` — diffusion vanishes at both time endpoints (arXiv:2410.02217).
 #   - `NonSingularSolver` — non-singular diffusion coefficient (arXiv:2410.02217).
 #
 # The SDE solvers can sometimes improve sample diversity at the cost of
-# additional stochasticity. They require prior statistics (`mu0`, `sigma0`) and a
-# diffusion strength parameter `alpha`.
+# additional stochasticity. The prior statistics (`mu0`, `sigma0`) are auto-provided;
+# only the diffusion strength parameter `alpha` must be specified.
 
 # %% Define the Flow Matching model and pipeline
 params_fm = Flux1Params(
@@ -193,7 +193,7 @@ pipeline_fm.train(rngs, save_model=True)
 # pipeline_fm.restore_model()
 
 # %% Sample with the default ODE solver
-# The default solver for flow matching is the ODESolver, which performs deterministic
+# The default solver for flow matching is the FMODESolver, which performs deterministic
 # ODE integration from noise (t=0) to data (t=1).
 samples_fm = pipeline_fm.sample(rngs.sample(), x_o, nsamples=100_000)
 samples_fm = unnormalize(samples_fm, means[:dim_obs], stds[:dim_obs])
@@ -205,19 +205,17 @@ plot_marginals(
     true_param=np.array(true_theta[0, :, 0]),
     range=plot_range,
 )
-plt.suptitle("Flow Matching — ODE Solver (default)", y=1.02)
+plt.suptitle("Flow Matching — FMODESolver (default)", y=1.02)
 plt.savefig("fm_ode_marginals.png", dpi=100, bbox_inches="tight")
 plt.show()
 
 # %% Alternative: ZeroEndsSolver (SDE-based)
 # The ZeroEndsSolver adds stochastic noise during sampling. The diffusion coefficient
 # vanishes at both t=0 and t=1, ensuring clean endpoints.
-# Required kwargs: mu0 (prior mean), sigma0 (prior std), alpha (diffusion strength).
+# Required kwarg: alpha (diffusion strength). mu0/sigma0 are auto-provided by the prior.
 from gensbi.flow_matching.solver import ZeroEndsSolver
 
 solver_kwargs_ze = {
-    "mu0": jnp.zeros((dim_obs, 1)),  # prior mean (data is normalized)
-    "sigma0": jnp.ones((dim_obs, 1)),  # prior std
     "alpha": 0.2,  # diffusion strength
 }
 
@@ -247,8 +245,6 @@ plt.show()
 from gensbi.flow_matching.solver import NonSingularSolver
 
 solver_kwargs_ns = {
-    "mu0": jnp.zeros((dim_obs, 1)),
-    "sigma0": jnp.ones((dim_obs, 1)),
     "alpha": 0.2,
 }
 
@@ -269,6 +265,78 @@ plot_marginals(
 )
 plt.suptitle("Flow Matching — NonSingularSolver (SDE)", y=1.02)
 plt.savefig("fm_nonsingular_marginals.png", dpi=100, bbox_inches="tight")
+plt.show()
+
+# %% [markdown]
+# ### Computing the log-prob (Flow Matching)
+#
+# Flow matching supports exact log-probability evaluation via the continuous
+# change-of-variables formula. This requires solving an ODE backward, so it is
+# more expensive than sampling, but it gives the exact (approximate) posterior
+# density at any point.
+
+# %% Import contour plotting utility
+from gensbi.utils.plotting import _plot_2d_dist_contour
+
+# %% Evaluate log-prob on a 3D grid
+# Build a meshgrid in *unnormalized* space, then normalize for the pipeline.
+theta1_raw = np.linspace(1.6, 2.4, 50)
+theta2_raw = np.linspace(1.4, 2.4, 51)
+theta3_raw = np.linspace(-0.5, 0.3, 52)
+
+# Normalize to the training data statistics (obs dims only)
+means_obs = means[:dim_obs, :]
+stds_obs = stds[:dim_obs, :]
+
+theta1 = (theta1_raw - means_obs[0, 0].item()) / stds_obs[0, 0].item()
+theta2 = (theta2_raw - means_obs[1, 0].item()) / stds_obs[1, 0].item()
+theta3 = (theta3_raw - means_obs[2, 0].item()) / stds_obs[2, 0].item()
+
+tt1, tt2, tt3 = jnp.meshgrid(theta1, theta2, theta3, indexing="ij")
+
+x_1 = jnp.stack([tt1.ravel(), tt2.ravel(), tt3.ravel()], axis=-1)[..., None]
+
+# %% Compute log-prob (Flow Matching)
+logp_fm = pipeline_fm.log_prob(x_1, x_o, use_ema=True)
+
+# %% Marginalize and plot log-prob contours (Flow Matching)
+prob_fm = jnp.exp(logp_fm).reshape((len(theta1_raw), len(theta2_raw), len(theta3_raw)))
+
+# Integrate out one dimension to get 2D marginal distributions
+prob12_fm = jnp.trapezoid(prob_fm, x=theta3, axis=2)
+prob13_fm = jnp.trapezoid(prob_fm, x=theta2, axis=1)
+prob23_fm = jnp.trapezoid(prob_fm, x=theta1, axis=0)
+
+fig, axes = plt.subplots(2, 2, figsize=(6, 6))
+
+ax = axes[1, 0]
+_plot_2d_dist_contour(theta1_raw, theta3_raw, prob13_fm.T, ax=ax,
+                      true_param=[true_theta[:, 0], true_theta[:, 2]])
+ax.set_xlabel(r"$\theta_1$")
+ax.set_ylabel(r"$\theta_3$")
+
+ax = axes[1, 1]
+_plot_2d_dist_contour(theta2_raw, theta3_raw, prob23_fm.T, ax=ax,
+                      true_param=[true_theta[:, 1], true_theta[:, 2]])
+ax.set_xlabel(r"$\theta_2$")
+ax.set_ylabel("")
+ax.set_yticks([])
+
+ax = axes[0, 0]
+_plot_2d_dist_contour(theta1_raw, theta2_raw, prob12_fm.T, ax=ax,
+                      true_param=[true_theta[:, 0], true_theta[:, 1]])
+ax.set_xlabel("")
+ax.set_xticks([])
+ax.set_ylabel(r"$\theta_2$")
+
+axes[0, 1].set_visible(False)
+
+fig.subplots_adjust(hspace=0.05, wspace=0.1, left=0.2, right=0.98, top=0.98, bottom=0.06)
+for ax in axes.ravel():
+    ax.set_aspect("equal", adjustable="box")
+
+plt.suptitle("Flow Matching \u2014 log-prob contours", y=1.02)
+plt.savefig("fm_log_prob.png", dpi=300, bbox_inches="tight")
 plt.show()
 
 # %% Cleanup Flow Matching model to free memory
@@ -428,8 +496,8 @@ del model_edm, pipeline_edm
 # - `ScoreMatchingMethod(sde_type="VE")` — Variance Exploding (VE) SDE
 #
 # **Solvers**:
-# - `SMSolver` (**default**) — reverse-time SDE, generates stochastic samples.
-# - `SMPFSolver` — probability flow ODE, generates deterministic samples from the
+# - `SMSDESolver` (**default**) — reverse-time SDE, generates stochastic samples.
+# - `SMODESolver` — probability flow ODE, generates deterministic samples from the
 #   same learned score function. Useful when reproducibility or lower variance is
 #   desired.
 
@@ -482,45 +550,112 @@ pipeline_sm.train(rngs, save_model=True)
 # %% Restore the trained Score Matching model
 # pipeline_sm.restore_model()
 
-# %% Sample with the default SMSolver (reverse SDE)
+# %% Sample with the default SMSDESolver (reverse SDE)
 # The default solver for score matching generates stochastic samples by running the
 # reverse-time SDE. Each call with a different key produces a different set of samples.
 samples_sm = pipeline_sm.sample(rngs.sample(), x_o, nsamples=100_000)
 samples_sm = unnormalize(samples_sm, means[:dim_obs], stds[:dim_obs])
 
-# %% Plot Score Matching samples (SMSolver)
+# %% Plot Score Matching samples (SMSDESolver)
 plot_marginals(
     np.array(samples_sm[..., 0]),
     gridsize=30,
     true_param=np.array(true_theta[0, :, 0]),
     range=plot_range,
 )
-plt.suptitle("Score Matching — SMSolver (default, reverse SDE)", y=1.02)
+plt.suptitle("Score Matching — SMSDESolver (default, reverse SDE)", y=1.02)
 plt.savefig("sm_sde_marginals.png", dpi=100, bbox_inches="tight")
 plt.show()
 
-# %% Alternative: SMPFSolver (probability flow ODE)
+# %% Alternative: SMODESolver (probability flow ODE)
 # The probability flow ODE produces deterministic samples from the same learned score
 # function. This can be useful when you want reproducible results or lower variance.
-from gensbi.diffusion.solver import SMPFSolver
+from gensbi.diffusion.solver import SMODESolver
 
 samples_sm_pf = pipeline_sm.sample(
     rngs.sample(),
     x_o,
     nsamples=100_000,
-    solver=(SMPFSolver, {}),
+    solver=(SMODESolver, {}),
 )
 samples_sm_pf = unnormalize(samples_sm_pf, means[:dim_obs], stds[:dim_obs])
 
-# %% Plot Score Matching samples (SMPFSolver)
+# %% Plot Score Matching samples (SMODESolver)
 plot_marginals(
     np.array(samples_sm_pf[..., 0]),
     gridsize=30,
     true_param=np.array(true_theta[0, :, 0]),
     range=plot_range,
 )
-plt.suptitle("Score Matching — SMPFSolver (probability flow ODE)", y=1.02)
+plt.suptitle("Score Matching — SMODESolver (probability flow ODE)", y=1.02)
 plt.savefig("sm_pf_marginals.png", dpi=100, bbox_inches="tight")
+plt.show()
+
+# %% [markdown]
+# ### Computing the log-prob (Score Matching)
+#
+# Score matching also supports exact log-probability evaluation via the
+# probability flow ODE formulation. Internally, `pipeline.log_prob()` uses
+# `SMODESolver` regardless of the default sampling solver.
+
+# %% Build log-prob grid (Score Matching)
+# We reuse the same unnormalized grid ranges defined in the FM section.
+from gensbi.utils.plotting import _plot_2d_dist_contour
+
+theta1_raw = np.linspace(1.6, 2.4, 50)
+theta2_raw = np.linspace(1.4, 2.4, 51)
+theta3_raw = np.linspace(-0.5, 0.3, 52)
+
+means_obs = means[:dim_obs, :]
+stds_obs = stds[:dim_obs, :]
+
+theta1 = (theta1_raw - means_obs[0, 0].item()) / stds_obs[0, 0].item()
+theta2 = (theta2_raw - means_obs[1, 0].item()) / stds_obs[1, 0].item()
+theta3 = (theta3_raw - means_obs[2, 0].item()) / stds_obs[2, 0].item()
+
+tt1, tt2, tt3 = jnp.meshgrid(theta1, theta2, theta3, indexing="ij")
+x_1 = jnp.stack([tt1.ravel(), tt2.ravel(), tt3.ravel()], axis=-1)[..., None]
+
+# %% Compute log-prob (Score Matching)
+logp_sm = pipeline_sm.log_prob(x_1, x_o, use_ema=True)
+
+# %% Marginalize and plot log-prob contours (Score Matching)
+prob_sm = jnp.exp(logp_sm).reshape((len(theta1_raw), len(theta2_raw), len(theta3_raw)))
+
+prob12_sm = jnp.trapezoid(prob_sm, x=theta3, axis=2)
+prob13_sm = jnp.trapezoid(prob_sm, x=theta2, axis=1)
+prob23_sm = jnp.trapezoid(prob_sm, x=theta1, axis=0)
+
+fig, axes = plt.subplots(2, 2, figsize=(6, 6))
+
+ax = axes[1, 0]
+_plot_2d_dist_contour(theta1_raw, theta3_raw, prob13_sm.T, ax=ax,
+                      true_param=[true_theta[:, 0], true_theta[:, 2]])
+ax.set_xlabel(r"$\theta_1$")
+ax.set_ylabel(r"$\theta_3$")
+
+ax = axes[1, 1]
+_plot_2d_dist_contour(theta2_raw, theta3_raw, prob23_sm.T, ax=ax,
+                      true_param=[true_theta[:, 1], true_theta[:, 2]])
+ax.set_xlabel(r"$\theta_2$")
+ax.set_ylabel("")
+ax.set_yticks([])
+
+ax = axes[0, 0]
+_plot_2d_dist_contour(theta1_raw, theta2_raw, prob12_sm.T, ax=ax,
+                      true_param=[true_theta[:, 0], true_theta[:, 1]])
+ax.set_xlabel("")
+ax.set_xticks([])
+ax.set_ylabel(r"$\theta_2$")
+
+axes[0, 1].set_visible(False)
+
+fig.subplots_adjust(hspace=0.05, wspace=0.1, left=0.2, right=0.98, top=0.98, bottom=0.06)
+for ax in axes.ravel():
+    ax.set_aspect("equal", adjustable="box")
+
+plt.suptitle("Score Matching \u2014 log-prob contours", y=1.02)
+plt.savefig("sm_log_prob.png", dpi=300, bbox_inches="tight")
 plt.show()
 
 # %% Cleanup Score Matching model to free memory
