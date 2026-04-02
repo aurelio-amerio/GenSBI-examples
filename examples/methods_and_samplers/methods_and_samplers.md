@@ -4,7 +4,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.19.1
+    jupytext_version: 1.17.2
 kernelspec:
   display_name: .venv
   language: python
@@ -172,6 +172,29 @@ x_o = new_sample_norm[:, dim_obs:, :]
 plot_range = [(1, 3), (1, 3), (-0.6, 0.5)]
 ```
 
+## Model parameters
+
+```{code-cell} ipython3
+params = Flux1Params(
+    in_channels=1,
+    vec_in_dim=None,
+    context_in_dim=1,
+    mlp_ratio=3,
+    num_heads=4,
+    depth=4,
+    depth_single_blocks=8,
+    val_emb_dim=10,
+    id_emb_dim=4,
+    qkv_bias=True,
+    dim_obs=dim_obs,
+    dim_cond=dim_cond,
+    id_embedding_strategy=("absolute", "absolute"),
+    id_merge_mode="concat",
+    rngs=nnx.Rngs(default=42),
+    param_dtype=jnp.float32,
+)
+```
+
 ---
 ## Section 1: Flow Matching
 
@@ -191,25 +214,7 @@ only the diffusion strength parameter `alpha` must be specified.
 ```{code-cell} ipython3
 :title: Define the Flow Matching model and pipeline
 
-params_fm = Flux1Params(
-    in_channels=1,
-    vec_in_dim=None,
-    context_in_dim=1,
-    mlp_ratio=3,
-    num_heads=2,
-    depth=4,
-    depth_single_blocks=8,
-    axes_dim=[10],
-    qkv_bias=True,
-    dim_obs=dim_obs,
-    dim_cond=dim_cond,
-    id_embedding_strategy=("absolute", "absolute"),
-    theta=10 * dim_joint,
-    rngs=nnx.Rngs(default=42),
-    param_dtype=jnp.float32,
-)
-
-model_fm = Flux1(params_fm)
+model_fm = Flux1(params)
 
 method_fm = FlowMatchingMethod()
 
@@ -388,6 +393,11 @@ logp_fm = pipeline_fm.log_prob(x_1, x_o, use_ema=True)
 
 prob_fm = jnp.exp(logp_fm).reshape((len(theta1_raw), len(theta2_raw), len(theta3_raw)))
 
+# since we did a change of variables, p(x_norm) = p(x)*|det(J)|, where J is the jacobian of the change of variables
+# we are interested in plotting p(x)
+# J = stds_obs, so we need to divide by the product of stds
+prob_fm = prob_fm / jnp.prod(stds_obs.flatten())
+
 # Integrate out one dimension to get 2D marginal distributions
 prob12_fm = jnp.trapezoid(prob_fm, x=theta3, axis=2)
 prob13_fm = jnp.trapezoid(prob_fm, x=theta2, axis=1)
@@ -401,12 +411,14 @@ _plot_2d_dist_contour(theta1_raw, theta3_raw, prob13_fm.T, ax=ax,
 ax.set_xlabel(r"$\theta_1$")
 ax.set_ylabel(r"$\theta_3$")
 
+
 ax = axes[1, 1]
 _plot_2d_dist_contour(theta2_raw, theta3_raw, prob23_fm.T, ax=ax,
                       true_param=[true_theta[:, 1], true_theta[:, 2]])
 ax.set_xlabel(r"$\theta_2$")
 ax.set_ylabel("")
 ax.set_yticks([])
+
 
 ax = axes[0, 0]
 _plot_2d_dist_contour(theta1_raw, theta2_raw, prob12_fm.T, ax=ax,
@@ -415,16 +427,20 @@ ax.set_xlabel("")
 ax.set_xticks([])
 ax.set_ylabel(r"$\theta_2$")
 
+
 axes[0, 1].set_visible(False)
 
-fig.subplots_adjust(hspace=0.05, wspace=0.1, left=0.2, right=0.98, top=0.98, bottom=0.06)
+fig.subplots_adjust(hspace=0.05, wspace=0.2, left=0.2, right=0.98, top=0.98, bottom=0.06)
 for ax in axes.ravel():
     ax.set_aspect("equal", adjustable="box")
+    # ax.set_aspect("equal")
 
 plt.suptitle("Flow Matching — log-prob contours", y=1.02)
 plt.savefig("fm_log_prob.png", dpi=300, bbox_inches="tight")
 plt.show()
 ```
+
+<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/methods_and_samplers/fm_log_prob.png" width=600>
 
 ```{code-cell} ipython3
 :title: Cleanup Flow Matching model to free memory
@@ -453,25 +469,7 @@ stochastic denoising sampler from Karras et al., 2022.
 ```{code-cell} ipython3
 :title: Define the EDM Diffusion model and pipeline
 
-params_edm = Flux1Params(
-    in_channels=1,
-    vec_in_dim=None,
-    context_in_dim=1,
-    mlp_ratio=3,
-    num_heads=2,
-    depth=4,
-    depth_single_blocks=8,
-    axes_dim=[10],
-    qkv_bias=True,
-    dim_obs=dim_obs,
-    dim_cond=dim_cond,
-    id_embedding_strategy=("absolute", "absolute"),
-    theta=10 * dim_joint,
-    rngs=nnx.Rngs(default=42),
-    param_dtype=jnp.float32,
-)
-
-model_edm = Flux1(params_edm)
+model_edm = Flux1(params)
 
 # Default EDM scheduler (recommended for both training and sampling)
 method_edm = DiffusionEDMMethod()
@@ -583,25 +581,7 @@ The SDE formulation can be either:
 ```{code-cell} ipython3
 :title: Define the Score Matching model and pipeline
 
-params_sm = Flux1Params(
-    in_channels=1,
-    vec_in_dim=None,
-    context_in_dim=1,
-    mlp_ratio=3,
-    num_heads=2,
-    depth=4,
-    depth_single_blocks=8,
-    axes_dim=[10],
-    qkv_bias=True,
-    dim_obs=dim_obs,
-    dim_cond=dim_cond,
-    id_embedding_strategy=("absolute", "absolute"),
-    theta=10 * dim_joint,
-    rngs=nnx.Rngs(default=42),
-    param_dtype=jnp.float32,
-)
-
-model_sm = Flux1(params_sm)
+model_sm = Flux1(params)
 
 # Default: Variance Preserving (VP) SDE
 method_sm = ScoreMatchingMethod()
@@ -707,9 +687,9 @@ probability flow ODE formulation. Internally, `pipeline.log_prob()` uses
 # We reuse the same unnormalized grid ranges defined in the FM section.
 from gensbi.utils.plotting import _plot_2d_dist_contour
 
-theta1_raw = np.linspace(1.6, 2.4, 50)
-theta2_raw = np.linspace(1.4, 2.4, 51)
-theta3_raw = np.linspace(-0.5, 0.3, 52)
+theta1_raw = np.linspace(1.6, 2.4, 20)
+theta2_raw = np.linspace(1.4, 2.4, 21)
+theta3_raw = np.linspace(-0.5, 0.3, 22)
 
 means_obs = means[:dim_obs, :]
 stds_obs = stds[:dim_obs, :]
@@ -725,13 +705,14 @@ x_1 = jnp.stack([tt1.ravel(), tt2.ravel(), tt3.ravel()], axis=-1)[..., None]
 ```{code-cell} ipython3
 :title: Compute log-prob (Score Matching)
 
-logp_sm = pipeline_sm.log_prob(x_1, x_o, use_ema=True)
+logp_sm = pipeline_sm.log_prob(x_1, x_o, use_ema=True, method="Euler")
 ```
 
 ```{code-cell} ipython3
 :title: Marginalize and plot log-prob contours (Score Matching)
 
 prob_sm = jnp.exp(logp_sm).reshape((len(theta1_raw), len(theta2_raw), len(theta3_raw)))
+prob_sm = prob_sm / jnp.prod(stds_obs.flatten())
 
 prob12_sm = jnp.trapezoid(prob_sm, x=theta3, axis=2)
 prob13_sm = jnp.trapezoid(prob_sm, x=theta2, axis=1)
@@ -769,6 +750,8 @@ plt.suptitle("Score Matching — log-prob contours", y=1.02)
 plt.savefig("sm_log_prob.png", dpi=300, bbox_inches="tight")
 plt.show()
 ```
+
+<img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/methods_and_samplers/sm_log_prob.png" width=600>
 
 ```{code-cell} ipython3
 :title: Cleanup Score Matching model to free memory
