@@ -19,6 +19,7 @@ model:
   - 10
   qkv_bias: true
   params_dtype: bfloat16
+  id_merge_mode: sum
   id_embedding_strategy:
   - absolute
   - absolute
