@@ -1,6 +1,6 @@
 [project]
 name = "gensbi-examples"
-version = "0.2.0"
+version = "0.4.0"
 description = "Examples for the GenSBI library"
 authors = [{ name = "Aurelio Amerio", email = "dev@gensbi.com" }]
 license = { file = "LICENSE" }
@@ -44,6 +44,7 @@ requires = ["uv_build>=0.10.7,<0.11.0"]
 build-backend = "uv_build"
 
 [tool.pytest.ini_options]
+addopts = "-n 2"
 env = [
     "JAX_PLATFORMS=cpu"
 ]

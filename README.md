@@ -47,6 +47,32 @@ git clone https://github.com/aurelio-amerio/GenSBI-examples.git
 
 - **My First Model**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/getting_started/my_first_model.ipynb)
 
+## Training Models
+
+Models can be trained from the command line by passing a YAML configuration file to one of the provided training scripts. Each configuration file specifies the task, model architecture, training methodology (flow matching, diffusion, or score matching), optimizer settings, and training hyperparameters. Example configuration files can be found alongside each benchmark task under the `config/` subdirectory (e.g., `examples/sbi-benchmarks/two_moons/flow_flux/config/config_flow_flux.yaml`).
+
+**General SBI tasks.** For the standard SBI benchmark tasks (Two Moons, Gaussian Linear, SLCP, etc.), use the general-purpose training script:
+
+```bash
+python scripts/train_sbi_model.py --config <path_to_config.yaml>
+```
+
+This script trains the model, runs sampling, and computes diagnostic metrics (C2ST, TARP, SBC, LC2ST) automatically.
+
+**SBIBM benchmarks (budget/model/methodology scans).** To reproduce the results reported in the main paper—including scans over training budget, model type, and methodology—use the dedicated SBIBM training script:
+
+```bash
+python scripts/train_sbi_model_sbibm.py --config <path_to_config.yaml>
+```
+
+This script additionally accepts a `--dsize` flag to control the training dataset size (default: 100,000), which is used for the budget scan experiments:
+
+```bash
+python scripts/train_sbi_model_sbibm.py --config <path_to_config.yaml> --dsize 10000
+```
+
+**Advanced tasks.** For more complex tasks such as gravitational waves and strong lensing, dedicated training scripts are provided in the corresponding example directories (e.g., `examples/sbi-benchmarks/gravitational_waves/train-gw.py` and `examples/sbi-benchmarks/lensing/train-lensing.py`).
+
 ## Neural Density Estimators (NDE)
 
 These examples demonstrate the usage of Neural Density Estimators for unconditional density estimation tasks.
@@ -96,3 +122,4 @@ This repository includes a comprehensive suite of Simulation-Based Inference (SB
 - **Flow Flux**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/slcp/flow_flux/slcp_flow_flux.ipynb)
 - **Flow Flux1Joint**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/slcp/flow_flux1joint/slcp_flow_flux1joint.ipynb)
 - **Flow SimFormer**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/slcp/flow_simformer/slcp_flow_simformer.ipynb)
+

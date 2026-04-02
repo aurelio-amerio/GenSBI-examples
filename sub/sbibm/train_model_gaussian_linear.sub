@@ -1,0 +1,54 @@
+experiment_name = gaussian_linear
+version = v9
+
+universe = vanilla
+
+request_memory = 128 GB
+request_cpus = 8
+
+executable = start_training_sbibm.sh
+arguments = "$(config_file) $(dsize)"
+getenv = True
+request_gpus = 1
+requirements = (Machine != "mlwn11.ific.uv.es")
+
+log                     = condor_logs/logs_$(experiment_name)_$(method)_$(model)_$(dsize).log
+output                  = condor_logs/outfile_$(experiment_name)_$(method)_$(model)_$(dsize).out
+error                   = condor_logs/errors_$(experiment_name)_$(method)_$(model)_$(dsize).err
+
+# New variant path structure
+variant = $(method)_$(model)
+experiment_path = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/$(experiment_name)/$(variant)
+config_file = $(experiment_path)/config/$(version)/config_$(method)_$(model)_sbibm_$(dsize).yaml
+
+#########
+dsize = 100000
+queue method,model, from (
+    score_matching, flux
+    score_matching, flux1joint
+    flow, flux
+    flow, flux1joint
+    diffusion, flux
+    diffusion, flux1joint
+)
+#########
+dsize = 30000
+queue method,model, from (
+    score_matching, flux
+    score_matching, flux1joint
+    flow, flux
+    flow, flux1joint
+    diffusion, flux
+    diffusion, flux1joint
+)
+#########
+dsize = 10000
+queue method,model, from (
+    score_matching, flux
+    score_matching, flux1joint
+    flow, flux
+    flow, flux1joint
+    diffusion, flux
+    diffusion, flux1joint
+)
+#########

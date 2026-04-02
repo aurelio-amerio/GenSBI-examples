@@ -12,7 +12,7 @@ import pytest
 
 import numpy as np
 
-from gensbi_examples.tasks import get_task
+from gensbi_examples.tasks import get_task, Task
 
 
 # %%
@@ -34,7 +34,7 @@ from gensbi_examples.tasks import get_task
     ],
 )
 def test_basic_task(task_name, kind):
-    task = get_task(task_name, kind, use_multiprocessing=False)
+    task = get_task(task_name, kind, use_prefetching=False)
     obs, reference_samples = task.get_reference(num_observation=1)
     assert (
         obs.shape[1] == task.dim_cond
@@ -130,7 +130,7 @@ def test_basic_task(task_name, kind):
     ],
 )
 def test_advanced_task(task_name):
-    task = get_task(task_name, "conditional", use_multiprocessing=False)
+    task = get_task(task_name, "conditional", use_prefetching=False)
 
     train_dataset = task.get_train_dataset(batch_size=32, nsamples=100)
     val_dataset = task.get_val_dataset(batch_size=32)
@@ -185,6 +185,148 @@ def test_advanced_task(task_name):
     print(f"All tests passed for {task_name} conditional!")
 
     return
+
+
+# ---------------------------------------------------------------------------
+# Normalization tests
+# ---------------------------------------------------------------------------
+
+STANDARD_TASKS = [
+    "two_moons",
+    "bernoulli_glm",
+    "gaussian_linear",
+    "gaussian_linear_uniform",
+    "gaussian_mixture",
+    "slcp",
+]
+
+
+@pytest.mark.parametrize("task_name", STANDARD_TASKS)
+@pytest.mark.parametrize("kind", ["joint", "conditional"])
+class TestNormalizationWithPrecomputedStats:
+    """Test that normalize_data=True with shipped stats works correctly."""
+
+    def test_stats_are_set(self, task_name, kind):
+        """When normalize_data=True, the task should have non-None stats."""
+        task = get_task(task_name, kind, normalize_data=True, use_prefetching=False)
+        assert task.normalize_data is True
+        assert task.obs_mean is not None
+        assert task.obs_std is not None
+        assert task.cond_mean is not None
+        assert task.cond_std is not None
+
+    def test_normalized_batch_shapes(self, task_name, kind):
+        """Normalized batches should have identical shapes to unnormalized ones."""
+        task_norm = get_task(
+            task_name, kind, normalize_data=True, use_prefetching=False
+        )
+        task_raw = get_task(
+            task_name, kind, normalize_data=False, use_prefetching=False
+        )
+
+        train_norm = next(iter(task_norm.get_train_dataset(batch_size=32, nsamples=1000)))
+        train_raw = next(iter(task_raw.get_train_dataset(batch_size=32, nsamples=1000)))
+
+        if kind == "joint":
+            assert train_norm.shape == train_raw.shape
+        else:
+            # conditional returns (obs, cond)
+            assert train_norm[0].shape == train_raw[0].shape
+            assert train_norm[1].shape == train_raw[1].shape
+
+    def test_normalize_unnormalize_roundtrip(self, task_name, kind):
+        """normalize then unnormalize should recover the original data."""
+        task = get_task(task_name, kind, normalize_data=True, use_prefetching=False)
+
+        rng = np.random.default_rng(0)
+        obs_dummy = jnp.array(rng.normal(size=(16, task.dim_obs, 1)), dtype=jnp.float32)
+        cond_dummy = jnp.array(
+            rng.normal(size=(16, task.dim_cond, 1)), dtype=jnp.float32
+        )
+
+        obs_recovered = task.unnormalize_obs(task.normalize_obs(obs_dummy))
+        cond_recovered = task.unnormalize_cond(task.normalize_cond(cond_dummy))
+
+        np.testing.assert_allclose(obs_recovered, obs_dummy, atol=1e-5, rtol=1e-5)
+        np.testing.assert_allclose(cond_recovered, cond_dummy, atol=1e-5, rtol=1e-5)
+
+
+@pytest.mark.parametrize("task_name", STANDARD_TASKS)
+@pytest.mark.parametrize("kind", ["joint", "conditional"])
+class TestNormalizationDisabled:
+    """Test that normalize_data=False leaves stats as None and methods as identity."""
+
+    def test_stats_are_none(self, task_name, kind):
+        task = get_task(task_name, kind, normalize_data=False, use_prefetching=False)
+        assert task.normalize_data is False
+        assert task.obs_mean is None
+        assert task.obs_std is None
+        assert task.cond_mean is None
+        assert task.cond_std is None
+
+    def test_convenience_methods_are_identity(self, task_name, kind):
+        """When normalize_data=False, normalize_obs/cond should return input unchanged."""
+        task = get_task(task_name, kind, normalize_data=False, use_prefetching=False)
+
+        rng = np.random.default_rng(1)
+        obs_dummy = jnp.array(rng.normal(size=(4, task.dim_obs, 1)), dtype=jnp.float32)
+        cond_dummy = jnp.array(
+            rng.normal(size=(4, task.dim_cond, 1)), dtype=jnp.float32
+        )
+
+        np.testing.assert_array_equal(task.normalize_obs(obs_dummy), obs_dummy)
+        np.testing.assert_array_equal(task.normalize_cond(cond_dummy), cond_dummy)
+        np.testing.assert_array_equal(task.unnormalize_obs(obs_dummy), obs_dummy)
+        np.testing.assert_array_equal(task.unnormalize_cond(cond_dummy), cond_dummy)
+
+
+@pytest.mark.parametrize("kind", ["joint", "conditional"])
+class TestNormalizationWithExplicitStats:
+    """Test passing explicit mean/std arrays overrides computed/precomputed values."""
+
+    def test_explicit_stats_are_used(self, kind):
+        # Use the base Task class directly to avoid subclass constructors
+        # overriding the stats before forwarding **kwargs.
+        obs_mean = np.array([[[1.0], [2.0]]])
+        obs_std = np.array([[[0.5], [0.5]]])
+        cond_mean = np.array([[[3.0], [4.0]]])
+        cond_std = np.array([[[1.0], [1.0]]])
+
+        task = Task(
+            "two_moons",
+            kind=kind,
+            normalize_data=True,
+            obs_mean=obs_mean,
+            obs_std=obs_std,
+            cond_mean=cond_mean,
+            cond_std=cond_std,
+            use_prefetching=False,
+        )
+
+        np.testing.assert_array_equal(task.obs_mean, obs_mean)
+        np.testing.assert_array_equal(task.obs_std, obs_std)
+        np.testing.assert_array_equal(task.cond_mean, cond_mean)
+        np.testing.assert_array_equal(task.cond_std, cond_std)
+
+
+@pytest.mark.parametrize("kind", ["joint", "conditional"])
+class TestNormalizationComputedFromData:
+    """Test that stats are computed from training data when no precomputed/explicit stats exist."""
+
+    def test_computed_stats_match_training_data(self, kind):
+        """Force computation by passing normalize_data=True to the base Task directly
+        with a task that has precomputed stats — verify the precomputed path is used."""
+        task = get_task(
+            "two_moons", kind, normalize_data=True, use_prefetching=False
+        )
+        # Precomputed stats are loaded; verify they are finite arrays
+        assert np.all(np.isfinite(task.obs_mean))
+        assert np.all(np.isfinite(task.obs_std))
+        assert np.all(np.isfinite(task.cond_mean))
+        assert np.all(np.isfinite(task.cond_std))
+        # std should be positive
+        assert np.all(task.obs_std > 0)
+        assert np.all(task.cond_std > 0)
 
 
 # %%

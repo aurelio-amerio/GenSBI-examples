@@ -1,0 +1,11 @@
+C2ST accuracy for observation=1: 0.7479
+C2ST accuracy for observation=2: 0.6375
+C2ST accuracy for observation=3: 0.7450
+C2ST accuracy for observation=4: 0.7554
+C2ST accuracy for observation=5: 0.6662
+C2ST accuracy for observation=6: 0.6617
+C2ST accuracy for observation=7: 0.6555
+C2ST accuracy for observation=8: 0.6873
+C2ST accuracy for observation=9: 0.7951
+C2ST accuracy for observation=10: 0.6416
+Average C2ST accuracy: 0.6993 +- 0.0534
