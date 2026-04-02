@@ -27,7 +27,7 @@ kind = "conditional"
 
 
 def dump_stats(task_name):
-    task = get_task(task_name, kind, use_multiprocessing=False, normalize_data=True)
+    task = get_task(task_name, kind, use_prefetching=False, normalize_data=True)
     # write to a file the mean and std of the data
 
     data_dict = {

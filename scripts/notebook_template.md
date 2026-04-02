@@ -98,7 +98,7 @@ from gensbi.utils.plotting import plot_marginals
 
 ```{code-cell} ipython3
 from gensbi_examples.tasks import get_task
-task = get_task("{task_name_gensbi}", kind="{kind}", use_multiprocessing=False)
+task = get_task("{task_name_gensbi}", kind="{kind}", use_prefetching=False)
 ```
 
 ```{code-cell} ipython3

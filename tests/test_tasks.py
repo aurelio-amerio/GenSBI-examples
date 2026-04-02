@@ -34,7 +34,7 @@ from gensbi_examples.tasks import get_task, Task
     ],
 )
 def test_basic_task(task_name, kind):
-    task = get_task(task_name, kind, use_multiprocessing=False)
+    task = get_task(task_name, kind, use_prefetching=False)
     obs, reference_samples = task.get_reference(num_observation=1)
     assert (
         obs.shape[1] == task.dim_cond
@@ -130,7 +130,7 @@ def test_basic_task(task_name, kind):
     ],
 )
 def test_advanced_task(task_name):
-    task = get_task(task_name, "conditional", use_multiprocessing=False)
+    task = get_task(task_name, "conditional", use_prefetching=False)
 
     train_dataset = task.get_train_dataset(batch_size=32, nsamples=100)
     val_dataset = task.get_val_dataset(batch_size=32)
@@ -208,7 +208,7 @@ class TestNormalizationWithPrecomputedStats:
 
     def test_stats_are_set(self, task_name, kind):
         """When normalize_data=True, the task should have non-None stats."""
-        task = get_task(task_name, kind, normalize_data=True, use_multiprocessing=False)
+        task = get_task(task_name, kind, normalize_data=True, use_prefetching=False)
         assert task.normalize_data is True
         assert task.obs_mean is not None
         assert task.obs_std is not None
@@ -218,10 +218,10 @@ class TestNormalizationWithPrecomputedStats:
     def test_normalized_batch_shapes(self, task_name, kind):
         """Normalized batches should have identical shapes to unnormalized ones."""
         task_norm = get_task(
-            task_name, kind, normalize_data=True, use_multiprocessing=False
+            task_name, kind, normalize_data=True, use_prefetching=False
         )
         task_raw = get_task(
-            task_name, kind, normalize_data=False, use_multiprocessing=False
+            task_name, kind, normalize_data=False, use_prefetching=False
         )
 
         train_norm = next(iter(task_norm.get_train_dataset(batch_size=32, nsamples=1000)))
@@ -236,7 +236,7 @@ class TestNormalizationWithPrecomputedStats:
 
     def test_normalize_unnormalize_roundtrip(self, task_name, kind):
         """normalize then unnormalize should recover the original data."""
-        task = get_task(task_name, kind, normalize_data=True, use_multiprocessing=False)
+        task = get_task(task_name, kind, normalize_data=True, use_prefetching=False)
 
         rng = np.random.default_rng(0)
         obs_dummy = jnp.array(rng.normal(size=(16, task.dim_obs, 1)), dtype=jnp.float32)
@@ -257,7 +257,7 @@ class TestNormalizationDisabled:
     """Test that normalize_data=False leaves stats as None and methods as identity."""
 
     def test_stats_are_none(self, task_name, kind):
-        task = get_task(task_name, kind, normalize_data=False, use_multiprocessing=False)
+        task = get_task(task_name, kind, normalize_data=False, use_prefetching=False)
         assert task.normalize_data is False
         assert task.obs_mean is None
         assert task.obs_std is None
@@ -266,7 +266,7 @@ class TestNormalizationDisabled:
 
     def test_convenience_methods_are_identity(self, task_name, kind):
         """When normalize_data=False, normalize_obs/cond should return input unchanged."""
-        task = get_task(task_name, kind, normalize_data=False, use_multiprocessing=False)
+        task = get_task(task_name, kind, normalize_data=False, use_prefetching=False)
 
         rng = np.random.default_rng(1)
         obs_dummy = jnp.array(rng.normal(size=(4, task.dim_obs, 1)), dtype=jnp.float32)
@@ -300,7 +300,7 @@ class TestNormalizationWithExplicitStats:
             obs_std=obs_std,
             cond_mean=cond_mean,
             cond_std=cond_std,
-            use_multiprocessing=False,
+            use_prefetching=False,
         )
 
         np.testing.assert_array_equal(task.obs_mean, obs_mean)
@@ -317,7 +317,7 @@ class TestNormalizationComputedFromData:
         """Force computation by passing normalize_data=True to the base Task directly
         with a task that has precomputed stats — verify the precomputed path is used."""
         task = get_task(
-            "two_moons", kind, normalize_data=True, use_multiprocessing=False
+            "two_moons", kind, normalize_data=True, use_prefetching=False
         )
         # Precomputed stats are loaded; verify they are finite arrays
         assert np.all(np.isfinite(task.obs_mean))
