@@ -37,8 +37,10 @@ BUDGETS = [10_000, 30_000, 100_000]
 
 EXPERIMENT_ID = 9
 
-STATS_DIR = (
-    "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
+import os
+STATS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "examples", "sbi-benchmarks", "stats"
 )
 
 # ---------- group methods by model ----------

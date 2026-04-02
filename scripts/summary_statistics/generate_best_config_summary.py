@@ -15,10 +15,11 @@ import glob
 import pandas as pd
 from collections import defaultdict
 
-stats_dir = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+stats_dir = os.path.join(root_dir, "examples", "sbi-benchmarks", "stats")
 output_md = os.path.join(stats_dir, "best_configurations_summary.md")
 output_csv = os.path.join(stats_dir, "best_configurations.csv")
-base_dir = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks"
+base_dir = os.path.join(root_dir, "examples", "sbi-benchmarks")
 
 tasks = ["two_moons", "bernoulli_glm", "gaussian_linear", "gaussian_mixture", "slcp"]
 models = {
