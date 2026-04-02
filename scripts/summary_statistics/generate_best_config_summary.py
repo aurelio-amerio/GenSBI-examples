@@ -3,16 +3,21 @@ generate_best_config_summary.py
 Generates a markdown summary of the best model configuration version per task, model, and budget.
 Only shows parameters that vary across versions for a given task/method.
 
+Also writes a compact CSV (best_configurations.csv) with one row per task/model/method/budget,
+containing the best version, its C2ST score, and the path to the config file.
+
 All configs are expected to live in config/v{N}/ directories with budget-specific filenames.
 """
 
 import os
 import yaml
 import glob
+import pandas as pd
 from collections import defaultdict
 
 stats_dir = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
 output_md = os.path.join(stats_dir, "best_configurations_summary.md")
+output_csv = os.path.join(stats_dir, "best_configurations.csv")
 base_dir = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks"
 
 tasks = ["two_moons", "bernoulli_glm", "gaussian_linear", "gaussian_mixture", "slcp"]
@@ -102,6 +107,9 @@ def get_all_version_configs(task, method, budget):
 
 
 # --- Main ---
+CSV_HEADERS = ["task", "model", "method", "budget", "best_version", "best_c2st", "config_path"]
+csv_rows = []
+
 with open(output_md, "w") as out:
     out.write("# Best Model Configurations\n\n")
     out.write(
@@ -160,6 +168,7 @@ with open(output_md, "w") as out:
                             row_data = {
                                 "__best_v__": best_v, "__c2st__": best_c2st,
                                 "__2nd_v__": second_v, "__2nd_c2st__": second_c2st,
+                                "__best_cf__": best_cf,
                             }
                             # Always include id_merge_mode; default to "sum" when absent
                             row_data["model.id_merge_mode"] = best_flat.get("model.id_merge_mode", "sum")
@@ -196,6 +205,21 @@ with open(output_md, "w") as out:
                         cols.append(str(row.get(k, "-")))
                     out.write("| " + " | ".join(cols) + " |\n")
 
+                    # Collect row for CSV
+                    csv_rows.append({
+                        "task": task,
+                        "model": model_name,
+                        "method": method,
+                        "budget": budget,
+                        "best_version": f"v{row['__best_v__']}",
+                        "best_c2st": f"{row['__c2st__']:.4f}",
+                        "config_path": row.get("__best_cf__", ""),
+                    })
+
                 out.write("\n")
 
+# Write compact CSV
+pd.DataFrame(csv_rows, columns=CSV_HEADERS).to_csv(output_csv, index=False)
+
 print(f"Done! Markdown written to: {output_md}")
+print(f"Done! CSV written to: {output_csv}")

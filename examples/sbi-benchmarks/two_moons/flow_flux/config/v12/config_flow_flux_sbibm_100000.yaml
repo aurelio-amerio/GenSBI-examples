@@ -1,0 +1,35 @@
+task_name: two_moons
+strategy:
+  method: flow
+  model: flux
+optimizer:
+  warmup_steps: 1000
+  decay_transition: 0.6
+  max_lr: 0.0002
+  min_lr: 2.0e-06
+model:
+  in_channels: 1
+  vec_in_dim: null
+  context_in_dim: 1
+  mlp_ratio: 4
+  num_heads: 4
+  depth: 8
+  depth_single_blocks: 16
+  axes_dim:
+  - 10
+  qkv_bias: true
+  params_dtype: bfloat16
+  id_embedding_strategy:
+  - absolute
+  - absolute
+training:
+  batch_size: 1024
+  nsteps: 100000
+  ema_decay: 0.999
+  multistep: 1
+  early_stopping: true
+  val_every: 100
+  experiment_id: 12
+  restore_model: true
+  train_model: false
+  val_error_ratio: 1.3
