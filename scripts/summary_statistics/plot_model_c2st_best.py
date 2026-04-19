@@ -35,7 +35,7 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9,12,13]
 # EXPERIMENT_IDS = [1, 2, 4, 5, 6, 8]
 
 import os
@@ -141,7 +141,14 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
                     key = (task, exp_id)
                     if key not in data:
                         continue
-                    val = max(float(data[key][method].values[i_budget]), 0.5)
+                    raw = data[key][method].values[i_budget]
+                    try:
+                        val = float(raw)
+                    except (ValueError, TypeError):
+                        continue
+                    if np.isnan(val):
+                        continue
+                    val = max(val, 0.5)
                     if val < min_val:
                         min_val = val
                         min_exp = exp_id

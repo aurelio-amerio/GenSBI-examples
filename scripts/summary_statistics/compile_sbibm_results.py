@@ -35,7 +35,7 @@ METHODS = [
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_ID = 9  # matches the experiment_id used during training
+EXPERIMENT_IDS = [12, 13]  # experiment versions to compile
 
 # regex to extract "Average C2ST accuracy EMA: 0.5771 +- 0.0108"
 PATTERN = re.compile(r"Average C2ST accuracy EMA:\s+([\d.]+)\s*\+-\s*([\d.]+)")
@@ -57,7 +57,7 @@ def read_c2st_ema(filepath: str) -> tuple[str, str]:
     return "NaN", "NaN"
 
 
-def build_result_path(base_dir: str, task: str, method: str, budget: int) -> str:
+def build_result_path(base_dir: str, task: str, method: str, budget: int, experiment_id: int) -> str:
     """
     Construct the expected path to the EMA C2ST results file.
 
@@ -71,7 +71,7 @@ def build_result_path(base_dir: str, task: str, method: str, budget: int) -> str
         "sbibm",
         str(budget),
         "c2st_results",
-        f"c2st_results_ema_{EXPERIMENT_ID}_{method}.txt",
+        f"c2st_results_ema_{experiment_id}_{method}.txt",
     )
 
 
@@ -93,41 +93,43 @@ def main():
 
     base_dir = args.base_dir
 
-    missing = []
+    for experiment_id in EXPERIMENT_IDS:
+        print(f"\n--- Experiment {experiment_id} ---")
+        missing = []
 
-    for task in TASKS:
-        rows = []
-        for budget in BUDGETS:
-            row = {"simulations": budget}
+        for task in TASKS:
+            rows = []
+            for budget in BUDGETS:
+                row = {"simulations": budget}
+                for method in METHODS:
+                    fpath = build_result_path(base_dir, task, method, budget, experiment_id)
+                    mean_val, std_val = read_c2st_ema(fpath)
+                    if mean_val == "NaN":
+                        missing.append(f"  MISSING: {task} / {method} / {budget}")
+                    row[method] = mean_val
+                    row[f"{method}_err"] = std_val
+                rows.append(row)
+
+            # Write CSV inside the stats directory
+            task_dir = os.path.join(base_dir, "stats")
+            csv_path = os.path.join(task_dir, f"{task}_experiment_{experiment_id}.csv")
+            fieldnames = ["simulations"]
             for method in METHODS:
-                fpath = build_result_path(base_dir, task, method, budget)
-                mean_val, std_val = read_c2st_ema(fpath)
-                if mean_val == "NaN":
-                    missing.append(f"  MISSING: {task} / {method} / {budget}")
-                row[method] = mean_val
-                row[f"{method}_err"] = std_val
-            rows.append(row)
+                fieldnames.extend([method, f"{method}_err"])
+            with open(csv_path, "w", newline="") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
 
-        # Write CSV inside the task directory
-        task_dir = os.path.join(base_dir, "stats")
-        csv_path = os.path.join(task_dir, f"{task}_experiment_{EXPERIMENT_ID}.csv")
-        fieldnames = ["simulations"]
-        for method in METHODS:
-            fieldnames.extend([method, f"{method}_err"])
-        with open(csv_path, "w", newline="") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
+            print(f"✓ Saved {csv_path}")
 
-        print(f"✓ Saved {csv_path}")
-
-    # Report missing combinations
-    if missing:
-        print(f"\n⚠ {len(missing)} missing result(s):")
-        for m in missing:
-            print(m)
-    else:
-        print("\nAll result files found — no missing combinations.")
+        # Report missing combinations
+        if missing:
+            print(f"\n⚠ {len(missing)} missing result(s) for experiment {experiment_id}:")
+            for m in missing:
+                print(m)
+        else:
+            print(f"\nAll result files found for experiment {experiment_id}.")
 
 
 if __name__ == "__main__":

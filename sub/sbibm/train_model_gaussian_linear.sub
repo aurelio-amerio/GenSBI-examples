@@ -39,7 +39,7 @@ queue method,model, from (
     # flow, flux
     # flow, flux1joint
     # diffusion, flux
-    diffusion, flux1joint
+    # diffusion, flux1joint
 )
 #########
 dsize = 10000
@@ -49,6 +49,6 @@ queue method,model, from (
     # flow, flux
     # flow, flux1joint
     # diffusion, flux
-    diffusion, flux1joint
+    # diffusion, flux1joint
 )
 #########

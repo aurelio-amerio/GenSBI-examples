@@ -28,7 +28,8 @@ BASE_DIR = os.path.join(
 )
 BASE_DIR = os.path.normpath(BASE_DIR)
 
-STATS_DIR = os.path.join(BASE_DIR, "stats")
+# STATS_DIR = os.path.join(BASE_DIR, "stats")
+STATS_DIR = "/lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/stats"
 
 TASKS = [
     "two_moons",
@@ -48,7 +49,7 @@ TASK_LABELS = {
 
 BUDGETS = [10_000, 30_000, 100_000]
 
-EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+EXPERIMENT_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9,12,13]
 
 # Methods grouped by model
 FLUX_METHODS = ["flow_flux", "diffusion_flux", "score_matching_flux"]
@@ -98,6 +99,7 @@ def find_best_experiment(data, task, method, budget_idx):
     """
     Find the experiment ID with the lowest (best) C2ST for a given
     (task, method, budget_index).  Returns (best_c2st, best_exp_id).
+    Experiments whose C2ST is NaN for this method/budget are skipped.
     """
     min_val = np.inf
     min_exp = None
@@ -105,7 +107,14 @@ def find_best_experiment(data, task, method, budget_idx):
         key = (task, exp_id)
         if key not in data:
             continue
-        val = max(float(data[key][method].values[budget_idx]), 0.5)
+        raw = data[key][method].values[budget_idx]
+        try:
+            val = float(raw)
+        except (ValueError, TypeError):
+            continue
+        if np.isnan(val):
+            continue
+        val = max(val, 0.5)
         if val < min_val:
             min_val = val
             min_exp = exp_id
@@ -367,7 +376,7 @@ def main():
         out_path = os.path.join(
             STATS_DIR, f"config_tables_{model_name.lower()}.tex"
         )
-        with open(out_path, "w") as f:
+        with open(out_path, "w+") as f:
             f.write(
                 f"% Auto-generated configuration tables for {model_name}\n"
                 f"% One wide table per task, 3 methods side-by-side\n\n"
