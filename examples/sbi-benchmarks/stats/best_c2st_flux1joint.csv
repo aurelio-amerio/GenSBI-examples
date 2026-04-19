@@ -1,16 +1,16 @@
 task,model,method,10000,30000,100000,10000_err,30000_err,100000_err
-bernoulli_glm,Flux1Joint,edm,0.8242,0.7762,0.7936,0.0515,0.0835,0.0615
+bernoulli_glm,Flux1Joint,edm,0.7261,0.6241,0.6062,0.0404,0.0142,0.0109
 bernoulli_glm,Flux1Joint,flow matching,0.6164,0.5775,0.5552,0.0254,0.0214,0.0164
 bernoulli_glm,Flux1Joint,score matching,0.6297,0.5761,0.5604,0.039,0.0291,0.0205
-gaussian_linear,Flux1Joint,edm,0.7074,0.6004,0.6014,0.0379,0.0092,0.0038
+gaussian_linear,Flux1Joint,edm,0.6195,0.5635,0.562,0.0146,0.0062,0.0035
 gaussian_linear,Flux1Joint,flow matching,0.5639,0.5118,0.5,0.0243,0.0054,0.0032
 gaussian_linear,Flux1Joint,score matching,0.5085,0.5,0.501,0.0054,0.0056,0.0033
-gaussian_mixture,Flux1Joint,edm,0.5404,0.516,0.5205,0.0121,0.0043,0.0064
+gaussian_mixture,Flux1Joint,edm,0.8249,0.5129,0.5165,0.091,0.0042,0.0055
 gaussian_mixture,Flux1Joint,flow matching,0.5221,0.5155,0.5127,0.0088,0.0083,0.0075
 gaussian_mixture,Flux1Joint,score matching,0.5105,0.5037,0.5008,0.0083,0.005,0.0049
-slcp,Flux1Joint,edm,0.8262,0.6803,0.655,0.0685,0.0459,0.0493
+slcp,Flux1Joint,edm,0.8707,0.6676,0.5877,0.0729,0.0565,0.0222
 slcp,Flux1Joint,flow matching,0.6569,0.5857,0.5657,0.0622,0.0275,0.0386
 slcp,Flux1Joint,score matching,0.6631,0.5679,0.5345,0.0659,0.0241,0.0191
-two_moons,Flux1Joint,edm,0.598,0.5798,0.5712,0.0252,0.0138,0.0124
+two_moons,Flux1Joint,edm,0.7847,0.5798,0.5729,0.0471,0.0154,0.0108
 two_moons,Flux1Joint,flow matching,0.542,0.5286,0.5242,0.0203,0.0088,0.0086
 two_moons,Flux1Joint,score matching,0.5222,0.5129,0.5023,0.0141,0.0101,0.0066

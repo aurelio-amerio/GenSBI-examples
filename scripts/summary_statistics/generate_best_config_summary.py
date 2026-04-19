@@ -158,9 +158,10 @@ with open(output_md, "w") as out:
                     ]
 
                     # Load the best version's config
-                    best_cf = get_config_for_version(task, method, budget, best_v)
+                    config_v = 12 if best_v < 12 else best_v
+                    best_cf = get_config_for_version(task, method, budget, config_v)
                     if best_cf is None:
-                        print(f"WARNING: [{task} - {method} - {budget}] config for v{best_v} not found")
+                        print(f"WARNING: [{task} - {method} - {budget}] config for v{config_v} not found")
                         continue
 
                     try:

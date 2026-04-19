@@ -83,7 +83,7 @@ METHOD_COLORS = {
 }
 
 # Marker for each experiment id
-EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*", 4: "s", 5: "d", 6: "p", 7: "h", 8: "H", 9: "v"}
+EXPERIMENT_MARKERS = {1: "x", 2: "o", 3: "*", 4: "s", 5: "d", 6: "p", 7: "h", 8: "H", 9: "v", 12: "^", 13: "<"}
 
 # ---------- load data ----------
 # %%
@@ -183,6 +183,8 @@ def plot_c2st_vs_budget_best(model_methods, model_name, data, with_markers=False
             if with_markers:
                 # Draw individual markers based on which experiment was best
                 for budget, val, exp_id in zip(BUDGETS, best_vals, best_exp_ids):
+                    if exp_id is None:
+                        continue
                     ax.plot(
                         budget,
                         val,

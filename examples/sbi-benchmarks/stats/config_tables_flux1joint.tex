@@ -12,17 +12,17 @@
  & \multicolumn{3}{c|}{Flow Matching} & \multicolumn{3}{c|}{Diffusion (EDM)} & \multicolumn{3}{c}{Score Matching} \\
 \textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
 \midrule
-Batch size & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Training steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Peak learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Minimum learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Warmup steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-EMA decay & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Single-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Batch size & 256 & 4\,096 & 1\,024 & 4\,096 & 256 & 4\,096 & 256 & 1\,024 & 4\,096 \\
+Training steps & 100\,000 & 50\,000 & 100\,000 & 100\,000 & 100\,000 & 100\,000 & 100\,000 & 90\,000 & 50\,000 \\
+Peak learning rate & $10^{-4}$ & $4 \times 10^{-4}$ & $2 \times 10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ & $4 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $4 \times 10^{-6}$ & $2 \times 10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ & $2 \times 10^{-6}$ & $4 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 1\,000 & 500 & 500 & 500 & 500 & 1\,000 & 500 \\
+EMA decay & 0.9999 & 0.999 & 0.999 & 0.9999 & 0.9999 & 0.9999 & 0.9999 & 0.999 & 0.999 \\
+Single-stream blocks & 16 & 16 & 16 & 16 & 16 & 16 & 16 & 16 & 16 \\
 Double-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Attention heads & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Attention heads & 4 & 4 & 4 & 4 & 4 & 4 & 4 & 4 & 4 \\
 \midrule
-Best C2ST & inf & inf & inf & 0.785 & 0.580 & 0.573 & inf & inf & inf \\
+Best C2ST & 0.542 & 0.529 & 0.524 & 0.785 & 0.580 & 0.573 & 0.522 & 0.513 & 0.502 \\
 \bottomrule
 \end{tabular}%
 }
@@ -39,17 +39,17 @@ Best C2ST & inf & inf & inf & 0.785 & 0.580 & 0.573 & inf & inf & inf \\
  & \multicolumn{3}{c|}{Flow Matching} & \multicolumn{3}{c|}{Diffusion (EDM)} & \multicolumn{3}{c}{Score Matching} \\
 \textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
 \midrule
-Batch size & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Training steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Peak learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Minimum learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Warmup steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-EMA decay & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Single-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Batch size & 256 & 4\,096 & 256 & 256 & 256 & 256 & 256 & 256 & 256 \\
+Training steps & 100\,000 & 50\,000 & 50\,000 & 50\,000 & 50\,000 & 100\,000 & 50\,000 & 100\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 & 500 & 500 & 500 & 500 & 500 & 500 \\
+EMA decay & 0.9999 & 0.999 & 0.999 & 0.999 & 0.999 & 0.9999 & 0.999 & 0.9999 & 0.9999 \\
+Single-stream blocks & 16 & 16 & 16 & 8 & 16 & 16 & 16 & 16 & 16 \\
 Double-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Attention heads & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Attention heads & 4 & 4 & 4 & 4 & 4 & 4 & 4 & 4 & 4 \\
 \midrule
-Best C2ST & inf & inf & inf & 0.726 & 0.624 & 0.606 & inf & inf & inf \\
+Best C2ST & 0.616 & 0.578 & 0.555 & 0.726 & 0.624 & 0.606 & 0.630 & 0.576 & 0.560 \\
 \bottomrule
 \end{tabular}%
 }
@@ -66,17 +66,17 @@ Best C2ST & inf & inf & inf & 0.726 & 0.624 & 0.606 & inf & inf & inf \\
  & \multicolumn{3}{c|}{Flow Matching} & \multicolumn{3}{c|}{Diffusion (EDM)} & \multicolumn{3}{c}{Score Matching} \\
 \textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
 \midrule
-Batch size & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Training steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Peak learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Minimum learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Warmup steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-EMA decay & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Single-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Batch size & 256 & 256 & 4\,096 & 256 & 256 & 256 & 256 & 256 & 1\,024 \\
+Training steps & 100\,000 & 50\,000 & 50\,000 & 50\,000 & 50\,000 & 50\,000 & 50\,000 & 100\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $2 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 & 500 & 500 & 500 & 500 & 500 & 1\,000 \\
+EMA decay & 0.9999 & 0.999 & 0.999 & 0.999 & 0.9999 & 0.9999 & 0.999 & 0.9999 & 0.999 \\
+Single-stream blocks & 8 & 16 & 16 & 8 & 16 & 16 & 8 & 16 & 16 \\
 Double-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Attention heads & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Attention heads & 4 & 4 & 4 & 4 & 4 & 4 & 4 & 4 & 4 \\
 \midrule
-Best C2ST & inf & inf & inf & 0.620 & 0.564 & 0.562 & inf & inf & inf \\
+Best C2ST & 0.564 & 0.512 & 0.500 & 0.620 & 0.564 & 0.562 & 0.508 & 0.500 & 0.501 \\
 \bottomrule
 \end{tabular}%
 }
@@ -93,17 +93,17 @@ Best C2ST & inf & inf & inf & 0.620 & 0.564 & 0.562 & inf & inf & inf \\
  & \multicolumn{3}{c|}{Flow Matching} & \multicolumn{3}{c|}{Diffusion (EDM)} & \multicolumn{3}{c}{Score Matching} \\
 \textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
 \midrule
-Batch size & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Training steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Peak learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Minimum learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Warmup steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-EMA decay & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Single-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Batch size & 256 & 256 & 256 & 4\,096 & 256 & 4\,096 & 4\,096 & 256 & 1\,024 \\
+Training steps & 100\,000 & 100\,000 & 100\,000 & 100\,000 & 100\,000 & 100\,000 & 50\,000 & 100\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ & $4 \times 10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ & $4 \times 10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ & $2 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 & 500 & 500 & 500 & 500 & 500 & 1\,000 \\
+EMA decay & 0.9999 & 0.9999 & 0.9999 & 0.9999 & 0.9999 & 0.9999 & 0.999 & 0.9999 & 0.999 \\
+Single-stream blocks & 8 & 8 & 8 & 16 & 16 & 16 & 16 & 8 & 16 \\
 Double-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Attention heads & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Attention heads & 4 & 4 & 4 & 4 & 4 & 4 & 4 & 4 & 4 \\
 \midrule
-Best C2ST & inf & inf & inf & 0.825 & 0.513 & 0.516 & inf & inf & inf \\
+Best C2ST & 0.522 & 0.515 & 0.513 & 0.825 & 0.513 & 0.516 & 0.510 & 0.504 & 0.501 \\
 \bottomrule
 \end{tabular}%
 }
@@ -120,17 +120,17 @@ Best C2ST & inf & inf & inf & 0.825 & 0.513 & 0.516 & inf & inf & inf \\
  & \multicolumn{3}{c|}{Flow Matching} & \multicolumn{3}{c|}{Diffusion (EDM)} & \multicolumn{3}{c}{Score Matching} \\
 \textbf{Parameter} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} & \textbf{10k} & \textbf{30k} & \textbf{100k} \\
 \midrule
-Batch size & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Training steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Peak learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Minimum learning rate & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Warmup steps & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-EMA decay & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Single-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Batch size & 256 & 256 & 256 & 256 & 256 & 256 & 4\,096 & 256 & 1\,024 \\
+Training steps & 50\,000 & 100\,000 & 100\,000 & 50\,000 & 100\,000 & 100\,000 & 50\,000 & 100\,000 & 100\,000 \\
+Peak learning rate & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $10^{-4}$ & $4 \times 10^{-4}$ & $10^{-4}$ & $2 \times 10^{-4}$ \\
+Minimum learning rate & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $10^{-6}$ & $4 \times 10^{-6}$ & $10^{-6}$ & $2 \times 10^{-6}$ \\
+Warmup steps & 500 & 500 & 500 & 500 & 500 & 500 & 500 & 500 & 1\,000 \\
+EMA decay & 0.999 & 0.9999 & 0.9999 & 0.999 & 0.9999 & 0.9999 & 0.999 & 0.9999 & 0.999 \\
+Single-stream blocks & 16 & 16 & 16 & 16 & 16 & 16 & 16 & 16 & 16 \\
 Double-stream blocks & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
-Attention heads & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Attention heads & 6 & 6 & 6 & 6 & 6 & 6 & 6 & 6 & 6 \\
 \midrule
-Best C2ST & inf & inf & inf & 0.871 & 0.668 & 0.588 & inf & inf & inf \\
+Best C2ST & 0.657 & 0.586 & 0.566 & 0.871 & 0.668 & 0.588 & 0.663 & 0.568 & 0.534 \\
 \bottomrule
 \end{tabular}%
 }

@@ -1,16 +1,16 @@
 task,model,method,10000,30000,100000,10000_err,30000_err,100000_err
-bernoulli_glm,Flux1,edm,inf,inf,inf,,,
-bernoulli_glm,Flux1,flow matching,inf,inf,inf,,,
-bernoulli_glm,Flux1,score matching,inf,inf,inf,,,
-gaussian_linear,Flux1,edm,inf,inf,inf,,,
-gaussian_linear,Flux1,flow matching,inf,inf,inf,,,
-gaussian_linear,Flux1,score matching,inf,inf,inf,,,
-gaussian_mixture,Flux1,edm,inf,inf,inf,,,
-gaussian_mixture,Flux1,flow matching,inf,inf,inf,,,
-gaussian_mixture,Flux1,score matching,inf,inf,inf,,,
-slcp,Flux1,edm,inf,inf,inf,,,
-slcp,Flux1,flow matching,inf,inf,inf,,,
-slcp,Flux1,score matching,inf,inf,inf,,,
-two_moons,Flux1,edm,inf,inf,inf,,,
-two_moons,Flux1,flow matching,inf,inf,inf,,,
-two_moons,Flux1,score matching,inf,inf,inf,,,
+bernoulli_glm,Flux1,edm,0.701,0.6733,0.5754,0.0316,0.0537,0.0197
+bernoulli_glm,Flux1,flow matching,0.7218,0.6959,0.5504,0.0657,0.0526,0.0158
+bernoulli_glm,Flux1,score matching,0.6923,0.579,0.5456,0.0458,0.0191,0.0209
+gaussian_linear,Flux1,edm,0.7184,0.5264,0.5228,0.1275,0.007,0.0049
+gaussian_linear,Flux1,flow matching,0.7143,0.5078,0.5012,0.0427,0.0075,0.0065
+gaussian_linear,Flux1,score matching,0.6659,0.5088,0.5,0.0478,0.0056,0.0049
+gaussian_mixture,Flux1,edm,0.5621,0.5201,0.5103,0.0242,0.0075,0.0047
+gaussian_mixture,Flux1,flow matching,0.5535,0.5204,0.5101,0.0245,0.0136,0.0065
+gaussian_mixture,Flux1,score matching,0.5242,0.5103,0.5021,0.0089,0.0059,0.0049
+slcp,Flux1,edm,0.8476,0.7413,0.6173,0.051,0.0639,0.0372
+slcp,Flux1,flow matching,0.8334,0.7248,0.6018,0.0744,0.0728,0.0424
+slcp,Flux1,score matching,0.8456,0.6922,0.6777,0.0482,0.0349,0.0352
+two_moons,Flux1,edm,0.5539,0.5343,0.5233,0.0179,0.015,0.009
+two_moons,Flux1,flow matching,0.5489,0.529,0.5251,0.0134,0.0144,0.0069
+two_moons,Flux1,score matching,0.5294,0.5159,0.5072,0.0162,0.0114,0.009
