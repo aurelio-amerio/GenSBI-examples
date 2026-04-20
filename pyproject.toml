@@ -1,6 +1,6 @@
 [project]
 name = "gensbi-examples"
-version = "0.4.0"
+version = "0.4.1"
 description = "Examples for the GenSBI library"
 authors = [{ name = "Aurelio Amerio", email = "dev@gensbi.com" }]
 license = { file = "LICENSE" }
@@ -8,7 +8,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 
 dependencies = [
-    "jax>=0.9.0",
+    "jax>=0.9.0, <0.10.0",
     "datasets",
     "huggingface_hub",
     "matplotlib>=3.10",
