@@ -184,8 +184,6 @@ def main():
     )
     plt.show()
 
-    return # we stop here for this rerun
-
     # --------- C2ST TEST ---------
 
     # Run C2ST
