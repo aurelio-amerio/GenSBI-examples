@@ -163,7 +163,7 @@ def main():
     # --------- Define sampling function ----------
     def get_samples(idx, nsamples=10_000, use_ema=True, key=None):
         observation, reference_samples = task.get_reference(idx)
-        true_param = jnp.array(task.get_true_parameters(idx))
+        true_param = jnp.array(task.get_true_parameters(idx)).reshape(-1)
 
         if key is None:
             key = jax.random.PRNGKey(42)
