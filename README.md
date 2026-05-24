@@ -4,7 +4,7 @@
 [![Version](https://img.shields.io/pypi/v/gensbi-examples.svg?maxAge=3600)](https://pypi.org/project/gensbi-examples/)
 [![Downloads](https://pepy.tech/badge/gensbi-examples)](https://pepy.tech/project/gensbi-examples)
 
-This repository contains a collection of examples, tutorials, and recipes for **GenSBI**, a JAX-based library for Simulation-Based Inference using generative models.
+This repository contains a collection of examples, tutorials, and recipes for **GenSBI**, a JAX-based library for Simulation-Based Inference using generative methods.
 
 These examples demonstrate how to use GenSBI for various tasks, including:
 
@@ -83,7 +83,7 @@ These examples demonstrate the usage of Neural Density Estimators for unconditio
 
 ## SBI Benchmark Examples
 
-This repository includes a comprehensive suite of Simulation-Based Inference (SBI) benchmarks. These examples cover a range of standard tasks used to evaluate SBI methods, including simple distributions, physical systems, and complex toy problems. For each task, we provide implementations using various generative models available in GenSBI, such as Flow Matching and Diffusion models with different architectures (Flux, SimFormer).
+This repository includes a comprehensive suite of Simulation-Based Inference (SBI) benchmarks. These examples cover a range of standard tasks used to evaluate SBI methods, including simple distributions, physical systems, and complex toy problems. For each task, we provide implementations using various generative methods available in GenSBI, such as Flow Matching and Diffusion models with different architectures (Flux, SimFormer).
 
 ### Two Moons
 

@@ -163,7 +163,7 @@ def main():
     # --------- Define sampling function ----------
     def get_samples(idx, nsamples=10_000, use_ema=True, key=None):
         observation, reference_samples = task.get_reference(idx)
-        true_param = jnp.array(task.get_true_parameters(idx))
+        true_param = jnp.array(task.get_true_parameters(idx)).reshape(-1)
 
         if key is None:
             key = jax.random.PRNGKey(42)
@@ -178,7 +178,7 @@ def main():
     # --------- Sampling ----------
     samples, true_param, _ = get_samples(8, nsamples=100_000, use_ema=True)
 
-    plot_marginals(samples[..., 0], plot_levels=False, backend="seaborn", gridsize=50)
+    plot_marginals(samples[..., 0], plot_levels=False, backend="seaborn", gridsize=50, true_param=true_param)
     plt.savefig(
         f"{img_dir}/marginals_ema_{experiment_id}.png", dpi=300, bbox_inches="tight"
     )

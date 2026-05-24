@@ -109,7 +109,7 @@ def plot_c2st_vs_budget(model_methods, model_name, data):
         for method in model_methods:
             label = METHOD_LABELS[method]
             color = METHOD_COLORS[method]
-            vals = np.maximum(df[method].values.astype(float), 0.5)
+            vals = np.maximum(pd.to_numeric(df[method], errors="coerce").values, 0.5)
 
             ax.plot(
                 BUDGETS,
