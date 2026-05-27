@@ -14,25 +14,37 @@ These examples demonstrate how to use GenSBI for various tasks, including:
 
 ## Installation
 
-### Prerequisites
+To run these examples you need both **GenSBI** and this examples helper package (`gensbi-examples`). The helper package is installed automatically through the `examples` extra of GenSBI.
 
-You need to have **GenSBI** and the examples package installed.
-
-**With CUDA 12 support (Recommended):**
+### Using uv (recommended)
 
 ```bash
-pip install gensbi[cuda12, examples]
+uv add gensbi[examples]
+# or, for a standalone install:
+uv pip install gensbi[examples]
 ```
 
-**CPU-only:**
+For GPU support (CUDA 12):
 
 ```bash
-pip install gensbi
+uv add gensbi[cuda12,examples]
+# or
+uv pip install gensbi[cuda12,examples]
 ```
 
-### Install Examples Package
+### Using pip
 
-To download these examples, clone the github repository:
+```bash
+pip install gensbi[examples]
+# with GPU support (CUDA 12):
+pip install gensbi[cuda12,examples]
+```
+
+For more installation options, including how to install `uv`, see the [Installation Guide](https://aurelio-amerio.github.io/GenSBI/getting_started/installation.html).
+
+### Download the example notebooks and scripts
+
+The `gensbi-examples` package provides the helper utilities, but the notebooks and training scripts live in this repository. To get them, clone the repo:
 
 ```bash
 git clone https://github.com/aurelio-amerio/GenSBI-examples.git

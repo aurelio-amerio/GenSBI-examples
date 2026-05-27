@@ -51,8 +51,7 @@ except ImportError:
 
 if colab:
     # Install required packages and clone the repository
-    !uv pip install --quiet "gensbi[cuda12] @ git+https://github.com/aurelio-amerio/GenSBI"
-    !uv pip install --quiet "gensbi-examples @ git+https://github.com/aurelio-amerio/GenSBI-examples"
+    !uv pip install --quiet "gensbi[cuda12,examples]"
     !git clone --depth 1 https://github.com/aurelio-amerio/GenSBI-examples
     %cd GenSBI-examples/examples/sbi-benchmarks/{task_name_gensbi}/{model_name}
 ```

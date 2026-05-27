@@ -27,7 +27,7 @@ As a first step, make sure GenSBI is installed in your environment. If you haven
 
 ```{code-cell} ipython3
 # step 1: install packages
-# !uv pip install --quiet  "gensbi[cuda12,examples] @ git+https://github.com/aurelio-amerio/GenSBI.git" 
+# !uv pip install --quiet  "gensbi[cuda12,examples]" 
 ```
 
 Next, it is convenient to download the GenSBI-examples package, which contains several example notebooks and checkpoints, including this one. You can do so by running:
@@ -51,7 +51,7 @@ except:
     colab=False
 
 if colab: # you may have to restart the runtime after installing the packages
-    !uv pip install --quiet "gensbi[cuda12, examples] @ git+https://github.com/aurelio-amerio/GenSBI"
+    !uv pip install --quiet "gensbi[cuda12,examples]"
     !git clone --depth 1 https://github.com/aurelio-amerio/GenSBI-examples
     %cd GenSBI-examples/examples/getting_started
 ```

@@ -35,7 +35,7 @@ except:
     colab=False
 
 if colab: # you may have to restart the runtime after installing the packages
-    !uv pip install --quiet "gensbi[cuda12, examples] @ git+https://github.com/aurelio-amerio/GenSBI"
+    !uv pip install --quiet "gensbi[cuda12,examples]"
     !git clone --depth 1 https://github.com/aurelio-amerio/GenSBI-examples
     %cd GenSBI-examples/examples/methods_and_samplers
 ```
