@@ -3,7 +3,7 @@
 ![Coverage](https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/img/badges/coverage.svg)
 [![Version](https://img.shields.io/pypi/v/gensbi-examples.svg?maxAge=3600)](https://pypi.org/project/gensbi-examples/)
 [![Downloads](https://pepy.tech/badge/gensbi-examples)](https://pepy.tech/project/gensbi-examples)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20407739.svg)](https://doi.org/10.5281/zenodo.20407739)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20407738.svg)](https://doi.org/10.5281/zenodo.20407738)
 
 This repository contains a collection of examples, tutorials, and recipes for **GenSBI**, a JAX-based library for Simulation-Based Inference using generative methods.
 
