@@ -90,7 +90,8 @@ python scripts/train_sbi_model_sbibm.py --config <path_to_config.yaml> --dsize 1
 
 These examples demonstrate the usage of Neural Density Estimators for unconditional density estimation tasks.
 
-- **Diffusion 2D Unconditional**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/diffusion_2d_unconditional.ipynb)
+- **Diffusion EDM 2D Unconditional**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/diffusion_EDM_2d_unconditional.ipynb)
+- **Diffusion SM 2D Unconditional**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/diffusion_SM_2d_unconditional.ipynb)
 - **Flow Matching 2D Unconditional**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/flow_matching_2d_unconditional.ipynb)
 - **Flow Matching 2D Unconditional (Flux1Joint)**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/flow_matching_2d_unconditional_flux1joint.ipynb)
 
