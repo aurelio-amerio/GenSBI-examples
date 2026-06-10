@@ -80,10 +80,13 @@ def radial_power_spectrum(field, nbins=40):
 
 
 def plot_losses(loss_array, val_loss_array, val_every, path):
+    # train + val are both recorded once per validation event (every
+    # val_every steps), so both share the same step-scaled x-axis.
     loss = np.asarray(loss_array, dtype=np.float32)
     val = np.asarray(val_loss_array, dtype=np.float32)
     fig, ax = plt.subplots(figsize=(6, 4))
-    ax.plot(np.arange(1, len(loss) + 1), loss, label="train", alpha=0.5)
+    ax.plot(np.arange(1, len(loss) + 1) * val_every, loss,
+            label="train (smoothed)", alpha=0.5)
     ax.plot(np.arange(1, len(val) + 1) * val_every, val, label="val")
     ax.set_xlabel("step")
     ax.set_ylabel("loss")
