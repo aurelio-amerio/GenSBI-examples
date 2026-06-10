@@ -136,7 +136,7 @@ params_flux = Flux1Params(
     num_heads= 4,
     depth= 8,
     depth_single_blocks= 16,
-    axes_dim= [4, 4, 2],
+    axes_dim= [4, 8, 8],
     qkv_bias=True,
     dim_obs=64,  # (64 // 8) * (64 // 8) = 64 patches with size=8
     dim_cond=2,

@@ -6,6 +6,7 @@ fielddit:
   patch_size: 2                          # -> 16x16 = 256 tokens
   cond_dim: 2                            # theta = (log_std, alpha)
   cond_in_channels: 1
+  # param_dtype: bfloat16
   param_dtype: bfloat16
   # defaults kept: num_heads 12, axes_dim [16,24,24] -> hidden 768,
   # depth 2, depth_single_blocks 2, res_blocks 2+2

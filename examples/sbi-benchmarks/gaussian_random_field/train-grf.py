@@ -163,6 +163,7 @@ def main(config_path):
         "gaussian_random_field_256",
         normalize=True,
         dtype=jnp.bfloat16,
+        # dtype=jnp.float32,
         use_prefetching=True,
         max_workers=tcfg.get("max_workers"),  # None -> no prefetch
     )
