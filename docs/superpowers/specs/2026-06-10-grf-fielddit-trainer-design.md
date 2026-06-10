@@ -41,16 +41,20 @@ examples/sbi-benchmarks/gaussian_random_field/
   is being republished with this schema; the conda `gensbi` env must have the
   updated sbibm_jax installed (the old site-packages version reads the old
   `data_kind` schema and will KeyError on the new metadata, and vice versa).
-- Loaders yield `(theta, x)`; the pipeline wants `(obs, cond)`. A small
-  iterator wrapper swaps the tuple:
+- Loaders yield `(theta, x)`; the pipeline wants `(obs, cond)`. Append a
+  `.map` to the returned grain dataset:
 
   ```python
-  class SwapLoader:
-      def __init__(self, loader): self.loader = loader
-      def __iter__(self):
-          for theta, x in self.loader:
-              yield x, theta
+  def swap_obs_cond(batch):  # module-level: survives pickling into workers
+      theta, x = batch
+      return x, theta
+
+  train_loader = task.get_train_loader(batch_size).map(swap_obs_cond)
   ```
+
+  Note: `get_train_loader` applies `mp_prefetch` last, so this map runs in
+  the main process after the workers. Fine for a free tuple swap; if the map
+  ever grows real per-batch work, it must move before the prefetch stage.
 - Train batch 128, val batch 128 (yaml knobs; ~40 GB GPU — reduce if OOM).
 - 100k train / 10k val / 10k test rows on the hub; 10k steps x 128 ≈ 13
   epochs.
