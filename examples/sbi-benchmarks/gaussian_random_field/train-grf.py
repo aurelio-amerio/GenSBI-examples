@@ -14,7 +14,7 @@ import os
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
 else:
-    os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".90"
+    os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".95"
     os.environ.setdefault("JAX_PLATFORMS", "cuda")  # JAX_PLATFORMS=cpu wins
 
 import argparse
@@ -67,14 +67,20 @@ def build_model(model_cfg, seed):
 
 def radial_power_spectrum(field, nbins=40):
     """Isotropic P(k) of a 2D field; k in cycles/pixel (Nyquist = 0.5)."""
+    # float64 throughout: with float32 weights np.histogram accumulates in
+    # float32, and for steep spectra the high-k bins (~1e-5 against a ~1e4
+    # running total) round away to exactly zero.
+    field = np.asarray(field, dtype=np.float64)
     H, W = field.shape
     pk2d = np.abs(np.fft.fft2(field)) ** 2 / (H * W)
     kx, ky = np.meshgrid(np.fft.fftfreq(H), np.fft.fftfreq(W), indexing="ij")
     knorm = np.sqrt(kx**2 + ky**2).ravel()
-    kbins = np.linspace(knorm[knorm > 0].min(), 0.5, nbins + 1)
+    # log-spaced bins with geometric centers: equal width on the loglog plot,
+    # so a steep power law isn't distorted by wide-in-log low-k bins.
+    kbins = np.geomspace(knorm[knorm > 0].min(), 0.5, nbins + 1)
     counts, _ = np.histogram(knorm, kbins)
     power, _ = np.histogram(knorm, kbins, weights=pk2d.ravel())
-    kcent = 0.5 * (kbins[1:] + kbins[:-1])
+    kcent = np.sqrt(kbins[1:] * kbins[:-1])
     good = counts > 0
     return kcent[good], power[good] / counts[good]
 

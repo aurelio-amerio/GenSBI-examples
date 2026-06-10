@@ -1,7 +1,8 @@
 experiment_name = gaussian_random_field
-version = 1a    
+version = 2a    
 workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/gaussian_random_field
 script_path = train-grf.py
+extra_args = --config config/config_2.yaml
 
 universe = vanilla
 
@@ -9,7 +10,7 @@ request_memory = 64 GB
 request_cpus = 8
 
 executable = train_model.sh
-arguments = "$(workdir) $(script_path)"
+arguments = "$(workdir) $(script_path) $(extra_args)"
 getenv = True
 request_gpus = 1
 requirements = (Machine != "mlwn11.ific.uv.es")
