@@ -24,6 +24,7 @@ training:
   val_every: 1
   early_stopping: false
   multistep: 1
+  decay_transition: 0.5    # avoids cosine_decay_steps=0 at nsteps=2
   experiment_id: 99        # separate checkpoint slot from the real run
   train_model: true
   restore_model: false
