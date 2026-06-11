@@ -1,7 +1,7 @@
-"""Train FieldDiT on gaussian_random_field_256 and sample the posterior.
+"""Train FieldDiT on gaussian_random_field (32x32) and sample the posterior.
 
 Field-level NPE: the model learns p(field | theta) with conditional flow
-matching. The 256x256 GRF realization is the generation target (obs); theta =
+matching. The 32x32 GRF realization is the generation target (obs); theta =
 (log_std, alpha) is the conditioning vector. Outputs: loss curves, a
 truth-vs-samples field grid, and radial power-spectrum overlays in imgs/.
 
@@ -166,7 +166,7 @@ def main(config_path):
 
     # --- data ---
     task = TaskDataset(
-        "gaussian_random_field_256",
+        "gaussian_random_field",
         normalize=True,
         dtype=jnp.bfloat16,
         # dtype=jnp.float32,
@@ -220,7 +220,7 @@ def main(config_path):
     n_thetas = scfg["num_thetas"]
     rows = task.df_test[:n_thetas]  # slice first: decodes only these rows
     thetas_raw = np.asarray(rows["thetas"], dtype=np.float32)  # (n, 2)
-    truths = np.asarray(rows["xs"], dtype=np.float32)          # (n, 256, 256)
+    truths = np.asarray(rows["xs"], dtype=np.float32)          # (n, 32, 32)
     theta_norm = np.asarray(
         task.normalize_theta(thetas_raw[..., None])            # (n, 2, 1)
     )
@@ -234,7 +234,7 @@ def main(config_path):
             jnp.asarray(theta_norm[i : i + 1]),  # (1, 2, 1)
             nsamples=scfg["nsamples"],
             step_size=scfg["step_size"],
-        )  # (nsamples, 256, 256, 1), normalized
+        )  # (nsamples, 32, 32, 1), normalized
         s = np.asarray(task.unnormalize_x(s), dtype=np.float32)[..., 0]
         samples.append(s)
         print(f"theta {i}: sampled {s.shape}, finite={np.isfinite(s).all()}")
