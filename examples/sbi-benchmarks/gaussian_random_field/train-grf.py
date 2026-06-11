@@ -34,7 +34,7 @@ from gensbi.core import FlowMatchingMethod
 from gensbi.experimental.models import FieldDiT, FieldDiTParams
 from gensbi.experimental.recipes import FieldConditionalPipeline
 
-from sbibm_jax.data import TaskDataset
+from sbibm_jax.data import OnlineTaskDataset, TaskDataset
 
 EXAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -165,19 +165,26 @@ def main(config_path):
     os.makedirs(imgs_dir, exist_ok=True)
 
     # --- data ---
-    task = TaskDataset(
+    task = OnlineTaskDataset(
         "gaussian_random_field",
         normalize=True,
         dtype=jnp.bfloat16,
         # dtype=jnp.float32,
-        use_prefetching=True,
-        max_workers=tcfg.get("max_workers"),  # None -> no prefetch
+        # use_prefetching=True,
+        # max_workers=tcfg.get("max_workers"),  # None -> no prefetch
+    )
+
+    offline_task = TaskDataset(
+        "gaussian_random_field",
+        normalize=True,
+        dtype=jnp.bfloat16,
     )
     # NOTE: this .map runs in the main process (mp_prefetch is the loader's
     # last stage). Free for a tuple swap; move it before prefetch if it ever
     # does real per-batch work.
-    train_loader = task.get_train_loader(tcfg["batch_size"]).map(swap_obs_cond)
-    val_loader = task.get_val_loader(tcfg["val_batch_size"]).map(swap_obs_cond)
+    # train_loader = task.get_train_loader(tcfg["batch_size"]).map(swap_obs_cond)
+    train_loader = task.get_online_train_loader(tcfg["batch_size"]).map(swap_obs_cond)
+    val_loader = offline_task.get_val_loader(tcfg["val_batch_size"]).map(swap_obs_cond)
 
     # --- model + pipeline ---
     model = build_model(cfg["fielddit"], seed=tcfg.get("seed", 0))

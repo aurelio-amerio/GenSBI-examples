@@ -1,5 +1,5 @@
 experiment_name = grf
-version = 2
+version = 3
 workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/gaussian_random_field
 script_path = train-grf.py
 
