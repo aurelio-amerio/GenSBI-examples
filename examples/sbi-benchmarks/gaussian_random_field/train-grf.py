@@ -1,12 +1,16 @@
-"""Train FieldDiT on gaussian_random_field (32x32) and sample the posterior.
+"""Train FieldDiT or PixelDiT on gaussian_random_field (32x32), sample the posterior.
 
 Field-level NPE: the model learns p(field | theta) with conditional flow
 matching. The 32x32 GRF realization is the generation target (obs); theta =
 (log_std, alpha) is the conditioning vector. Outputs: loss curves, a
 truth-vs-samples field grid, and radial power-spectrum overlays in imgs/.
 
+The model is chosen by the config's model section: a `fielddit:` key builds
+FieldDiT (configs 1-3), a `pixeldit:` key builds PixelDiT (config 1b).
+
 Usage (conda env `gensbi`):
     python train-grf.py --config config/config_1.yaml
+    python train-grf.py --config config/config_1b.yaml
 """
 
 import os
@@ -31,7 +35,6 @@ matplotlib.use("Agg")  # headless cluster nodes
 import matplotlib.pyplot as plt
 
 from gensbi.core import FlowMatchingMethod
-from gensbi.experimental.models import FieldDiT, FieldDiTParams
 from gensbi.experimental.recipes import FieldConditionalPipeline
 
 from sbibm_jax.data import OnlineTaskDataset, TaskDataset
@@ -57,11 +60,25 @@ def swap_obs_cond(batch):
     return x, theta
 
 
-def build_model(model_cfg, seed):
+def resolve_model_section(cfg):
+    """Return (model_kind, model_cfg) from the yaml: 'pixeldit' or 'fielddit'."""
+    for kind in ("pixeldit", "fielddit"):
+        if kind in cfg:
+            return kind, cfg[kind]
+    raise KeyError("config must have a 'pixeldit:' or 'fielddit:' section")
+
+
+def build_model(model_kind, model_cfg, seed):
     kw = dict(model_cfg)
     kw["field_shape"] = tuple(kw["field_shape"])
+    kw["param_dtype"] = getattr(jnp, kw.pop("param_dtype", "bfloat16"))
+    if model_kind == "pixeldit":
+        from gensbi.experimental.models import PixelDiT, PixelDiTParams
+
+        return PixelDiT(PixelDiTParams(rngs=nnx.Rngs(seed), **kw))
+    from gensbi.experimental.models import FieldDiT, FieldDiTParams
+
     kw["encoder_widths"] = tuple(kw["encoder_widths"])
-    kw["param_dtype"] = getattr(jnp, kw.get("param_dtype", "bfloat16"))
     return FieldDiT(FieldDiTParams(rngs=nnx.Rngs(seed), **kw))
 
 
@@ -187,12 +204,13 @@ def main(config_path):
     val_loader = offline_task.get_val_loader(tcfg["val_batch_size"]).map(swap_obs_cond)
 
     # --- model + pipeline ---
-    model = build_model(cfg["fielddit"], seed=tcfg.get("seed", 0))
+    model_kind, model_cfg = resolve_model_section(cfg)
+    model = build_model(model_kind, model_cfg, seed=tcfg.get("seed", 0))
     n_params = sum(
         leaf.size
         for leaf in jax.tree_util.tree_leaves(nnx.state(model, nnx.Param))
     )
-    print(f"FieldDiT parameters: {n_params / 1e6:.1f}M")
+    print(f"{model_kind} parameters: {n_params / 1e6:.1f}M")
 
     training_config = FieldConditionalPipeline.get_default_training_config()
     training_config.update({k: tcfg[k] for k in _PIPELINE_KEYS if k in tcfg})
@@ -202,8 +220,8 @@ def main(config_path):
         model,
         train_loader,
         val_loader,
-        field_shape=tuple(cfg["fielddit"]["field_shape"]),
-        dim_cond=cfg["fielddit"]["cond_dim"],
+        field_shape=tuple(model_cfg["field_shape"]),
+        dim_cond=model_cfg["cond_dim"],
         method=FlowMatchingMethod(),
         ch_obs=1,
         ch_cond=1,
