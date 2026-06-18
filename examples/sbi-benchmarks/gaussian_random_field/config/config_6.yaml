@@ -1,0 +1,36 @@
+# GRF-32 FieldDiT — experiment 2: deeper transformer, longer run
+fielddit:
+  in_channels: 1
+  field_shape: [32, 32]
+  encoder_widths: [32, 64, 128]   # D=2 
+  patch_size: 1              
+  cond_dim: 2                # theta = (log_std, alpha)
+  cond_in_channels: 1
+  param_dtype: bfloat16
+  num_heads: 8
+  axes_dim: [4, 32, 32]      
+  depth: 8
+  depth_single_blocks: 16
+  cond_modulates_encoder: true
+
+training:
+  batch_size: 128
+  val_batch_size: 128
+  max_workers: 4             # grain mp_prefetch workers (null -> no prefetch)
+  nsteps: 50000
+  max_lr: 1.0e-4
+  val_every: 100
+  early_stopping: false
+  multistep: 1
+  ema_decay: 0.999            # EMA window ~ 1/(1-decay) steps; sample() uses the EMA model by default (use_ema=True)
+  decay_transition: 0.80      # fraction of nsteps at constant max_lr before cosine decay to min_lr begins
+  experiment_id: 6
+  train_model: false
+  restore_model: true
+  seed: 0
+
+sampling:
+  num_thetas: 3              # test rows used for plots
+  nsamples: 128               # posterior samples per theta (P(k) statistics)
+  nsamples_grid: 3           # samples shown per row in the field grid
+  step_size: 0.01            # Euler ODE step (100 steps)

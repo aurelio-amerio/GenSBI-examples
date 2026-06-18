@@ -1,0 +1,43 @@
+# GRF-256 PixelDiT — experiment 6: faithful PixelDiT-B port at 256x256
+# (arXiv:2511.20645). Architecture emulates the paper's ImageNet-256 setup:
+#   - patch_size p=16  (paper's default for 256x256; Sec. 4.5.3 + Table 3)
+#   - PixelDiT-B variant (Table 3): N=12, M=2, D=768, D_pix=16, heads=12 (184M on RGB)
+# B/L/XL differ only in (N, M, D, heads): L=(22,4,1024,16), XL=(26,4,1152,16).
+pixeldit:
+  in_channels: 1
+  field_shape: [256, 256]
+  patch_size: 16            # p=16 -> 16x16 = 256 patch tokens, 256 pixels/patch (paper default)
+  hidden_size: 768          # patch-level width D (PixelDiT-B)
+  pixel_hidden_size: 16     # per-pixel width D_pix (paper value, all variants)
+  patch_depth: 12           # N MMDiT blocks (PixelDiT-B)
+  pixel_depth: 2            # M PiT blocks (PixelDiT-B)
+  num_heads: 12             # head_dim 64 (PixelDiT-B)
+  cond_dim: 2               # theta = (log_std, alpha)
+  cond_in_channels: 1
+  cond_id_embedding: absolute
+  use_cond_rope: false      # theta components are unordered -> no sequential rope
+  param_dtype: bfloat16
+
+training:
+  # Paper trains with global batch 256 across GPUs; pick what fits one GPU and
+  # halve on OOM (PixelDiT's pixel pathway is memory-heavy at 256).
+  batch_size: 32
+  val_batch_size: 32
+  max_workers: 4            # grain mp_prefetch workers (null -> no prefetch)
+  nsteps: 50000
+  max_lr: 1.0e-4            # paper: constant 1e-4 ...
+  min_lr: 1.0e-5            # ... then step down to 1e-5 (here: cosine decay tail)
+  ema_decay: 0.9999         # paper EMA decay
+  val_every: 100
+  early_stopping: false
+  multistep: 4
+  experiment_id: 6
+  train_model: false
+  restore_model: true
+  seed: 0
+
+sampling:
+  num_thetas: 3             # test rows used for plots
+  nsamples: 16              # posterior samples per theta (P(k) statistics)
+  nsamples_grid: 3          # samples shown per row in the field grid
+  step_size: 0.01           # Euler ODE step (100 steps)

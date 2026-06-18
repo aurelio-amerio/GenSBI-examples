@@ -17,7 +17,7 @@ training:
   batch_size: 128
   val_batch_size: 128
   max_workers: 4             # grain mp_prefetch workers (null -> no prefetch)
-  nsteps: 50000
+  nsteps: 20000
   max_lr: 1.0e-4
   val_every: 100
   early_stopping: false

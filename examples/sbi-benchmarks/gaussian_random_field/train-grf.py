@@ -76,10 +76,11 @@ def build_model(model_kind, model_cfg, seed):
         from gensbi.experimental.models import PixelDiT, PixelDiTParams
 
         return PixelDiT(PixelDiTParams(rngs=nnx.Rngs(seed), **kw))
-    from gensbi.experimental.models import FieldDiT, FieldDiTParams
+    else:
+        from gensbi.experimental.models import FieldDiT, FieldDiTParams
 
-    kw["encoder_widths"] = tuple(kw["encoder_widths"])
-    return FieldDiT(FieldDiTParams(rngs=nnx.Rngs(seed), **kw))
+        kw["encoder_widths"] = tuple(kw["encoder_widths"])
+        return FieldDiT(FieldDiTParams(rngs=nnx.Rngs(seed), **kw))
 
 
 def radial_power_spectrum(field, nbins=40):
@@ -214,7 +215,17 @@ def main(config_path):
 
     training_config = FieldConditionalPipeline.get_default_training_config()
     training_config.update({k: tcfg[k] for k in _PIPELINE_KEYS if k in tcfg})
-    training_config["checkpoint_dir"] = os.path.join(EXAMPLE_DIR, "checkpoints")
+    # Separate checkpoint dirs per model kind so FieldDiT and PixelDiT can train
+    # in parallel without clobbering each other's checkpoints.
+    ckpt_dirname = "checkpoints_pixeldit" if model_kind == "pixeldit" else "checkpoints"
+    training_config["checkpoint_dir"] = os.path.join(EXAMPLE_DIR, ckpt_dirname)
+
+    ts_cfg = cfg.get("time_sampling", {})
+    method = FlowMatchingMethod(
+        time_dist=ts_cfg.get("dist", "uniform"),
+        logitnorm_mean=ts_cfg.get("logitnorm_mean", 0.0),
+        logitnorm_std=ts_cfg.get("logitnorm_std", 1.0),
+    )
 
     pipeline = FieldConditionalPipeline(
         model,
@@ -222,7 +233,7 @@ def main(config_path):
         val_loader,
         field_shape=tuple(model_cfg["field_shape"]),
         dim_cond=model_cfg["cond_dim"],
-        method=FlowMatchingMethod(),
+        method=method,
         ch_obs=1,
         ch_cond=1,
         training_config=training_config,
@@ -243,41 +254,46 @@ def main(config_path):
 
     # --- posterior samples for a few test thetas ---
     n_thetas = scfg["num_thetas"]
-    rows = task.df_test[:n_thetas]  # slice first: decodes only these rows
+    rows = offline_task.df_test[:n_thetas]  # slice first: decodes only these rows
     thetas_raw = np.asarray(rows["thetas"], dtype=np.float32)  # (n, 2)
     truths = np.asarray(rows["xs"], dtype=np.float32)          # (n, 32, 32)
     theta_norm = np.asarray(
         task.normalize_theta(thetas_raw[..., None])            # (n, 2, 1)
     )
 
-    samples = []
-    key = jax.random.PRNGKey(tcfg.get("seed", 0))
-    for i in range(n_thetas):
-        key, sub = jax.random.split(key)
-        s = pipeline.sample(
-            sub,
-            jnp.asarray(theta_norm[i : i + 1]),  # (1, 2, 1)
-            nsamples=scfg["nsamples"],
-            step_size=scfg["step_size"],
-        )  # (nsamples, 32, 32, 1), normalized
-        s = np.asarray(task.unnormalize_x(s), dtype=np.float32)[..., 0]
-        samples.append(s)
-        print(f"theta {i}: sampled {s.shape}, finite={np.isfinite(s).all()}")
+    # Cross-check EMA vs raw weights: sample() defaults to the EMA model, which
+    # has been observed to degenerate to flat-P(k) noise even when the raw model
+    # is good. Emit both (_ema / _raw); identical PRNG so only the weights differ.
+    for use_ema, tag in ((True, "ema"), (False, "raw")):
+        samples = []
+        key = jax.random.PRNGKey(tcfg.get("seed", 0))
+        for i in range(n_thetas):
+            key, sub = jax.random.split(key)
+            s = pipeline.sample(
+                sub,
+                jnp.asarray(theta_norm[i : i + 1]),  # (1, 2, 1)
+                nsamples=scfg["nsamples"],
+                step_size=scfg["step_size"],
+                use_ema=use_ema,
+            )  # (nsamples, 32, 32, 1), normalized
+            s = np.asarray(task.unnormalize_x(s), dtype=np.float32)[..., 0]
+            samples.append(s)
+            print(f"[{tag}] theta {i}: sampled {s.shape}, finite={np.isfinite(s).all()}")
 
-    plot_field_grid(
-        truths,
-        samples,
-        thetas_raw,
-        scfg["nsamples_grid"],
-        os.path.join(imgs_dir, f"grf_fields_conf{experiment}.png"),
-    )
-    plot_power_spectra(
-        truths,
-        samples,
-        thetas_raw,
-        os.path.join(imgs_dir, f"grf_pk_conf{experiment}.png"),
-    )
-    print(f"Plots written to {imgs_dir} (experiment {experiment})")
+        plot_field_grid(
+            truths,
+            samples,
+            thetas_raw,
+            scfg["nsamples_grid"],
+            os.path.join(imgs_dir, f"grf_fields_conf{experiment}_{tag}.png"),
+        )
+        plot_power_spectra(
+            truths,
+            samples,
+            thetas_raw,
+            os.path.join(imgs_dir, f"grf_pk_conf{experiment}_{tag}.png"),
+        )
+    print(f"Plots written to {imgs_dir} (experiment {experiment}; _ema and _raw)")
 
 
 if __name__ == "__main__":
