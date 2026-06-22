@@ -17,22 +17,22 @@ model:
 optimizer:
   warmup_steps: 500
   decay_transition: 0.80
-  max_lr: 4.0e-4
-  min_lr: 4.0e-6
+  max_lr: 2.0e-4
+  min_lr: 2.0e-6
 
 training:
-  batch_size: 4096
-  nsamples: 90000            # training subset; MUST be < task.max_samples
-  nsteps: 20000
+  batch_size: 1024
+  nsamples: 100000            # training subset; MUST be < task.max_samples
+  nsteps: 50000
   ema_decay: 0.999
   val_every: 100
   early_stopping: true
-  experiment_id: 1
-  restore_model: false
-  train_model: true
+  experiment_id: 2
+  restore_model: true
+  train_model: false
 
 evaluation:
-  observation_idx: 1
+  observation_idx: 8
   grid_size: 200
   padding: 0.5
   n_ref_overlay: 2000

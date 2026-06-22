@@ -189,8 +189,10 @@ def main():
     xx, yy, grid_pts = make_density_grid(ref_samples, grid_size,
                                          padding=float(eval_cfg.get("padding", 0.5)))
     Z = posterior_density(pipeline, grid_pts, obs, grid_size, use_ema=True)
-    fig, ax = plot_posterior_contour(xx, yy, Z, true_param, ref_samples=ref_samples,
-                                     n_ref_overlay=int(eval_cfg.get("n_ref_overlay", 2000)))
+    # fig, ax = plot_posterior_contour(xx, yy, Z, true_param, ref_samples=ref_samples,
+    #                                  n_ref_overlay=int(eval_cfg.get("n_ref_overlay", 2000)))
+    fig, ax = plot_2d_dist_contour(xx, yy, Z, true_param=np.asarray(true_param).reshape(-1))
+    
     out_path = os.path.join(img_dir, f"posterior_contour_obs{idx}.png")
     fig.savefig(out_path, dpi=300, bbox_inches="tight")
     print(f"Saved posterior contour to {out_path}")
