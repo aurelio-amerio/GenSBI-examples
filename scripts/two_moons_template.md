@@ -57,7 +57,7 @@ except ImportError:
 
 if colab:
     # Install required packages and clone the repository
-    !uv pip install --quiet "gensbi[cuda12,examples]"
+    !uv pip install --quiet "gensbi[cuda12,examples]" "sbibm-jax[loader]"
     !git clone --depth 1 https://github.com/aurelio-amerio/GenSBI-examples
     %cd GenSBI-examples/examples/sbi-benchmarks/two_moons/{model_name}
 ```
@@ -102,8 +102,8 @@ from gensbi.utils.plotting import plot_marginals
 ```
 
 ```{code-cell} ipython3
-from gensbi_examples.tasks import TwoMoons
-task = TwoMoons(kind="{kind}")
+from sbibm_jax.data import TaskDataset
+task = TaskDataset("two_moons", kind="{kind}")
 ```
 
 ```{code-cell} ipython3
@@ -126,8 +126,8 @@ nsamples = int(1e5)
 # Set batch size for training. Larger batch sizes help prevent overfitting, but are limited by available GPU memory.
 batch_size = 4096
 # Create training and validation datasets using the Two Moons task object.
-train_dataset = task.get_train_dataset(batch_size)
-val_dataset = task.get_val_dataset(batch_size)
+train_dataset = task.get_train_loader(batch_size, num_samples=nsamples)
+val_dataset = task.get_val_loader(batch_size)
 
 # Create iterators for the training and validation datasets.
 dataset_iter = iter(train_dataset)
@@ -151,8 +151,8 @@ config_path = f"{notebook_path}/config/config_{model_name}.yaml"
 
 ```{code-cell} ipython3
 # Extract dimensionality information from the task object.
-dim_obs = task.dim_obs  # Number of parameters to infer
-dim_cond = task.dim_cond    # Number of observed data dimensions
+dim_obs = task.dim_theta  # Number of parameters to infer
+dim_cond = task.dim_x    # Number of observed data dimensions
 
 dim_joint = dim_obs + dim_cond  # Joint dimension (for model input)
 ```
