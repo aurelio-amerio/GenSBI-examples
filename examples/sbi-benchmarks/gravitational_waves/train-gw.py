@@ -54,7 +54,7 @@ from gensbi.diagnostics.marginal_coverage import (
     plot_marginal_coverage,
 )
 
-from gensbi_examples.tasks import GravitationalWaves
+from sbibm_jax.data import TaskDataset
 
 
 config_path = "./config/gw_config_6c.yaml"
@@ -117,7 +117,7 @@ def main():
         train_model = config["training"]["train_model"]
         restore_model = config["training"]["restore_model"]
 
-    task = GravitationalWaves()
+    task = TaskDataset("gravitational_waves")
 
     df_train = task.df_train
     df_val = task.df_val

@@ -48,7 +48,7 @@ from gensbi.diagnostics.marginal_coverage import (
     plot_marginal_coverage,
 )
 
-from gensbi_examples.tasks import GravitationalLensing
+from sbibm_jax.data import TaskDataset
 
 
 ### end of imports ###
@@ -114,7 +114,7 @@ def main():
         train_model = config["training"]["train_model"]
         restore_model = config["training"]["restore_model"]
 
-    task = GravitationalLensing()
+    task = TaskDataset("toy_lensing")
 
     df_train = task.df_train
     df_val = task.df_val

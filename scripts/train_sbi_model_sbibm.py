@@ -27,7 +27,7 @@ from flax import nnx
 
 from time import time
 
-from gensbi_examples.tasks import get_task
+from sbibm_jax.data import TaskDataset
 from gensbi.diagnostics.metrics import c2st
 
 from gensbi.diagnostics import run_tarp, plot_tarp
@@ -156,20 +156,20 @@ def main():
         )
 
     # Task and dataset setup
-    task = get_task(
-        task_name, kind=kind, normalize_data=True, use_prefetching=True, max_workers=2
+    task = TaskDataset(
+        task_name, kind=kind, normalize=True, use_prefetching=True, max_workers=2
     )
 
     # Set checkpoint directory (new structure)
     checkpoint_dir = os.path.join(os.getcwd(), "checkpoints")
 
-    train_dataset = task.get_train_dataset(batch_size, nsamples=dataset_size)
-    val_dataset = task.get_val_dataset(
+    train_dataset = task.get_train_loader(batch_size, num_samples=dataset_size)
+    val_dataset = task.get_val_loader(
         512
     )  # we are using the mean loss, so batch size does not matter
 
-    dim_obs = task.dim_obs
-    dim_cond = task.dim_cond
+    dim_obs = task.dim_theta
+    dim_cond = task.dim_x
     dim_joint = task.dim_joint
 
     # Model parameters from config
@@ -214,7 +214,7 @@ def main():
         # Reshape to (1, D, 1) so normalization broadcasts correctly
         obs_for_model = jnp.array(observation).reshape(1, -1, 1)
         # Normalize observation before feeding to the model
-        obs_for_model = task.normalize_cond(obs_for_model)
+        obs_for_model = task.normalize_x(obs_for_model)
 
         sampler_kwargs = {}
         if method == "diffusion":
@@ -223,7 +223,7 @@ def main():
         samples = pipeline.sample(key, obs_for_model, nsamples, use_ema=use_ema, **sampler_kwargs)
 
         # Unnormalize model output back to physical space
-        samples = task.unnormalize_obs(samples)
+        samples = task.unnormalize_theta(samples)
 
         return samples, true_param, reference_samples
 
