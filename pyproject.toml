@@ -16,6 +16,7 @@ dependencies = [
     "flax>=0.12.4",
     "grain>=0.2.15",
     "imageio>=2.37.2",
+    "sbibm-jax[loader]",
 ]
 
 [project.urls]
@@ -26,28 +27,9 @@ Issues = "https://github.com/aurelio-amerio/GenSBI-examples/issues"
 lint = [
     "flake8",
 ]
-test = [
-    "pytest",
-    "pytest-xdist",
-    "pytest-cov",
-    "pytest-mock",
-    "pytest-env",
-    "genbadge[all]",
-]
 dev = [
     {include-group = "lint"},
-    {include-group = "test"},
 ]
 
-[build-system]
-requires = ["uv_build>=0.10.7,<0.11.0"]
-build-backend = "uv_build"
-
-[tool.pytest.ini_options]
-addopts = "-n 2"
-env = [
-    "JAX_PLATFORMS=cpu"
-]
-testpaths = [
-    "tests",
-]
+[tool.uv]
+package = false
