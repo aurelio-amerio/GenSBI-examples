@@ -27,8 +27,12 @@ Issues = "https://github.com/aurelio-amerio/GenSBI-examples/issues"
 lint = [
     "flake8",
 ]
+notebooks = [
+    "jupytext",
+]
 dev = [
     {include-group = "lint"},
+    {include-group = "notebooks"},
 ]
 
 [tool.uv]
