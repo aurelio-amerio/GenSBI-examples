@@ -25,7 +25,7 @@ import jax
 import jax.numpy as jnp
 from flax import nnx
 
-from gensbi_examples.tasks import get_task
+from sbibm_jax.data import TaskDataset
 from gensbi.diagnostics.metrics import c2st
 
 from gensbi.diagnostics import run_tarp, plot_tarp
@@ -123,18 +123,18 @@ def main():
         )
 
     # Task and dataset setup
-    task = get_task(task_name, kind=kind)
+    task = TaskDataset(task_name, kind=kind)
 
     # Set checkpoint directory (new structure)
     checkpoint_dir = os.path.join(os.getcwd(), "checkpoints")
 
-    train_dataset = task.get_train_dataset(batch_size)
-    val_dataset = task.get_val_dataset(
+    train_dataset = task.get_train_loader(batch_size, num_samples=100_000)
+    val_dataset = task.get_val_loader(
         512
     )  # we are using the mean loss, so batch size does not matter
 
-    dim_obs = task.dim_obs
-    dim_cond = task.dim_cond
+    dim_obs = task.dim_theta
+    dim_cond = task.dim_x
     dim_joint = task.dim_joint
 
     # Model parameters from config
