@@ -28,5 +28,5 @@ def test_config_yaml_has_required_sections():
     for section in ("model", "optimizer", "training", "evaluation"):
         assert section in cfg, f"missing section {section!r}"
     assert cfg["model"]["transformer"] in ("affine", "rqspline")
-    assert cfg["training"]["nsamples"] < 100_000  # default get_train_dataset cap
+    assert cfg["training"]["nsamples"] < 100_000  # below get_train_dataset's default nsamples; real cap is task.max_samples (runtime)
     assert cfg["evaluation"]["grid_size"] > 0
