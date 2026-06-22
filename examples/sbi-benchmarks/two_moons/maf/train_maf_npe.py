@@ -82,3 +82,47 @@ def load_obs_stats(task_name, dim_obs):
     mean = jnp.asarray(stats["obs_mean"]).reshape(dim_obs)
     std = jnp.asarray(stats["obs_std"]).reshape(dim_obs)
     return mean, std
+
+
+def apply_standardization(pipeline, mean, std):
+    """Set the θ Standardize buffers on both model and EMA from precomputed stats.
+
+    EMA averages only Params, so its non-Param Standardize buffer must be set too.
+    Marks the pipeline standardized to suppress the train-time 'did you fit?' warning.
+    """
+    pipeline.model.set_standardization(mean, std)
+    pipeline.ema_model.set_standardization(mean, std)
+    pipeline._standardized = True
+
+
+def make_density_grid(ref_samples, grid_size, padding=0.5):
+    """Build a 2D θ grid framing the reference samples (+padding).
+
+    Returns (xx, yy, grid_pts): xx, yy are (G, G) meshgrids (indexing='xy');
+    grid_pts is (G*G, 2) row-aligned with xx.ravel()/yy.ravel() (C order).
+    """
+    ref = np.asarray(ref_samples).reshape(-1, 2)
+    lo = ref.min(axis=0) - padding
+    hi = ref.max(axis=0) + padding
+    xs = np.linspace(lo[0], hi[0], grid_size)
+    ys = np.linspace(lo[1], hi[1], grid_size)
+    xx, yy = np.meshgrid(xs, ys)
+    grid_pts = np.stack([xx.ravel(), yy.ravel()], axis=-1)
+    return xx, yy, grid_pts
+
+
+def posterior_density(pipeline, grid_pts, obs, grid_size, use_ema=True):
+    """Evaluate q(θ|obs) on grid_pts and reshape to (G, G) aligned with the meshgrid."""
+    grid_pts = jnp.asarray(grid_pts)                       # (G*G, 2)
+    logp = pipeline.log_prob(grid_pts, obs, use_ema=use_ema)  # (G*G,)
+    Z = np.asarray(jnp.exp(logp)).reshape(grid_size, grid_size)
+    return Z
+
+
+def plot_posterior_contour(xx, yy, Z, true_param, ref_samples=None, n_ref_overlay=2000):
+    """Contour plot of the posterior with the true θ marked and a light ref-sample overlay."""
+    fig, ax = plot_2d_dist_contour(xx, yy, Z, true_param=np.asarray(true_param).reshape(-1))
+    if ref_samples is not None and n_ref_overlay > 0:
+        ref = np.asarray(ref_samples).reshape(-1, 2)[:n_ref_overlay]
+        ax.scatter(ref[:, 0], ref[:, 1], s=2, alpha=0.15, color="k", zorder=5)
+    return fig, ax

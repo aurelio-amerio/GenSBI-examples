@@ -83,3 +83,79 @@ def test_load_obs_stats_shape_two_moons():
     assert mean.shape == (2,)
     assert std.shape == (2,)
     assert bool(jnp.all(std > 0))
+
+
+@pytest.fixture
+def tiny_pipeline(tmp_path):
+    """A minimal ConditionalFlowPipeline on a tiny CPU flow (no HF, no training)."""
+    mod = _load_script_module()
+    from flax import nnx
+    from gensbi.recipes import ConditionalFlowPipeline
+    import jax.numpy as jnp
+
+    flow = mod.build_flow(nnx.Rngs(0), dim_obs=2, dim_cond=2,
+                          model_cfg={"n_layers": 2, "transformer": "affine"})
+    obs = jnp.zeros((8, 2, 1))   # (B, dim_obs, 1) — theta
+    cond = jnp.zeros((8, 2, 1))  # (B, dim_cond, 1) — x
+    dummy = [(obs, cond)]
+    tc = ConditionalFlowPipeline.get_default_training_config()
+    tc["checkpoint_dir"] = str(tmp_path / "ckpt")
+    pipe = ConditionalFlowPipeline(flow, dummy, dummy, dim_obs=2, dim_cond=2,
+                                   training_config=tc)
+    return mod, pipe
+
+
+def test_apply_standardization_sets_buffers(tiny_pipeline):
+    mod, pipe = tiny_pipeline
+    import jax.numpy as jnp
+    mean = jnp.array([1.0, -2.0])
+    std = jnp.array([3.0, 4.0])
+    mod.apply_standardization(pipe, mean, std)
+    assert pipe._standardized is True
+    # both model and EMA must carry the buffer (EMA averages only Params)
+    for m in (pipe.model, pipe.ema_model):
+        std_bijection = [b for b in m.chain.bijections
+                         if b.__class__.__name__ == "Standardize"][0]
+        assert bool(jnp.allclose(std_bijection.mean.value, mean))
+        assert bool(jnp.allclose(std_bijection.std.value, std))
+
+
+def test_make_density_grid_shapes_and_bounds():
+    mod = _load_script_module()
+    rng = np.random.default_rng(0)
+    ref = rng.normal(size=(500, 2)) * 0.3
+    xx, yy, grid_pts = mod.make_density_grid(ref, grid_size=20, padding=0.5)
+    assert xx.shape == (20, 20)
+    assert yy.shape == (20, 20)
+    assert grid_pts.shape == (400, 2)
+    assert grid_pts[:, 0].min() <= ref[:, 0].min()
+    assert grid_pts[:, 0].max() >= ref[:, 0].max()
+
+
+def test_posterior_density_shape_and_finite(tiny_pipeline):
+    mod, pipe = tiny_pipeline
+    import jax.numpy as jnp
+    mod.apply_standardization(pipe, jnp.zeros(2), jnp.ones(2))
+    rng = np.random.default_rng(0)
+    ref = rng.normal(size=(500, 2)) * 0.3
+    xx, yy, grid_pts = mod.make_density_grid(ref, grid_size=15, padding=0.5)
+    Z = mod.posterior_density(pipe, grid_pts, obs=np.array([0.1, 0.2]), grid_size=15)
+    assert Z.shape == (15, 15)
+    assert np.all(np.isfinite(Z))
+    assert np.all(Z >= 0.0)
+
+
+def test_plot_posterior_contour_returns_figure(tiny_pipeline):
+    mod, pipe = tiny_pipeline
+    import jax.numpy as jnp
+    import matplotlib
+    mod.apply_standardization(pipe, jnp.zeros(2), jnp.ones(2))
+    rng = np.random.default_rng(0)
+    ref = rng.normal(size=(500, 2)) * 0.3
+    xx, yy, grid_pts = mod.make_density_grid(ref, grid_size=15, padding=0.5)
+    Z = mod.posterior_density(pipe, grid_pts, obs=np.array([0.0, 0.0]), grid_size=15)
+    fig, ax = mod.plot_posterior_contour(xx, yy, Z, true_param=np.array([0.0, 0.0]),
+                                         ref_samples=ref, n_ref_overlay=100)
+    assert isinstance(fig, matplotlib.figure.Figure)
+    import matplotlib.pyplot as plt
+    plt.close(fig)
