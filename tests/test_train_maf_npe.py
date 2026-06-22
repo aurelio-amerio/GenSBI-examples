@@ -30,3 +30,27 @@ def test_config_yaml_has_required_sections():
     assert cfg["model"]["transformer"] in ("affine", "rqspline")
     assert cfg["training"]["nsamples"] < 100_000  # below get_train_dataset's default nsamples; real cap is task.max_samples (runtime)
     assert cfg["evaluation"]["grid_size"] > 0
+
+
+def test_build_transformer_selects_type():
+    mod = _load_script_module()
+    from gensbi.normalizing_flows import Affine, RQSpline
+    assert isinstance(mod.build_transformer({"transformer": "affine"}), Affine)
+    rq = mod.build_transformer({"transformer": "rqspline", "num_bins": 6})
+    assert isinstance(rq, RQSpline)
+    assert rq.num_bins == 6
+    with pytest.raises(ValueError):
+        mod.build_transformer({"transformer": "nope"})
+
+
+def test_build_flow_runs_log_prob():
+    mod = _load_script_module()
+    from flax import nnx
+    import jax.numpy as jnp
+    flow = mod.build_flow(nnx.Rngs(0), dim_obs=2, dim_cond=2,
+                          model_cfg={"n_layers": 2, "transformer": "affine"})
+    x = jnp.zeros((4, 2))
+    cond = jnp.zeros((4, 2))
+    lp = flow.log_prob(x, cond)
+    assert lp.shape == (4,)
+    assert bool(jnp.all(jnp.isfinite(lp)))
