@@ -54,3 +54,31 @@ def build_flow(rngs, dim_obs, dim_cond, model_cfg):
         standardize=bool(model_cfg.get("standardize", True)),
         zero_init=bool(model_cfg.get("zero_init", True)),
     )
+
+
+def build_training_config(config, checkpoint_dir):
+    """Start from the pipeline defaults, overlay YAML optimizer+training, set ckpt dir.
+
+    ConditionalFlowPipeline reads training_config keys eagerly in __init__ with no
+    merge, so it must be complete. Extra keys (batch_size, nsamples, restore_model,
+    train_model) are harmless — the pipeline only reads the keys it knows.
+    """
+    tc = ConditionalFlowPipeline.get_default_training_config()
+    tc.update(config.get("optimizer", {}))
+    tc.update(config.get("training", {}))
+    tc["checkpoint_dir"] = checkpoint_dir
+    return tc
+
+
+def load_obs_stats(task_name, dim_obs):
+    """Precomputed θ (obs) mean/std as shape (dim_obs,) — no fitting, no HF download.
+
+    Stats ship as (1, dim_obs, 1) in gensbi_examples/stats/stats_<task>.npz and are
+    loaded by the same internal helper the Task uses.
+    """
+    stats = _load_precomputed_stats(task_name)
+    if stats is None:
+        raise FileNotFoundError(f"no precomputed stats for task {task_name!r}")
+    mean = jnp.asarray(stats["obs_mean"]).reshape(dim_obs)
+    std = jnp.asarray(stats["obs_std"]).reshape(dim_obs)
+    return mean, std

@@ -54,3 +54,32 @@ def test_build_flow_runs_log_prob():
     lp = flow.log_prob(x, cond)
     assert lp.shape == (4,)
     assert bool(jnp.all(jnp.isfinite(lp)))
+
+
+def test_build_training_config_merges_defaults_and_overrides(tmp_path):
+    mod = _load_script_module()
+    from gensbi.recipes import ConditionalFlowPipeline
+    cfg = {
+        "optimizer": {"max_lr": 4.0e-4, "min_lr": 4.0e-6, "warmup_steps": 500,
+                      "decay_transition": 0.80},
+        "training": {"nsteps": 123, "ema_decay": 0.99, "val_every": 50,
+                     "early_stopping": True, "experiment_id": 7},
+    }
+    tc = mod.build_training_config(cfg, checkpoint_dir=str(tmp_path / "ckpt"))
+    # every key the pipeline reads must be present (defaults filled in)
+    for key in ConditionalFlowPipeline.get_default_training_config():
+        assert key in tc, f"missing required training_config key {key!r}"
+    # overrides applied
+    assert tc["nsteps"] == 123
+    assert tc["max_lr"] == 4.0e-4
+    assert tc["experiment_id"] == 7
+    assert tc["checkpoint_dir"] == str(tmp_path / "ckpt")
+
+
+def test_load_obs_stats_shape_two_moons():
+    mod = _load_script_module()
+    import jax.numpy as jnp
+    mean, std = mod.load_obs_stats("two_moons", dim_obs=2)
+    assert mean.shape == (2,)
+    assert std.shape == (2,)
+    assert bool(jnp.all(std > 0))
