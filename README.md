@@ -45,7 +45,7 @@ For more installation options, including how to install `uv`, see the [Installat
 
 ### Download the example notebooks and scripts
 
-The `gensbi-examples` package provides the helper utilities, but the notebooks and training scripts live in this repository. To get them, clone the repo:
+The notebooks and training scripts live in this repository. Task data is loaded via [`sbibm-jax`](https://github.com/aurelio-amerio/sbibm-jax) (`pip install "sbibm-jax[loader]"`). To get the examples, clone the repo:
 
 ```bash
 git clone https://github.com/aurelio-amerio/GenSBI-examples.git
@@ -54,7 +54,6 @@ git clone https://github.com/aurelio-amerio/GenSBI-examples.git
 ## Structure
 
 - `examples/`: Contains standalone example scripts and notebooks.
-- `src/gensbi_examples`: Helper utilities for the examples.
 
 ## Getting Started
 
