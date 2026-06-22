@@ -126,3 +126,74 @@ def plot_posterior_contour(xx, yy, Z, true_param, ref_samples=None, n_ref_overla
         ref = np.asarray(ref_samples).reshape(-1, 2)[:n_ref_overlay]
         ax.scatter(ref[:, 0], ref[:, 1], s=2, alpha=0.15, color="k", zorder=5)
     return fig, ax
+
+
+def parse_args():
+    here = os.path.dirname(os.path.abspath(__file__))
+    default_config = os.path.join(here, "config", "config_maf_npe.yaml")
+    parser = argparse.ArgumentParser(description="Two-moons NPE (MAF) training/eval")
+    parser.add_argument("--config", type=str, default=default_config,
+                        help="Path to the YAML config.")
+    args, _ = parser.parse_known_args()
+    return args
+
+
+def main():
+    args = parse_args()
+    with open(args.config) as f:
+        config = yaml.safe_load(f)
+
+    exp_dir = os.path.dirname(os.path.abspath(__file__))
+    checkpoint_dir = os.path.join(exp_dir, "checkpoints")
+    img_dir = os.path.join(exp_dir, "imgs")
+    os.makedirs(img_dir, exist_ok=True)
+
+    task_name = config["task_name"]
+    model_cfg = config["model"]
+    train_cfg = config["training"]
+    eval_cfg = config["evaluation"]
+
+    # --- task / data (UNSTANDARDIZED loader: normalize_data=False) ---
+    task = get_task(task_name, kind="conditional", normalize_data=False)
+    dim_obs, dim_cond = task.dim_obs, task.dim_cond
+    train_ds = task.get_train_dataset(int(train_cfg["batch_size"]),
+                                      nsamples=int(train_cfg["nsamples"]))
+    val_ds = task.get_val_dataset(512)
+
+    # --- flow + pipeline ---
+    flow = build_flow(nnx.Rngs(0), dim_obs, dim_cond, model_cfg)
+    training_config = build_training_config(config, checkpoint_dir)
+    pipeline = ConditionalFlowPipeline(flow, train_ds, val_ds, dim_obs, dim_cond,
+                                       training_config=training_config)
+
+    # --- standardize θ from precomputed stats (no fitting; loader stays raw) ---
+    mean, std = load_obs_stats(task_name, dim_obs)
+    apply_standardization(pipeline, mean, std)
+
+    # --- train / restore ---
+    if train_cfg.get("restore_model", False):
+        print("Restoring model from checkpoint...")
+        pipeline.restore_model()
+    if train_cfg.get("train_model", True):
+        print("Starting training...")
+        pipeline.train(nnx.Rngs(0))
+        print("Training complete.")
+
+    # --- evaluate posterior + contour plot for one observation ---
+    idx = int(eval_cfg["observation_idx"])
+    obs, ref_samples = task.get_reference(idx)
+    true_param = np.asarray(task.get_true_parameters(idx)).reshape(-1)
+
+    grid_size = int(eval_cfg["grid_size"])
+    xx, yy, grid_pts = make_density_grid(ref_samples, grid_size,
+                                         padding=float(eval_cfg.get("padding", 0.5)))
+    Z = posterior_density(pipeline, grid_pts, obs, grid_size, use_ema=True)
+    fig, ax = plot_posterior_contour(xx, yy, Z, true_param, ref_samples=ref_samples,
+                                     n_ref_overlay=int(eval_cfg.get("n_ref_overlay", 2000)))
+    out_path = os.path.join(img_dir, f"posterior_contour_obs{idx}.png")
+    fig.savefig(out_path, dpi=300, bbox_inches="tight")
+    print(f"Saved posterior contour to {out_path}")
+
+
+if __name__ == "__main__":
+    main()
