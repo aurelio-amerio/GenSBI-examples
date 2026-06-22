@@ -28,7 +28,7 @@ def test_config_yaml_has_required_sections():
     for section in ("model", "optimizer", "training", "evaluation"):
         assert section in cfg, f"missing section {section!r}"
     assert cfg["model"]["transformer"] in ("affine", "rqspline")
-    assert cfg["training"]["nsamples"] < 100_000  # below get_train_dataset's default nsamples; real cap is task.max_samples (runtime)
+    assert cfg["training"]["nsamples"] < 1_000_000  # must be <= train split rows (TaskDataset.get_train_loader checks at runtime)
     assert cfg["evaluation"]["grid_size"] > 0
 
 
@@ -90,13 +90,27 @@ def test_build_training_config_merges_defaults_and_overrides(tmp_path):
     assert tc["checkpoint_dir"] == str(tmp_path / "ckpt")
 
 
-def test_load_obs_stats_shape_two_moons():
+def test_load_obs_stats_reshapes_task_theta_stats():
     mod = _load_script_module()
+    import types
     import jax.numpy as jnp
-    mean, std = mod.load_obs_stats("two_moons", dim_obs=2)
+    # Mimic TaskDataset: theta_mean/theta_std ship as shape (1, dim_obs).
+    task = types.SimpleNamespace(theta_mean=np.array([[1.0, -2.0]]),
+                                 theta_std=np.array([[3.0, 4.0]]), name="two_moons")
+    mean, std = mod.load_obs_stats(task, dim_obs=2)
     assert mean.shape == (2,)
     assert std.shape == (2,)
+    assert bool(jnp.allclose(mean, jnp.array([1.0, -2.0])))
+    assert bool(jnp.allclose(std, jnp.array([3.0, 4.0])))
     assert bool(jnp.all(std > 0))
+
+
+def test_load_obs_stats_raises_without_stats():
+    mod = _load_script_module()
+    import types
+    task = types.SimpleNamespace(theta_mean=None, theta_std=None, name="two_moons")
+    with pytest.raises(ValueError):
+        mod.load_obs_stats(task, dim_obs=2)
 
 
 @pytest.fixture

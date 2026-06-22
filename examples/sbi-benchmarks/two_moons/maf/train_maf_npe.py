@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from gensbi.normalizing_flows import make_maf, Affine, RQSpline
 from gensbi.recipes import ConditionalFlowPipeline
 from gensbi.utils.plotting import plot_2d_dist_contour
-from gensbi_examples.tasks import get_task, _load_precomputed_stats
+from sbibm_jax.data import TaskDataset
 
 
 def build_transformer(model_cfg):
@@ -70,17 +70,17 @@ def build_training_config(config, checkpoint_dir):
     return tc
 
 
-def load_obs_stats(task_name, dim_obs):
-    """Precomputed θ (obs) mean/std as shape (dim_obs,) — no fitting, no HF download.
+def load_obs_stats(task, dim_obs):
+    """Precomputed θ mean/std as shape (dim_obs,) — read straight off the TaskDataset.
 
-    Stats ship as (1, dim_obs, 1) in gensbi_examples/stats/stats_<task>.npz and are
-    loaded by the same internal helper the Task uses.
+    ``TaskDataset`` exposes ``theta_mean``/``theta_std`` from the dataset metadata
+    (shape ``(1, dim_obs)``) regardless of its ``normalize`` flag, so no fitting and
+    no extra data pass is needed. θ is the autoregressive target ("obs") for NPE.
     """
-    stats = _load_precomputed_stats(task_name)
-    if stats is None:
-        raise FileNotFoundError(f"no precomputed stats for task {task_name!r}")
-    mean = jnp.asarray(stats["obs_mean"]).reshape(dim_obs)
-    std = jnp.asarray(stats["obs_std"]).reshape(dim_obs)
+    if task.theta_mean is None or task.theta_std is None:
+        raise ValueError(f"task {getattr(task, 'name', task)!r} has no theta stats")
+    mean = jnp.asarray(task.theta_mean).reshape(dim_obs)
+    std = jnp.asarray(task.theta_std).reshape(dim_obs)
     return mean, std
 
 
@@ -153,12 +153,13 @@ def main():
     train_cfg = config["training"]
     eval_cfg = config["evaluation"]
 
-    # --- task / data (UNSTANDARDIZED loader: normalize_data=False) ---
-    task = get_task(task_name, kind="conditional", normalize_data=False)
-    dim_obs, dim_cond = task.dim_obs, task.dim_cond
-    train_ds = task.get_train_dataset(int(train_cfg["batch_size"]),
-                                      nsamples=int(train_cfg["nsamples"]))
-    val_ds = task.get_val_dataset(512)
+    # --- task / data (raw loader: normalize=False; θ is standardized in-flow) ---
+    task = TaskDataset(task_name, kind="conditional", normalize=False,
+                       use_prefetching=True, max_workers=2)
+    dim_obs, dim_cond = task.dim_theta, task.dim_x
+    train_ds = task.get_train_loader(int(train_cfg["batch_size"]),
+                                     num_samples=int(train_cfg["nsamples"]))
+    val_ds = task.get_val_loader(512)
 
     # --- flow + pipeline ---
     flow = build_flow(nnx.Rngs(0), dim_obs, dim_cond, model_cfg)
@@ -166,8 +167,8 @@ def main():
     pipeline = ConditionalFlowPipeline(flow, train_ds, val_ds, dim_obs, dim_cond,
                                        training_config=training_config)
 
-    # --- standardize θ from precomputed stats (no fitting; loader stays raw) ---
-    mean, std = load_obs_stats(task_name, dim_obs)
+    # --- standardize θ from dataset stats (no fitting; loader stays raw) ---
+    mean, std = load_obs_stats(task, dim_obs)
     apply_standardization(pipeline, mean, std)
 
     # --- train / restore ---
