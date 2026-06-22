@@ -5,7 +5,7 @@ description = "Examples for the GenSBI library"
 authors = [{ name = "Aurelio Amerio", email = "dev@gensbi.com" }]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 dependencies = [
     "jax>=0.9.0, <0.10.0",
