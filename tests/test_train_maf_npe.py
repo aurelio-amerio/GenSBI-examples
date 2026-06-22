@@ -56,6 +56,20 @@ def test_build_flow_runs_log_prob():
     assert bool(jnp.all(jnp.isfinite(lp)))
 
 
+def test_build_flow_rqspline_runs_log_prob():
+    mod = _load_script_module()
+    from flax import nnx
+    import jax.numpy as jnp
+    flow = mod.build_flow(nnx.Rngs(0), dim_obs=2, dim_cond=2,
+                          model_cfg={"n_layers": 2, "transformer": "rqspline",
+                                     "num_bins": 8})
+    x = jnp.zeros((4, 2))
+    cond = jnp.zeros((4, 2))
+    lp = flow.log_prob(x, cond)
+    assert lp.shape == (4,)
+    assert bool(jnp.all(jnp.isfinite(lp)))
+
+
 def test_build_training_config_merges_defaults_and_overrides(tmp_path):
     mod = _load_script_module()
     from gensbi.recipes import ConditionalFlowPipeline
