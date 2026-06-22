@@ -116,8 +116,8 @@ def test_apply_standardization_sets_buffers(tiny_pipeline):
     for m in (pipe.model, pipe.ema_model):
         std_bijection = [b for b in m.chain.bijections
                          if b.__class__.__name__ == "Standardize"][0]
-        assert bool(jnp.allclose(std_bijection.mean.value, mean))
-        assert bool(jnp.allclose(std_bijection.std.value, std))
+        assert bool(jnp.allclose(std_bijection.mean[...], mean))
+        assert bool(jnp.allclose(std_bijection.std[...], std))
 
 
 def test_make_density_grid_shapes_and_bounds():
