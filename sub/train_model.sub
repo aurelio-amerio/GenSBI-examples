@@ -1,5 +1,5 @@
 experiment_name = maf_two_moons
-version = 1a    
+version = 2a    
 workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/two_moons/maf
 script_path = train_maf_npe.py
 
