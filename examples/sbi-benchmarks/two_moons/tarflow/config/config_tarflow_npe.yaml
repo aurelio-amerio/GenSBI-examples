@@ -1,0 +1,38 @@
+task_name: two_moons
+
+strategy:
+  method: npe
+  model: tarflow
+
+model:
+  num_blocks: 8              # transformer blocks (mirrors MAF n_layers)
+  channels: 64               # token/feature width (mirrors MAF nn_width)
+  layers_per_block: 2        # attention layers per block (mirrors MAF nn_depth)
+  head_dim: 16               # attention head dim; channels must be divisible by it
+  block_size: 1              # tokens of size block_size; dim must be divisible by it
+  permutation: flip          # flip | random
+  standardize: true
+  zero_init: true
+
+optimizer:
+  warmup_steps: 500
+  decay_transition: 0.80
+  max_lr: 2.0e-4
+  min_lr: 2.0e-6
+
+training:
+  batch_size: 1024
+  nsamples: 100000           # training subset; MUST be < task.max_samples
+  nsteps: 20000
+  ema_decay: 0.999
+  val_every: 100
+  early_stopping: true
+  experiment_id: 2
+  restore_model: false
+  train_model: true
+
+evaluation:
+  observation_idx: 8
+  grid_size: 200
+  padding: 0.5
+  n_ref_overlay: 2000
