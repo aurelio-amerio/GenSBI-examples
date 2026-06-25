@@ -1,5 +1,5 @@
 experiment_name = tarflow_two_moons
-version = 2a    
+version = 3a    
 workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/two_moons/tarflow
 script_path = train_tarflow_npe.py
 

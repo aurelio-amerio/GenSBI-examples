@@ -23,11 +23,11 @@ optimizer:
 training:
   batch_size: 1024
   nsamples: 100000           # training subset; MUST be < task.max_samples
-  nsteps: 50000
+  nsteps: 20000
   ema_decay: 0.999
   val_every: 100
   early_stopping: true
-  experiment_id: 3
+  experiment_id: 2
   restore_model: false
   train_model: true
 
