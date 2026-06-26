@@ -60,7 +60,7 @@ This matches the canonical pattern in `GenSBI/scripts/maf_nle_recovery.py`, whic
 builds data with `x` first, calls `fit_standardization(x)`, then
 `NLEPosterior(pipe.ema_model, prior)`.
 
-### Getting the prior
+### Getting the prior (with a correctness fix)
 
 The offline `TaskDataset` does not expose the underlying task object, so the prior is
 fetched directly from the task registry:
@@ -70,8 +70,31 @@ from sbibm_jax.tasks import get_task
 prior = get_task(task_name).get_prior_dist()   # numpyro Independent(Uniform([-1,1]^2), 1)
 ```
 
-This yields the exact task prior with correct bounds, used both for `prior.log_prob`
-in the NLE potential and `prior.sample` for the NUTS init.
+**Critical subtlety found during verification:** the task's prior is constructed with
+`validate_args=False`, so its `log_prob` returns the in-support constant
+(`-log(2)` per dim) *everywhere* — it never returns `-inf` outside `[-1,1]`. Fed to
+`NLEPosterior` as-is, the prior therefore does **not** bound the NUTS potential, and
+the chain wanders far outside the prior support (a CPU smoke produced samples from
+−41 to +25, only 0.2% inside the box). The posterior would be wrong.
+
+The fix lives entirely in `build_prior`: re-enable validation on the returned prior so
+out-of-support `log_prob` becomes `-inf`, which confines the potential (hence NUTS) to
+the prior box. This works on the task's own prior object, needs no gensbi edit, and
+keeps `NLEPosterior` exactly as the user chose:
+
+```python
+def build_prior(task_name, validate_args=True):
+    prior = get_task(task_name).get_prior_dist()
+    prior._validate_args = validate_args          # out-of-support log_prob -> -inf
+    if hasattr(prior, "base_dist"):               # Independent wraps a base dist
+        prior.base_dist._validate_args = validate_args
+    return prior
+```
+
+Verified on CPU: with the toggle, `log_prob([2,2]) = -inf`, `log_prob([0,0]) = -1.386`,
+and NUTS via `NLEPosterior` stays finite and **100% inside `[-1,1]`** (matching the
+numpyro constrained-model route). The prior is used both for `prior.log_prob` in the
+NLE potential and `prior.sample` for the NUTS init.
 
 ### Inference + plot
 
@@ -105,7 +128,9 @@ New for NLE:
 - `swap_obs_cond(batch)` — `(theta, x) -> (x, theta)`.
 - `load_x_stats(task, dim_obs)` — read `task.x_mean` / `task.x_std`, reshape to
   `(dim_obs,)`. The NLE analog of the NPE `load_obs_stats`.
-- `build_prior(task_name)` — `get_task(task_name).get_prior_dist()`.
+- `build_prior(task_name, validate_args=True)` — `get_task(task_name).get_prior_dist()`
+  with validation re-enabled so out-of-support `log_prob` is `-inf` (see "Getting the
+  prior" — required for correct NLE posteriors).
 - `build_posterior(pipeline, prior, mcmc_cfg)` — construct `NLEPosterior`.
 
 `main()` wires it together: load config -> `TaskDataset` -> swapped loaders -> flow +
@@ -180,14 +205,17 @@ evaluation:
 - The pipeline warns if `train()` is called without standardization having been set;
   `apply_standardization` sets `_standardized = True` to suppress it.
 
-## Known caveat (no action this iteration)
+## Bounded-prior handling (resolved)
 
 Every existing NLE test/script uses an **unbounded Gaussian** prior. two-moons has a
-**bounded Uniform** prior, and `NLEPosterior` runs NUTS on the raw potential with no
-reparametrization, so the hard `[-1, 1]` boundaries can in principle cause divergences.
-For two-moons the posterior mass sits well inside the box, so it typically samples
-cleanly. We use the true Uniform prior as-is. If divergences appear in practice, a
-follow-up could add a reparametrized (unconstrained) variant — out of scope here.
+**bounded Uniform** prior. Verification (CPU smoke) showed the task's prior is built
+`validate_args=False`, so it does not bound the NUTS potential and the chain escapes
+`[-1, 1]` — see "Getting the prior". The fix is the `validate_args=True` toggle in
+`build_prior`, which confines NUTS to the support (verified 100% in-box, finite). No
+reparametrization and no gensbi edit are needed: NUTS on the validated potential
+rejects out-of-box proposals (the in-box gradients stay finite), and for two-moons the
+posterior mass sits well inside the box. This is the standard NLEPosterior route the
+user chose, made correct by bounding the prior.
 
 ## Out of scope
 
