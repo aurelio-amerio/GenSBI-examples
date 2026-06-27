@@ -1,0 +1,41 @@
+task_name: slcp
+
+strategy:
+  method: npe
+  model: tarflow
+
+# SLCP NPE flow: q(theta | x) over the 5-D parameter conditioned on the 8-D
+# observation. TransformerFlow (TarFlow) is a transformer autoregressive flow;
+# channels is the token/feature width and must be divisible by head_dim
+# (num_heads = channels // head_dim). The SLCP posterior is multimodal, which the
+# conditional flow captures directly.
+model:
+  num_blocks: 8              # transformer blocks (mirrors MAF n_layers)
+  channels: 128             # token/feature width (mirrors MAF nn_width)
+  layers_per_block: 2        # attention layers per block (mirrors MAF nn_depth)
+  head_dim: 16               # attention head dim; channels must be divisible by it
+  block_size: 1              # tokens of size block_size; dim must be divisible by it
+  permutation: flip          # flip | random
+  standardize: true
+  zero_init: true
+
+optimizer:
+  warmup_steps: 500
+  decay_transition: 0.80
+  max_lr: 2.0e-4
+  min_lr: 2.0e-6
+
+training:
+  batch_size: 1024
+  nsamples: 100000            # training subset; MUST be < task.max_samples
+  nsteps: 50000
+  ema_decay: 0.999
+  val_every: 100
+  early_stopping: true
+  experiment_id: 1
+  restore_model: false        # no checkpoint yet: train from scratch first run
+  train_model: true
+
+evaluation:
+  observation_idx: 1
+  nsamples_posterior: 20000   # posterior samples drawn from q(theta|x_o) for the corner plot

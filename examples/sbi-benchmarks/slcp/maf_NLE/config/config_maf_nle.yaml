@@ -1,0 +1,52 @@
+task_name: slcp
+
+strategy:
+  method: nle
+  model: maf
+
+# SLCP NLE flow: q(x | theta) over the 8-D observation conditioned on the 5-D
+# parameter. The SLCP likelihood is genuinely simple (4 i.i.d. 2-D Gaussians), so
+# a modest flow suffices; the obs is 8-D (vs 2-D for two-moons) so the conditioner
+# MLPs are a touch wider.
+model:
+  n_layers: 8
+  transformer: rqspline      # affine | rqspline
+  num_bins: 8                # used only when transformer == rqspline
+  nn_width: 128
+  nn_depth: 2
+  permutation: reverse       # reverse | random
+  standardize: true
+  zero_init: true
+
+optimizer:
+  warmup_steps: 500
+  decay_transition: 0.80
+  max_lr: 2.0e-4
+  min_lr: 2.0e-6
+
+training:
+  batch_size: 1024
+  nsamples: 100000            # training subset; MUST be < task.max_samples
+  nsteps: 50000
+  ema_decay: 0.999
+  val_every: 100
+  early_stopping: true
+  experiment_id: 1
+  restore_model: false        # no checkpoint yet: train from scratch first run
+  train_model: true
+
+# Tempered SMC sampler: the SLCP posterior is complex and multimodal (the scale
+# params enter the likelihood squared and the correlation through tanh, giving
+# sign-symmetric modes), so a single MCMC/MCLMC chain would capture only one mode.
+# SMC walks a particle cloud from prior -> posterior and populates all modes.
+# num_particles is the number of posterior samples returned.
+sampler:
+  num_particles: 20000
+  target_ess: 0.5
+  num_mcmc_steps: 20            # more rejuvenation than two-moons for the 5-D target
+  inner_kernel: mclmc            # mclmc (adjusted MCLMC) | nuts
+  inner_step_size: 0.1
+  inner_num_integration_steps: 5
+
+evaluation:
+  observation_idx: 1
