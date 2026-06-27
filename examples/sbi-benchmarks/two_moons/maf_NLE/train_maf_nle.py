@@ -1,13 +1,15 @@
 """Two-moons NLE example: train a conditional MAF likelihood q(x|theta) and
-sample the posterior with NUTS (MCMC).
+sample the (multimodal) posterior with tempered SMC.
 
 Run (on a GPU node with HF access, via the gensbi conda env):
     python train_maf_nle.py --config config/config_maf_nle.yaml
 
 NLE convention (mirror of the NPE script): obs = x, cond = theta, so the flow
 models q(x | theta). The posterior is recovered at inference time by combining the
-learned likelihood with the task prior under NUTS via gensbi NLEPosterior. Helpers
-are module-level and import-safe so they can be smoke-tested on CPU.
+learned likelihood with the task prior via gensbi NLEPosterior. Two-moons posteriors
+are multimodal, so we sample with TemperedSMC (a particle cloud walked from prior to
+posterior) instead of a single MCMC/MCLMC chain, which would capture only one mode.
+Helpers are module-level and import-safe so they can be smoke-tested on CPU.
 """
 
 import os
@@ -26,9 +28,10 @@ import jax.numpy as jnp
 from flax import nnx
 import matplotlib.pyplot as plt
 
-from gensbi.normalizing_flows import make_maf, Affine, RQSpline
+from gensbi.normalizing_flows import Affine, RQSpline
+from gensbi.models import MAFlow, MAFlowParams
 from gensbi.recipes import ConditionalFlowPipeline
-from gensbi.inference import NLEPosterior
+from gensbi.inference import NLEPosterior, TemperedSMC
 from gensbi.utils.plotting import plot_marginals
 from sbibm_jax.data import TaskDataset
 from sbibm_jax.tasks import get_task
@@ -50,8 +53,8 @@ def build_flow(rngs, dim_obs, dim_cond, model_cfg):
     For NLE, dim_obs == task.dim_x (autoregressive target) and dim_cond == task.dim_theta.
     """
     transformer = build_transformer(model_cfg)
-    return make_maf(
-        rngs,
+    return MAFlow(MAFlowParams(
+        rngs=rngs,
         dim=dim_obs,
         cond_dim=dim_cond,
         n_layers=int(model_cfg.get("n_layers", 8)),
@@ -61,7 +64,7 @@ def build_flow(rngs, dim_obs, dim_cond, model_cfg):
         permutation=str(model_cfg.get("permutation", "reverse")),
         standardize=bool(model_cfg.get("standardize", True)),
         zero_init=bool(model_cfg.get("zero_init", True)),
-    )
+    ))
 
 
 def build_training_config(config, checkpoint_dir):
@@ -117,8 +120,9 @@ def build_prior(task_name, validate_args=True):
 
     get_task(...).get_prior_dist() ships with validate_args=False, so its log_prob
     returns the in-support constant *everywhere* and does NOT bound the NLE potential —
-    NUTS then wanders outside the prior support and the posterior is wrong. Re-enabling
-    validation makes log_prob = -inf outside the support, confining NUTS to the box.
+    the sampler then wanders outside the prior support and the posterior is wrong.
+    Re-enabling validation makes log_prob = -inf outside the support, which both bounds
+    the SMC tempering target and confines any inner MCMC/MCLMC moves to the box.
     """
     prior = get_task(task_name).get_prior_dist()
     prior._validate_args = validate_args
@@ -127,15 +131,31 @@ def build_prior(task_name, validate_args=True):
     return prior
 
 
-def build_posterior(pipeline, prior, mcmc_cfg, use_ema=True):
-    """Wrap the trained likelihood flow + validated prior in an NLE NUTS posterior."""
+def build_posterior(pipeline, prior, use_ema=True):
+    """Wrap the trained likelihood flow + validated prior in an NLE posterior.
+
+    The sampler (and its config) is supplied separately at sample() time; NLEPosterior
+    only holds the flow + prior and builds the log-densities for a given observation.
+    """
     flow = pipeline.ema_model if use_ema else pipeline.model
-    return NLEPosterior(
-        flow,
-        prior,
-        num_warmup=int(mcmc_cfg.get("num_warmup", 1000)),
-        num_samples=int(mcmc_cfg.get("num_samples", 50000)),
-        num_chains=int(mcmc_cfg.get("num_chains", 1)),
+    return NLEPosterior(flow, prior)
+
+
+def build_sampler(sampler_cfg):
+    """Tempered SMC sampler for the multimodal two-moons posterior.
+
+    SMC walks a particle cloud along p(theta) * q(x_o|theta)^beta for beta: 0 -> 1,
+    populating every mode of the posterior (a single MCMC/MCLMC chain captures only
+    one). num_particles is the number of posterior samples returned. The inner
+    rejuvenation kernel defaults to adjusted MCLMC ("mclmc"); "nuts" is the fallback.
+    """
+    return TemperedSMC(
+        num_particles=int(sampler_cfg.get("num_particles", 20000)),
+        target_ess=float(sampler_cfg.get("target_ess", 0.5)),
+        num_mcmc_steps=int(sampler_cfg.get("num_mcmc_steps", 10)),
+        inner_kernel=str(sampler_cfg.get("inner_kernel", "mclmc")),
+        inner_step_size=float(sampler_cfg.get("inner_step_size", 0.1)),
+        inner_num_integration_steps=int(sampler_cfg.get("inner_num_integration_steps", 5)),
     )
 
 
@@ -162,7 +182,7 @@ def main():
     task_name = config["task_name"]
     model_cfg = config["model"]
     train_cfg = config["training"]
-    mcmc_cfg = config["mcmc"]
+    sampler_cfg = config["sampler"]
     eval_cfg = config["evaluation"]
 
     # --- task / data (raw loader: normalize=False; x is standardized in-flow) ---
@@ -195,16 +215,20 @@ def main():
         pipeline.train(nnx.Rngs(0))
         print("Training complete.")
 
-    # --- NLE posterior via NUTS for one observation ---
+    # --- NLE posterior via tempered SMC for one observation ---
     idx = int(eval_cfg["observation_idx"])
     obs, _ = task.get_reference(idx)
     true_param = np.asarray(task.get_true_parameters(idx)).reshape(-1)
 
     prior = build_prior(task_name)
-    posterior = build_posterior(pipeline, prior, mcmc_cfg, use_ema=True)
-    print(f"Sampling posterior with NUTS "
-          f"(warmup={mcmc_cfg['num_warmup']}, samples={mcmc_cfg['num_samples']})...")
-    samples = posterior.sample(jax.random.PRNGKey(0), obs)   # (n, dim_theta, 1)
+    posterior = build_posterior(pipeline, prior, use_ema=True)
+    sampler = build_sampler(sampler_cfg)
+    print(f"Sampling multimodal posterior with tempered SMC "
+          f"(num_particles={sampler.num_particles}, inner_kernel={sampler.inner_kernel})...")
+    samples, info = posterior.sample(jax.random.PRNGKey(0), obs,
+                                     sampler=sampler, return_info=True)  # (n, dim_theta, 1)
+    print(f"SMC done: {info.num_temperature_steps} temperature steps, "
+          f"log_evidence={info.log_evidence:.3f}")
 
     # --- contour plot of the posterior samples with the true value marked ---
     plot_marginals(np.asarray(samples[..., 0]), plot_levels=False, backend="seaborn",

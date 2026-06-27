@@ -26,27 +26,37 @@ import jax.numpy as jnp
 from flax import nnx
 import matplotlib.pyplot as plt
 
-from gensbi.normalizing_flows import make_tarflow
+from gensbi.models import TarFlow, TarFlowParams
 from gensbi.recipes import ConditionalFlowPipeline
 from gensbi.utils.plotting import plot_2d_dist_contour
 from sbibm_jax.data import TaskDataset
 
 
 def build_flow(rngs, dim_obs, dim_cond, model_cfg):
-    """Build the TransformerFlow (TarFlow) stack from the model config section."""
-    return make_tarflow(
-        rngs,
+    """Build the TarFlow (transformer autoregressive flow) stack from the model config.
+
+    TarFlowParams uses the head_dim/num_heads convention and derives the total width
+    channels = head_dim * num_heads. The config keeps specifying channels + head_dim
+    (channels must be divisible by head_dim), so num_heads = channels // head_dim here.
+    """
+    channels = int(model_cfg.get("channels", 64))
+    head_dim = int(model_cfg.get("head_dim", 16))
+    if channels % head_dim != 0:
+        raise ValueError(
+            f"channels ({channels}) must be divisible by head_dim ({head_dim})")
+    return TarFlow(TarFlowParams(
+        rngs=rngs,
         dim=dim_obs,
         cond_dim=dim_cond,
         num_blocks=int(model_cfg.get("num_blocks", 8)),
-        channels=int(model_cfg.get("channels", 64)),
         layers_per_block=int(model_cfg.get("layers_per_block", 2)),
-        head_dim=int(model_cfg.get("head_dim", 16)),
+        head_dim=head_dim,
+        num_heads=channels // head_dim,
         block_size=int(model_cfg.get("block_size", 1)),
         permutation=str(model_cfg.get("permutation", "flip")),
         standardize=bool(model_cfg.get("standardize", True)),
         zero_init=bool(model_cfg.get("zero_init", True)),
-    )
+    ))
 
 
 def build_training_config(config, checkpoint_dir):

@@ -23,7 +23,8 @@ import jax.numpy as jnp
 from flax import nnx
 import matplotlib.pyplot as plt
 
-from gensbi.normalizing_flows import make_maf, Affine, RQSpline
+from gensbi.normalizing_flows import Affine, RQSpline
+from gensbi.models import MAFlow, MAFlowParams
 from gensbi.recipes import ConditionalFlowPipeline
 from gensbi.utils.plotting import plot_2d_dist_contour
 from sbibm_jax.data import TaskDataset
@@ -42,8 +43,8 @@ def build_transformer(model_cfg):
 def build_flow(rngs, dim_obs, dim_cond, model_cfg):
     """Build the MAF Flow from the model config section."""
     transformer = build_transformer(model_cfg)
-    return make_maf(
-        rngs,
+    return MAFlow(MAFlowParams(
+        rngs=rngs,
         dim=dim_obs,
         cond_dim=dim_cond,
         n_layers=int(model_cfg.get("n_layers", 8)),
@@ -53,7 +54,7 @@ def build_flow(rngs, dim_obs, dim_cond, model_cfg):
         permutation=str(model_cfg.get("permutation", "reverse")),
         standardize=bool(model_cfg.get("standardize", True)),
         zero_init=bool(model_cfg.get("zero_init", True)),
-    )
+    ))
 
 
 def build_training_config(config, checkpoint_dir):

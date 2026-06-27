@@ -28,13 +28,19 @@ training:
   val_every: 100
   early_stopping: true
   experiment_id: 1
-  restore_model: false
-  train_model: true
+  restore_model: true
+  train_model: false
 
-mcmc:
-  num_warmup: 1000
-  num_samples: 50000
-  num_chains: 1
+# Tempered SMC sampler: two-moons posteriors are multimodal, so a single MCMC/MCLMC
+# chain would capture only one mode. SMC walks a particle cloud from prior -> posterior
+# and populates all modes. num_particles is the number of posterior samples returned.
+sampler:
+  num_particles: 20000
+  target_ess: 0.5
+  num_mcmc_steps: 10
+  inner_kernel: mclmc            # mclmc (adjusted MCLMC) | nuts
+  inner_step_size: 0.1
+  inner_num_integration_steps: 5
 
 evaluation:
   observation_idx: 8
