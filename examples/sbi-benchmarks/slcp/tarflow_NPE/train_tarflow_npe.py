@@ -35,6 +35,7 @@ import matplotlib.pyplot as plt
 
 from gensbi.models import TarFlow, TarFlowParams
 from gensbi.recipes import ConditionalFlowPipeline
+from gensbi.diagnostics.metrics import c2st
 from gensbi.utils.plotting import plot_marginals
 from sbibm_jax.data import TaskDataset
 
@@ -105,6 +106,54 @@ def apply_standardization(pipeline, mean, std):
     pipeline.model.set_standardization(mean, std)
     pipeline.ema_model.set_standardization(mean, std)
     pipeline._standardized = True
+
+
+def compute_c2st(pipeline, task, key=None):
+    """C2ST accuracy per observation for the raw and EMA posteriors.
+
+    For each of the task's reference observations, draw posterior samples from the
+    amortized flow q(theta | x_o) and score them against the reference posterior samples
+    with a classifier two-sample test. Accuracy ~0.5 means the learned posterior is
+    indistinguishable from the reference; ~1.0 means they are easily told apart. The
+    posterior sample count is matched to the reference count so the two c2st classes
+    stay balanced (an imbalance would shift the chance accuracy away from 0.5). NPE
+    sampling is amortized and cheap, so both the raw and EMA flows are evaluated.
+    Returns {"raw": [...], "ema": [...]} of per-observation accuracies.
+    """
+    if key is None:
+        key = jax.random.PRNGKey(42)
+    results = {"raw": [], "ema": []}
+    for tag, use_ema in (("raw", False), ("ema", True)):
+        for idx in range(1, task.num_observations + 1):
+            obs, reference_samples = task.get_reference(idx)
+            n = reference_samples.shape[0]
+            key, subkey = jax.random.split(key)
+            samples = pipeline.sample(subkey, obs, nsamples=n, use_ema=use_ema)
+            acc = float(c2st(reference_samples, samples[..., 0]))
+            results[tag].append(acc)
+            print(f"C2ST [{tag}] observation={idx}: {acc:.4f}")
+    return results
+
+
+def save_c2st_results(c2st_dir, accuracies, tag, experiment_id, method, model):
+    """Write per-observation c2st accuracies and their mean +- std to a txt file.
+
+    Mirrors scripts/train_sbi_model.py. tag is "raw" or "ema" and selects both the
+    filename suffix and the in-file labels. Returns the path written.
+    """
+    suffix = "_ema" if tag == "ema" else ""
+    label = "EMA " if tag == "ema" else ""
+    path = os.path.join(
+        c2st_dir, f"c2st_results{suffix}_{experiment_id}_{method}_{model}.txt"
+    )
+    with open(path, "w") as f:
+        for idx, acc in enumerate(accuracies, start=1):
+            f.write(f"C2ST accuracy {label}for observation={idx}: {acc:.4f}\n")
+        f.write(
+            f"Average C2ST accuracy {label}: "
+            f"{np.mean(accuracies):.4f} +- {np.std(accuracies):.4f}\n"
+        )
+    return path
 
 
 def parse_args():
@@ -178,6 +227,26 @@ def main():
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close("all")
     print(f"Saved posterior marginals to {out_path}")
+
+    # --- C2ST: score the amortized posterior against the reference posterior ---
+    strategy = config.get("strategy", {})
+    method = strategy.get("method", "npe")
+    model = strategy.get("model", "tarflow")
+    experiment_id = train_cfg.get("experiment_id", 1)
+
+    c2st_dir = os.path.join(exp_dir, "c2st_results")
+    os.makedirs(c2st_dir, exist_ok=True)
+
+    print(f"Running C2ST over {task.num_observations} observations...")
+    c2st_results = compute_c2st(pipeline, task)
+    for tag in ("raw", "ema"):
+        accs = c2st_results[tag]
+        label = "EMA" if tag == "ema" else "raw"
+        print(f"Average C2ST accuracy [{label}]: "
+              f"{np.mean(accs):.4f} +- {np.std(accs):.4f}")
+        path = save_c2st_results(c2st_dir, accs, tag, experiment_id, method, model)
+        print(f"Saved C2ST results to {path}")
+    print("C2ST complete.")
 
 
 if __name__ == "__main__":

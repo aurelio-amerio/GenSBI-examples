@@ -35,6 +35,7 @@ from gensbi.normalizing_flows import Affine, RQSpline
 from gensbi.models import MAFlow, MAFlowParams
 from gensbi.recipes import ConditionalFlowPipeline
 from gensbi.inference import NLEPosterior, TemperedSMC
+from gensbi.diagnostics.metrics import c2st
 from gensbi.utils.plotting import plot_marginals
 from sbibm_jax.data import TaskDataset
 from sbibm_jax.tasks import get_task
@@ -163,6 +164,57 @@ def build_sampler(sampler_cfg):
     )
 
 
+def compute_c2st(pipeline, task, prior, sampler_cfg, key=None):
+    """C2ST accuracy per observation for the raw and EMA NLE posteriors.
+
+    For each of the task's reference observations, rebuild the NLE posterior (likelihood
+    flow + prior) and draw posterior samples with tempered SMC, then score them against
+    the reference posterior samples with a classifier two-sample test. Accuracy ~0.5
+    means the recovered posterior is indistinguishable from the reference; ~1.0 means
+    they are easily told apart. Each SMC sample is subsampled to the reference count so
+    the two c2st classes stay balanced (an imbalance would shift the chance accuracy away
+    from 0.5). SMC is run once per observation for both the raw and EMA flows. Returns
+    {"raw": [...], "ema": [...]} of per-observation accuracies.
+    """
+    if key is None:
+        key = jax.random.PRNGKey(0)
+    results = {"raw": [], "ema": []}
+    for tag, use_ema in (("raw", False), ("ema", True)):
+        posterior = build_posterior(pipeline, prior, use_ema=use_ema)
+        for idx in range(1, task.num_observations + 1):
+            obs, reference_samples = task.get_reference(idx)
+            sampler = build_sampler(sampler_cfg)
+            key, subkey = jax.random.split(key)
+            samples = posterior.sample(subkey, obs, sampler=sampler)
+            post = samples[..., 0]
+            n = min(reference_samples.shape[0], post.shape[0])
+            acc = float(c2st(reference_samples[:n], post[:n]))
+            results[tag].append(acc)
+            print(f"C2ST [{tag}] observation={idx}: {acc:.4f}")
+    return results
+
+
+def save_c2st_results(c2st_dir, accuracies, tag, experiment_id, method, model):
+    """Write per-observation c2st accuracies and their mean +- std to a txt file.
+
+    Mirrors scripts/train_sbi_model.py. tag is "raw" or "ema" and selects both the
+    filename suffix and the in-file labels. Returns the path written.
+    """
+    suffix = "_ema" if tag == "ema" else ""
+    label = "EMA " if tag == "ema" else ""
+    path = os.path.join(
+        c2st_dir, f"c2st_results{suffix}_{experiment_id}_{method}_{model}.txt"
+    )
+    with open(path, "w") as f:
+        for idx, acc in enumerate(accuracies, start=1):
+            f.write(f"C2ST accuracy {label}for observation={idx}: {acc:.4f}\n")
+        f.write(
+            f"Average C2ST accuracy {label}: "
+            f"{np.mean(accuracies):.4f} +- {np.std(accuracies):.4f}\n"
+        )
+    return path
+
+
 def parse_args():
     here = os.path.dirname(os.path.abspath(__file__))
     default_config = os.path.join(here, "config", "config_maf_nle.yaml")
@@ -241,6 +293,27 @@ def main():
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close("all")
     print(f"Saved posterior marginals to {out_path}")
+
+    # --- C2ST: score the SMC posterior against the reference posterior ---
+    strategy = config.get("strategy", {})
+    method = strategy.get("method", "nle")
+    model = strategy.get("model", "maf")
+    experiment_id = train_cfg.get("experiment_id", 1)
+
+    c2st_dir = os.path.join(exp_dir, "c2st_results")
+    os.makedirs(c2st_dir, exist_ok=True)
+
+    print(f"Running C2ST over {task.num_observations} observations "
+          f"(tempered SMC per observation, x2 for raw+EMA; this is slow)...")
+    c2st_results = compute_c2st(pipeline, task, prior, sampler_cfg)
+    for tag in ("raw", "ema"):
+        accs = c2st_results[tag]
+        label = "EMA" if tag == "ema" else "raw"
+        print(f"Average C2ST accuracy [{label}]: "
+              f"{np.mean(accs):.4f} +- {np.std(accs):.4f}")
+        path = save_c2st_results(c2st_dir, accs, tag, experiment_id, method, model)
+        print(f"Saved C2ST results to {path}")
+    print("C2ST complete.")
 
 
 if __name__ == "__main__":
