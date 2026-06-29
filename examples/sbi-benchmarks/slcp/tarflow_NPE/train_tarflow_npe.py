@@ -122,6 +122,9 @@ def compute_c2st(pipeline, task, key=None):
     for tag, use_ema in (("raw", False), ("ema", True)):
         for idx in range(1, task.num_observations + 1):
             obs, reference_samples = task.get_reference(idx)
+            obs = jnp.asarray(obs)
+            if obs.ndim == 1:
+                obs = obs[None, :, None]  # (dim_x,) -> (1, dim_x, 1)
             n = reference_samples.shape[0]
             key, subkey = jax.random.split(key)
             samples = pipeline.sample(subkey, obs, nsamples=n, use_ema=use_ema)
@@ -209,6 +212,9 @@ def main():
     # --- amortized NPE posterior: sample q(theta|x_o) directly, no inference step ---
     idx = int(eval_cfg["observation_idx"])
     obs, _ = task.get_reference(idx)
+    obs = jnp.asarray(obs)
+    if obs.ndim == 1:
+        obs = obs[None, :, None]  # (dim_x,) -> (1, dim_x, 1)
     true_param = np.asarray(task.get_true_parameters(idx)).reshape(-1)
 
     nsamples = int(eval_cfg.get("nsamples_posterior", 20000))

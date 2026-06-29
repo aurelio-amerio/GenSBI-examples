@@ -112,7 +112,10 @@ def make_density_grid(ref_samples, grid_size, padding=0.5):
 
 def posterior_density(pipeline, grid_pts, obs, grid_size, use_ema=True):
     """Evaluate q(θ|obs) on grid_pts and reshape to (G, G) aligned with the meshgrid."""
-    grid_pts = jnp.asarray(grid_pts)                       # (G*G, 2)
+    grid_pts = jnp.asarray(grid_pts)[..., None]            # (G*G, 2) -> (G*G, 2, 1)
+    obs = jnp.asarray(obs)
+    if obs.ndim == 1:
+        obs = obs[None, :, None]                            # (dim,) -> (1, dim, 1)
     logp = pipeline.log_prob(grid_pts, obs, use_ema=use_ema)  # (G*G,)
     Z = np.asarray(jnp.exp(logp)).reshape(grid_size, grid_size)
     return Z
