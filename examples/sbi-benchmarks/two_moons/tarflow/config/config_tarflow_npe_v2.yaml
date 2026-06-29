@@ -6,9 +6,9 @@ strategy:
 
 model:
   num_blocks: 8              # transformer blocks (mirrors MAF n_layers)
-  channels: 64               # token/feature width (mirrors MAF nn_width)
+  num_heads: 4               # attention heads; total width = head_dim * num_heads
   layers_per_block: 2        # attention layers per block (mirrors MAF nn_depth)
-  head_dim: 16               # attention head dim; channels must be divisible by it
+  head_dim: 16               # attention head dim
   block_size: 1              # tokens of size block_size; dim must be divisible by it
   permutation: flip          # flip | random
   standardize: true

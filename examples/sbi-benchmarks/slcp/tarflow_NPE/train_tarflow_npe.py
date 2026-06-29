@@ -44,16 +44,12 @@ def build_flow(rngs, dim_obs, dim_cond, model_cfg):
     """Build the TarFlow (transformer autoregressive flow) stack from the model config.
 
     TarFlowParams uses the head_dim/num_heads convention and derives the total width
-    channels = head_dim * num_heads. The config keeps specifying channels + head_dim
-    (channels must be divisible by head_dim), so num_heads = channels // head_dim here.
+    channels = head_dim * num_heads.
 
     For NPE, dim_obs == task.dim_theta (autoregressive target) and dim_cond == task.dim_x.
     """
-    channels = int(model_cfg.get("channels", 64))
     head_dim = int(model_cfg.get("head_dim", 16))
-    if channels % head_dim != 0:
-        raise ValueError(
-            f"channels ({channels}) must be divisible by head_dim ({head_dim})")
+    num_heads = int(model_cfg.get("num_heads", 4))
     return TarFlow(TarFlowParams(
         rngs=rngs,
         dim=dim_obs,
@@ -61,7 +57,7 @@ def build_flow(rngs, dim_obs, dim_cond, model_cfg):
         num_blocks=int(model_cfg.get("num_blocks", 8)),
         layers_per_block=int(model_cfg.get("layers_per_block", 2)),
         head_dim=head_dim,
-        num_heads=channels // head_dim,
+        num_heads=num_heads,
         block_size=int(model_cfg.get("block_size", 1)),
         permutation=str(model_cfg.get("permutation", "flip")),
         standardize=bool(model_cfg.get("standardize", True)),
