@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 from gensbi.recipes import ConditionalPipeline
 from gensbi.core import FlowMatchingMethod
 from gensbi.recipes.flux1 import parse_flux1_params, parse_training_config
-from gensbi.recipes.utils import patchify_2d
+from gensbi.models.core.patching import patchify_2d
 
 from gensbi.experimental.models.autoencoders import AutoEncoder2D, AutoEncoderParams
 from gensbi.experimental.recipes.vae_pipeline import parse_autoencoder_params

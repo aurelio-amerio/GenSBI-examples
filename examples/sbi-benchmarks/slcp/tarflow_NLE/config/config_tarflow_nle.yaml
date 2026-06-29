@@ -10,8 +10,8 @@ strategy:
 # (num_heads = channels // head_dim). The SLCP likelihood is genuinely simple
 # (4 i.i.d. 2-D Gaussians), so a modest flow suffices.
 model:
-  num_blocks: 4              # transformer blocks (mirrors MAF n_layers)
-  channels: 48               # token/feature width (mirrors MAF nn_width)
+  num_blocks: 6              # transformer blocks (mirrors MAF n_layers)
+  channels: 72               # token/feature width (mirrors MAF nn_width)
   layers_per_block: 2        # attention layers per block (mirrors MAF nn_depth)
   head_dim: 12               # attention head dim; channels must be divisible by it
   block_size: 1              # tokens of size block_size; dim must be divisible by it
@@ -27,12 +27,12 @@ optimizer:
 
 training:
   batch_size: 1024
-  nsamples: 100000            # training subset; MUST be < task.max_samples
-  nsteps: 50000
+  nsamples: 500000            # training subset; MUST be < task.max_samples
+  nsteps: 100000
   ema_decay: 0.999
   val_every: 100
   early_stopping: false
-  experiment_id: 3
+  experiment_id: 4
   restore_model: false        # no checkpoint yet: train from scratch first run
   train_model: true
 
