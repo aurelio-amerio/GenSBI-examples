@@ -50,6 +50,13 @@ def build_flow(rngs, dim_obs, dim_cond, model_cfg):
     channels = head_dim * num_heads.
 
     For NLE, dim_obs == task.dim_x (autoregressive target) and dim_cond == task.dim_theta.
+
+    The conditioner is selected by ``model.cond`` (default ``"bias"``): ``"bias"`` embeds
+    theta as a single per-token additive bias (AdditiveBiasConditioner), while ``"vector"``
+    embeds each theta coordinate as its own prefix token (VectorConditioner) -- richer
+    conditioning at the cost of M = dim_cond extra tokens. The pipeline already feeds the
+    condition as (B, dim_cond, cond_channels), so both conditioners are drop-in; for the
+    tabular SLCP theta, cond_channels stays 1.
     """
     head_dim = int(model_cfg.get("head_dim", 16))
     num_heads = int(model_cfg.get("num_heads", 4))
@@ -57,6 +64,8 @@ def build_flow(rngs, dim_obs, dim_cond, model_cfg):
         rngs=rngs,
         dim=dim_obs,
         cond_dim=dim_cond,
+        cond=str(model_cfg.get("cond", "bias")),
+        cond_channels=int(model_cfg.get("cond_channels", 1)),
         num_blocks=int(model_cfg.get("num_blocks", 8)),
         layers_per_block=int(model_cfg.get("layers_per_block", 2)),
         head_dim=head_dim,

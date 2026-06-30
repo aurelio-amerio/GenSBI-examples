@@ -2,18 +2,12 @@ task_name: slcp
 
 strategy:
   method: nle
-  model: tarflow_vector
+  model: tarflow
 
 # SLCP NLE flow: q(x | theta) over the 8-D observation conditioned on the 5-D
 # parameter. TransformerFlow (TarFlow) is a transformer autoregressive flow;
 # total width = head_dim * num_heads. The SLCP likelihood is genuinely simple
 # (4 i.i.d. 2-D Gaussians), so a modest flow suffices.
-#
-# This variant swaps the conditioner: instead of the default per-token additive
-# bias ("bias"), each of the 5 theta coordinates becomes its own prefix token
-# ("vector" -> VectorConditioner). Richer conditioning at the cost of M = 5 extra
-# tokens per block; everything else is identical to config_tarflow_nle_v4.yaml so
-# the two runs are directly comparable.
 model:
   num_blocks: 6              # transformer blocks (mirrors MAF n_layers)
   num_heads: 6               # attention heads; total width = head_dim * num_heads
@@ -23,8 +17,6 @@ model:
   permutation: flip          # flip | random
   standardize: true
   zero_init: true
-  cond: vector               # bias (additive) | vector (per-coordinate prefix tokens) | image
-  cond_channels: 1           # channels per theta coordinate; tabular SLCP theta is scalar
 
 optimizer:
   warmup_steps: 500
@@ -39,7 +31,7 @@ training:
   ema_decay: 0.999
   val_every: 100
   early_stopping: false
-  experiment_id: 5            # distinct from v4 so checkpoints/c2st outputs don't collide
+  experiment_id: 4
   restore_model: false        # no checkpoint yet: train from scratch first run
   train_model: true
 
