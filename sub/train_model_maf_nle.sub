@@ -1,0 +1,28 @@
+experiment_name = maf_nle_slcp
+version = 1a    
+workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/slcp/maf_NLE
+script_path = train_maf_nle.py
+
+universe = vanilla
+
+request_memory = 64 GB
+request_cpus = 8
+
+executable = train_model.sh
+arguments = "$(workdir) $(script_path) --config config/config_maf_nle.yaml"
+getenv = True
+request_gpus = 1
+requirements = (Machine != "mlwn11.ific.uv.es")
++UseNvidiaA100 = True
+
+
+log                     = condor_logs/logs_$(experiment_name)_$(version).log
+output                  = condor_logs/outfile_$(experiment_name)_$(version).out
+error                   = condor_logs/errors_$(experiment_name)_$(version).err
+
+#########
+
+queue 
+
+
+

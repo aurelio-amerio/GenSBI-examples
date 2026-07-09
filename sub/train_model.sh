@@ -2,6 +2,6 @@
 cd $1
 eval "$(conda shell.bash hook)"
 conda activate /lhome/ific/a/aamerio/miniforge3/envs/gensbi
-python $2
+python $2 $3 $4 $5 $6
 
 exit
