@@ -40,8 +40,8 @@ training:
   val_every: 100
   early_stopping: false
   experiment_id: 5            # distinct from v4 so checkpoints/c2st outputs don't collide
-  restore_model: false        # no checkpoint yet: train from scratch first run
-  train_model: true
+  restore_model: true         # no checkpoint yet: train from scratch first run
+  train_model: false
 
 # Tempered SMC sampler: the SLCP posterior is complex and multimodal (the scale
 # params enter the likelihood squared and the correlation through tanh, giving
