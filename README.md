@@ -1,8 +1,8 @@
 # GenSBI Examples
 <!-- [![Build](https://github.com/aurelio-amerio/GenSBI-examples/actions/workflows/python-app.yml/badge.svg)](https://github.com/aurelio-amerio/GenSBI-examples/actions/workflows/python-app.yml)
 ![Coverage](https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/img/badges/coverage.svg) -->
-[![Downloads](https://pepy.tech/badge/gensbi)](https://pepy.tech/project/gensbi)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20407738.svg)](https://doi.org/10.5281/zenodo.20407738)
+<!-- [![Downloads](https://pepy.tech/badge/gensbi)](https://pepy.tech/project/gensbi)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20407738.svg)](https://doi.org/10.5281/zenodo.20407738) -->
 
 This repository contains a collection of examples, tutorials, and recipes for **GenSBI**, a JAX-based library for Simulation-Based Inference using generative methods.
 
