@@ -1,0 +1,41 @@
+# GRF-32 TarFlow field-level NLE — experiment 1: rope + vector-prefix cond
+model:
+  img_size: 32
+  patch_size: 4            # -> T = 64 tokens, F = 16 per token
+  img_channels: 1
+  cond_dim: 2              # theta = (log_std, alpha) -> 2 prefix tokens
+  use_rope: true           # 2D rotary PE; learned pos_embed dropped
+  rope_theta: 10000
+  head_dim: 32             # % 4 == 0 required by rope
+  num_heads: 8             # channels = 256
+  num_blocks: 8
+  layers_per_block: 2
+  permutation: flip
+
+optimizer:
+  max_lr: 1.0e-4
+  min_lr: 1.0e-6
+  warmup_steps: 500
+  decay_transition: 0.80
+
+training:
+  batch_size: 256
+  val_batch_size: 256
+  max_workers: 4           # online sim workers (grain prefetch if offline)
+  online: true             # fresh prior+simulator draws every batch
+  nsteps: 10000
+  ema_decay: 0.999
+  val_every: 100
+  early_stopping: false    # 10k steps IS the budget for this baseline
+  multistep: 1
+  experiment_id: 1
+  train_model: true
+  restore_model: false
+  seed: 0
+
+sampling:
+  num_thetas: 3            # test rows used for plots
+  nsamples: 16             # fields sampled per theta (P(k) statistics)
+  nsamples_grid: 3         # samples shown per row in the field grid
+  nsim_pk: 64              # fresh simulator maps per theta for the P(k) reference
+  nll_num_test: 256        # held-out fields for the bits/dim NLL
