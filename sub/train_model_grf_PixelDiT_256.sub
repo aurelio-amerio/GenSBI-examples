@@ -1,0 +1,26 @@
+experiment_name = grf
+version = 12b
+workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/gaussian_random_field_256
+script_path = train-grf.py
+
+universe = vanilla
+
+request_memory = 64 GB
+request_cpus = 8
+
+executable = train_model.sh
+arguments = "$(workdir) $(script_path) --config config/config_$(version).yaml"
+getenv = True
+request_gpus = 1
+# bf16 matmuls (param_dtype: bfloat16) need Ampere+ -> A100/H100 nodes only
+# gpus_minimum_capability = 8.0
++UseNvidiaA100 = True
+#+UseNvidiaH100 = True
+
+log                     = condor_logs/logs_$(experiment_name)_$(version).log
+output                  = condor_logs/outfile_$(experiment_name)_$(version).out
+error                   = condor_logs/errors_$(experiment_name)_$(version).err
+
+#########
+
+queue

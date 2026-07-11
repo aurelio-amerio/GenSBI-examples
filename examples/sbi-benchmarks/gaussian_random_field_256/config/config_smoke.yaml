@@ -1,0 +1,37 @@
+# Wiring smoke test: tiny model, 2 steps, CPU. NOT a learning check.
+fielddit:
+  in_channels: 1
+  field_shape: [256, 256]
+  encoder_widths: [8, 16, 16, 16]       # D=3 -> 32x32 meeting grid
+  patch_size: 2                          # -> 256 tokens
+  cond_dim: 2
+  cond_in_channels: 1
+  num_heads: 2
+  axes_dim: [4, 6, 6]                    # hidden 32
+  depth: 1
+  depth_single_blocks: 1
+  res_blocks_down: 1
+  res_blocks_up: 1
+  param_dtype: float32
+
+training:
+  batch_size: 2
+  val_batch_size: 2
+  max_workers: null        # no mp_prefetch on the login node
+  nsteps: 2
+  warmup_steps: 1
+  max_lr: 1.0e-4
+  val_every: 1
+  early_stopping: false
+  multistep: 1
+  decay_transition: 0.5    # avoids cosine_decay_steps=0 at nsteps=2
+  experiment_id: 99        # separate checkpoint slot from the real run
+  train_model: true
+  restore_model: false
+  seed: 0
+
+sampling:
+  num_thetas: 2
+  nsamples: 2
+  nsamples_grid: 2
+  step_size: 0.5           # 2 Euler steps — wiring only

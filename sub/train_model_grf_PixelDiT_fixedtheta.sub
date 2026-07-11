@@ -1,0 +1,24 @@
+experiment_name = grf
+version = 4f
+workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/gaussian_random_field
+script_path = train-grf-fixedtheta.py
+
+universe = vanilla
+
+request_memory = 32 GB
+request_cpus = 8
+
+executable = train_model.sh
+arguments = "$(workdir) $(script_path) --config config/config_$(version).yaml"
+getenv = True
+request_gpus = 1
+# bf16 matmuls (param_dtype: bfloat16) need Ampere+ -> A100/H100 nodes only
++UseNvidiaA100 = True
+
+log                     = condor_logs/logs_$(experiment_name)_fixedtheta_$(version).log
+output                  = condor_logs/outfile_$(experiment_name)_fixedtheta_$(version).out
+error                   = condor_logs/errors_$(experiment_name)_fixedtheta_$(version).err
+
+#########
+
+queue

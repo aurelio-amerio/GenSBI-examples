@@ -1,0 +1,45 @@
+# GRF-32 PixelDiT — fixed-theta diagnostic (experiment 41 / version 4f)
+# Single held-constant theta + logit-normal t-sampling, 100k steps. Tests whether
+# PixelDiT can learn ONE GRF's 2-point structure with enough training.
+# NOTE: cond is constant here -> does NOT test conditioning (intentional).
+pixeldit:
+  in_channels: 1
+  field_shape: [32, 32]
+  patch_size: 4
+  hidden_size: 384
+  pixel_hidden_size: 16
+  patch_depth: 6
+  pixel_depth: 2
+  num_heads: 6
+  cond_dim: 2
+  cond_in_channels: 1
+  cond_id_embedding: absolute
+  use_cond_rope: false
+  param_dtype: bfloat16
+
+time_sampling:
+  dist: logitnormal
+  logitnorm_mean: 0.0
+  logitnorm_std: 1.0
+
+fixed_theta: [0.1, 3.0]        # [log_std, alpha]; alpha=3 = intermediate smoothness
+
+training:
+  batch_size: 128
+  val_batch_size: 128
+  nsteps: 100000
+  max_lr: 1.0e-4
+  val_every: 100
+  early_stopping: false
+  multistep: 1
+  ema_decay: 0.999            # EMA window ~ 1/(1-decay) steps; sample() uses the EMA model by default (use_ema=True)
+  decay_transition: 0.80      # fraction of nsteps at constant max_lr before cosine decay to min_lr begins
+  experiment_id: 41
+  train_model: true
+  restore_model: false
+  seed: 0
+
+sampling:
+  nsamples: 64                 # truth + posterior samples for P(k) statistics
+  nsamples_grid: 4
+  step_size: 0.01              # Euler ODE step (100 steps)
