@@ -141,3 +141,16 @@ def test_plot_helpers_write_files(tmp_path):
                            path=str(p_pk))
     mod.plot_losses(np.ones(10), np.ones(10), val_every=100, path=str(p_loss))
     assert p_grid.exists() and p_pk.exists() and p_loss.exists()
+
+
+def test_main_exists_and_smoke_config_is_tiny():
+    import yaml
+    mod = _load_script_module()
+    assert callable(mod.main)
+    smoke = (_REPO_ROOT / "examples/sbi-benchmarks/gaussian_random_field_256"
+             / "tarflow/config/config_smoke.yaml")
+    with open(smoke) as f:
+        cfg = yaml.safe_load(f)
+    assert cfg["training"]["nsteps"] <= 50          # cheap enough for CPU
+    assert cfg["model"]["head_dim"] % 4 == 0        # rope requirement holds
+    assert cfg["sampling"]["nsamples"] <= 4

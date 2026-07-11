@@ -1,0 +1,43 @@
+# CPU smoke config: verifies the full train -> NLL -> sample -> plot path.
+# Not a science run. Requires the gaussian_random_field_256 HF dataset cache
+# (val loader + df_test come from the offline split).
+model:
+  img_size: 256
+  patch_size: 32           # -> T = 64 tokens (fast CPU sampling)
+  img_channels: 1
+  cond_dim: 2
+  use_rope: true
+  rope_theta: 10000
+  head_dim: 16
+  num_heads: 2             # channels = 32
+  num_blocks: 2
+  layers_per_block: 1
+  permutation: flip
+
+optimizer:
+  max_lr: 1.0e-4
+  min_lr: 1.0e-6
+  warmup_steps: 5
+  decay_transition: 0.80
+
+training:
+  batch_size: 8
+  val_batch_size: 8
+  max_workers: null
+  online: true
+  nsteps: 20
+  ema_decay: 0.999
+  val_every: 10
+  early_stopping: false
+  multistep: 1
+  experiment_id: 99
+  train_model: true
+  restore_model: false
+  seed: 0
+
+sampling:
+  num_thetas: 1
+  nsamples: 2
+  nsamples_grid: 2
+  nsim_pk: 4
+  nll_num_test: 8
