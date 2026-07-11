@@ -111,3 +111,33 @@ def test_heldout_bits_per_dim_matches_gaussian_at_identity_init():
     got = mod.heldout_bits_per_dim(flow, fields, theta, batch_size=128)
     expected = 0.5 * np.log2(2 * np.pi * np.e)
     assert abs(got - expected) < 0.05
+
+
+def test_radial_power_spectrum_white_noise_level_and_range():
+    mod = _load_script_module()
+    rng = np.random.default_rng(0)
+    field = rng.normal(size=(128, 128))
+    k, pk = mod.radial_power_spectrum(field)
+    assert k.shape == pk.shape and len(k) > 10
+    assert k.min() > 0 and k.max() <= 0.5      # cycles/pixel, Nyquist bound
+    assert np.all(pk > 0)
+    # white noise: E[P(k)] = sigma^2 = 1; high-k bins average many modes
+    high = k > 0.1
+    assert abs(pk[high].mean() - 1.0) < 0.1
+
+
+def test_plot_helpers_write_files(tmp_path):
+    mod = _load_script_module()
+    rng = np.random.default_rng(0)
+    truths = rng.normal(size=(2, 16, 16))
+    samples = [rng.normal(size=(3, 16, 16)) for _ in range(2)]
+    sim_fields = [rng.normal(size=(4, 16, 16)) for _ in range(2)]
+    thetas = np.array([[0.0, 2.0], [0.5, 3.0]])
+    p_grid = tmp_path / "grid.png"
+    p_pk = tmp_path / "pk.png"
+    p_loss = tmp_path / "loss.png"
+    mod.plot_field_grid(truths, samples, thetas, n_show=3, path=str(p_grid))
+    mod.plot_power_spectra(sim_fields, samples, thetas, field_size=16,
+                           path=str(p_pk))
+    mod.plot_losses(np.ones(10), np.ones(10), val_every=100, path=str(p_loss))
+    assert p_grid.exists() and p_pk.exists() and p_loss.exists()

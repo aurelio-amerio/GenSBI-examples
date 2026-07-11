@@ -123,3 +123,121 @@ def heldout_bits_per_dim(flow, fields_norm, theta_norm, batch_size=64):
                            jnp.asarray(theta_norm[i:i + batch_size]))
         lps.append(np.asarray(lp, dtype=np.float64))
     return float(-np.concatenate(lps).mean() / (ndim * np.log(2.0)))
+
+
+def radial_power_spectrum(field, nbins=40):
+    """Isotropic P(k) of a 2D field; k in cycles/pixel (Nyquist = 0.5)."""
+    # float64 throughout: with float32 weights np.histogram accumulates in
+    # float32, and for steep spectra the high-k bins (~1e-5 against a ~1e4
+    # running total) round away to exactly zero.
+    field = np.asarray(field, dtype=np.float64)
+    H, W = field.shape
+    pk2d = np.abs(np.fft.fft2(field)) ** 2 / (H * W)
+    kx, ky = np.meshgrid(np.fft.fftfreq(H), np.fft.fftfreq(W), indexing="ij")
+    knorm = np.sqrt(kx**2 + ky**2).ravel()
+    # log-spaced bins with geometric centers: equal width on the loglog plot,
+    # so a steep power law isn't distorted by wide-in-log low-k bins.
+    kbins = np.geomspace(knorm[knorm > 0].min(), 0.5, nbins + 1)
+    counts, _ = np.histogram(knorm, kbins)
+    power, _ = np.histogram(knorm, kbins, weights=pk2d.ravel())
+    kcent = np.sqrt(kbins[1:] * kbins[:-1])
+    good = counts > 0
+    return kcent[good], power[good] / counts[good]
+
+
+def plot_losses(loss_array, val_loss_array, val_every, path):
+    # train + val are both recorded once per validation event (every
+    # val_every steps), so both share the same step-scaled x-axis.
+    loss = np.asarray(loss_array, dtype=np.float32)
+    val = np.asarray(val_loss_array, dtype=np.float32)
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(np.arange(1, len(loss) + 1) * val_every, loss,
+            label="train (smoothed)", alpha=0.5)
+    ax.plot(np.arange(1, len(val) + 1) * val_every, val, label="val")
+    ax.set_xlabel("step")
+    ax.set_ylabel("loss")
+    ax.set_yscale("log")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=100, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_field_grid(truths, samples, thetas, n_show, path):
+    """One row per theta: true field | n_show posterior samples."""
+    n = len(truths)
+    fig, axes = plt.subplots(
+        n, n_show + 1, figsize=(3 * (n_show + 1), 3.2 * n), squeeze=False
+    )
+    for i in range(n):
+        vmax = float(np.percentile(np.abs(truths[i]), 99.5))
+        axes[i][0].imshow(truths[i], vmin=-vmax, vmax=vmax, cmap="coolwarm")
+        axes[i][0].set_title(
+            f"truth | log_std={thetas[i, 0]:.2f}, alpha={thetas[i, 1]:.2f}",
+            fontsize=9,
+        )
+        for j in range(n_show):
+            axes[i][j + 1].imshow(
+                samples[i][j], vmin=-vmax, vmax=vmax, cmap="coolwarm"
+            )
+            axes[i][j + 1].set_title(f"sample {j + 1}", fontsize=9)
+        for ax in axes[i]:
+            ax.set_xticks([])
+            ax.set_yticks([])
+    fig.tight_layout()
+    fig.savefig(path, dpi=100, bbox_inches="tight")
+    plt.close(fig)
+
+
+def theory_power_spectrum(k, log_std, alpha, field_size):
+    """Analytic conditional P(k) of the GRF simulator at (log_std, alpha).
+
+    The simulator builds sqrt(P) = (knorm*(|alpha|+1e-7))**(-alpha/2)*exp(log_std)
+    with knorm the fftfreq grid (= the plotted k). Propagating that through the
+    ifftn + radial_power_spectrum normalization (verified numerically) gives the
+    measured spectrum E[P(k)] = exp(2 log_std) * (k*(|alpha|+1e-7))**(-alpha) / N^2.
+    """
+    return np.exp(2.0 * log_std) * (k * (abs(alpha) + 1e-7)) ** (-alpha) / field_size**2
+
+
+def plot_power_spectra(sim_fields, samples, thetas, field_size, path):
+    """Per theta: model-sample P(k) vs the true conditional P(k).
+
+    Truth reference is the mean P(k) over `sim_fields[i]` fresh simulator maps
+    at theta_i (solid black + 1 sigma realization band) -- averaging beats down
+    the per-realization cosmic variance a single map shows in the low-k bins --
+    with the analytic power law overlaid dashed. Model samples: C0 mean +/- sigma.
+    """
+    n = len(samples)
+    fig, axes = plt.subplots(1, n, figsize=(4.5 * n, 3.8), squeeze=False)
+    for i in range(n):
+        ax = axes[0][i]
+        log_std, alpha = float(thetas[i, 0]), float(thetas[i, 1])
+
+        # truth: mean +/- 1 sigma P(k) over fresh simulator realizations
+        k, _ = radial_power_spectrum(sim_fields[i][0])
+        pk_sim = np.stack([radial_power_spectrum(f)[1] for f in sim_fields[i]])
+        sim_mean, sim_std = pk_sim.mean(axis=0), pk_sim.std(axis=0)
+        pk_theory = theory_power_spectrum(k, log_std, alpha, field_size)
+
+        # model samples
+        pks = np.stack([radial_power_spectrum(s)[1] for s in samples[i]])
+        mean, std = pks.mean(axis=0), pks.std(axis=0)
+
+        ax.loglog(k, sim_mean, "k-", label=f"simulator (mean of {len(sim_fields[i])})")
+        ax.fill_between(
+            k, np.maximum(sim_mean - sim_std, 1e-20), sim_mean + sim_std,
+            color="k", alpha=0.15,
+        )
+        ax.loglog(k, pk_theory, "k--", label="theory")
+        ax.loglog(k, mean, "C0-", label="samples (mean)")
+        ax.fill_between(
+            k, np.maximum(mean - std, 1e-20), mean + std, color="C0", alpha=0.3
+        )
+        ax.set_title(f"log_std={log_std:.2f}, alpha={alpha:.2f}", fontsize=9)
+        ax.set_xlabel("k [cycles/pixel]")
+        ax.legend(fontsize=8)
+    axes[0][0].set_ylabel("P(k)")
+    fig.tight_layout()
+    fig.savefig(path, dpi=100, bbox_inches="tight")
+    plt.close(fig)
