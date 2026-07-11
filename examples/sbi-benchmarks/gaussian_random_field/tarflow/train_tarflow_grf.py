@@ -92,13 +92,15 @@ def build_training_config(config, checkpoint_dir):
 def to_obs_cond(batch):
     """Loader yields (theta, x); the flow pipeline wants (obs=x, cond=theta).
 
-    x already arrives in native image shape (B, 32, 32, 1); theta (B, 2)
-    gains the channel axis the VectorConditioner expects: (B, 2, 1).
+    sbibm_jax's collate already tokenizes both: x arrives in native image
+    shape (B, 32, 32, 1), theta already carries the trailing channel axis
+    the VectorConditioner expects, (B, 2, 1) -- no further reshape needed
+    here, just the obs/cond swap.
     Module-level (not a lambda) so it survives pickling if it ever moves
     before a prefetch stage.
     """
     theta, x = batch
-    return x, theta[..., None]
+    return x, theta
 
 
 def heldout_bits_per_dim(flow, fields_norm, theta_norm, batch_size=64):
@@ -237,3 +239,144 @@ def plot_power_spectra(sim_fields, samples, thetas, field_size, path):
     fig.tight_layout()
     fig.savefig(path, dpi=100, bbox_inches="tight")
     plt.close(fig)
+
+
+_NLL_BATCH = 64
+
+
+def main(config_path):
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
+    model_cfg = cfg["model"]
+    tcfg = cfg["training"]
+    scfg = cfg["sampling"]
+    experiment = tcfg.get("experiment_id", 1)
+
+    # --- data ---
+    # online (default) -> fresh (theta, x) prior+simulator draws every batch;
+    # offline -> the pre-generated HF train split. The offline task is always
+    # built: it serves the val loader, the df_test rows and the NLL eval.
+    online = tcfg.get("online", True)
+    max_workers = tcfg.get("max_workers")  # None -> in-process / no prefetch
+
+    task = OnlineTaskDataset("gaussian_random_field", normalize=True)
+    offline_task = TaskDataset(
+        "gaussian_random_field",
+        normalize=True,
+        max_workers=None if online else max_workers,
+    )
+    if online:
+        train_loader = task.get_online_train_loader(
+            tcfg["batch_size"], num_workers=max_workers or 0
+        ).map(to_obs_cond)
+    else:
+        train_loader = offline_task.get_train_loader(
+            tcfg["batch_size"]
+        ).map(to_obs_cond)
+    val_loader = offline_task.get_val_loader(tcfg["val_batch_size"]).map(to_obs_cond)
+
+    # --- flow + pipeline ---
+    flow = build_flow(nnx.Rngs(tcfg.get("seed", 0)), model_cfg)
+    n_params = sum(
+        leaf.size for leaf in jax.tree_util.tree_leaves(nnx.state(flow, nnx.Param))
+    )
+    print(f"tarflow parameters: {n_params / 1e6:.1f}M")
+
+    img_size = int(model_cfg["img_size"])
+    img_channels = int(model_cfg.get("img_channels", 1))
+    training_config = build_training_config(
+        cfg, os.path.join(EXAMPLE_DIR, "checkpoints"))
+    pipeline = ConditionalFlowPipeline(
+        flow, train_loader, val_loader,
+        dim_obs=img_size * img_size * img_channels,
+        dim_cond=int(model_cfg["cond_dim"]),
+        structured_obs=True,
+        training_config=training_config,
+    )
+    # Data is normalized upstream (normalize=True datasets); the flow's
+    # standardize buffers stay at identity. Mark standardized to suppress
+    # the train-time 'did you fit?' warning.
+    pipeline._standardized = True
+
+    imgs_dir = os.path.join(EXAMPLE_DIR, "imgs")
+    os.makedirs(imgs_dir, exist_ok=True)
+
+    # --- train / restore ---
+    if tcfg.get("restore_model", False):
+        print("Restoring model from checkpoint...")
+        pipeline.restore_model()
+    if tcfg.get("train_model", True):
+        loss_array, val_loss_array = pipeline.train(nnx.Rngs(0), save_model=True)
+        plot_losses(
+            loss_array, val_loss_array, training_config["val_every"],
+            os.path.join(imgs_dir, f"grf_loss_conf{experiment}.png"),
+        )
+
+    # --- test rows: raw truths + normalized thetas ---
+    n_thetas = scfg["num_thetas"]
+    n_nll = scfg.get("nll_num_test", 256)
+    rows = offline_task.df_test[:max(n_thetas, n_nll)]  # slice first: decodes only these
+    thetas_raw = np.asarray(rows["thetas"], dtype=np.float32)  # (n, 2)
+    truths = np.asarray(rows["xs"], dtype=np.float32)          # (n, 32, 32)
+    theta_norm = np.asarray(
+        task.normalize_theta(thetas_raw[..., None])            # (n, 2, 1)
+    )
+    field_size = truths.shape[-1]
+
+    # --- exact held-out NLL (bits/dim), raw and EMA weights ---
+    n_nll = min(n_nll, len(truths))
+    fields_norm = np.asarray(task.normalize_x(truths[:n_nll, ..., None]))
+    for use_ema, tag in ((True, "ema"), (False, "raw")):
+        m = pipeline.ema_model if use_ema else pipeline.model
+        bpd = heldout_bits_per_dim(m, fields_norm, theta_norm[:n_nll], _NLL_BATCH)
+        print(f"held-out NLL [{tag}]: {bpd:.4f} bits/dim over {n_nll} test fields")
+
+    # --- fresh simulator realizations per theta: P(k) truth reference ---
+    # Mean over these (+/- 1 sigma) beats down the per-realization cosmic
+    # variance a single stored map shows in the low-k bins. Raw field units,
+    # matching unnormalize_x(samples). Separate PRNG stream from sampling.
+    n_sim_pk = scfg.get("nsim_pk", 64)
+    simulator = task.task.get_simulator(jax.random.PRNGKey(tcfg.get("seed", 0)))
+    sim_fields = []
+    sim_key = jax.random.PRNGKey(tcfg.get("seed", 0) + 1)
+    for i in range(n_thetas):
+        sim_key, sk = jax.random.split(sim_key)
+        thetas_M = jnp.broadcast_to(jnp.asarray(thetas_raw[i]), (n_sim_pk, 2))
+        f = np.asarray(simulator(sk, thetas_M), dtype=np.float32)  # (M, N*N)
+        sim_fields.append(f.reshape(n_sim_pk, field_size, field_size))
+
+    # --- sample p(field | theta), raw and EMA weights (identical PRNG) ---
+    # EMA-degeneration cross-check inherited from the FM script: emit both.
+    for use_ema, tag in ((True, "ema"), (False, "raw")):
+        samples = []
+        key = jax.random.PRNGKey(tcfg.get("seed", 0))
+        for i in range(n_thetas):
+            key, sub = jax.random.split(key)
+            s = pipeline.sample(
+                sub,
+                jnp.asarray(theta_norm[i:i + 1]),  # (1, 2, 1)
+                nsamples=scfg["nsamples"],
+                use_ema=use_ema,
+            )  # (nsamples, 32, 32, 1), normalized; KV-cached sampler
+            s = np.asarray(task.unnormalize_x(s), dtype=np.float32)[..., 0]
+            samples.append(s)
+            print(f"[{tag}] theta {i}: sampled {s.shape}, "
+                  f"finite={np.isfinite(s).all()}")
+
+        plot_field_grid(
+            truths[:n_thetas], samples, thetas_raw, scfg["nsamples_grid"],
+            os.path.join(imgs_dir, f"grf_fields_conf{experiment}_{tag}.png"),
+        )
+        plot_power_spectra(
+            sim_fields, samples, thetas_raw, field_size,
+            os.path.join(imgs_dir, f"grf_pk_conf{experiment}_{tag}.png"),
+        )
+    print(f"Plots written to {imgs_dir} (experiment {experiment}; _ema and _raw)")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--config",
+        default=os.path.join(EXAMPLE_DIR, "config", "config_1.yaml"))
+    main(parser.parse_args().config)

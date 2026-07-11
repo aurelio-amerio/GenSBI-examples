@@ -87,7 +87,10 @@ def test_build_training_config_merges_defaults_and_overrides(tmp_path):
 
 def test_to_obs_cond_swaps_and_adds_channel():
     mod = _load_script_module()
-    theta = np.zeros((4, 2), dtype=np.float32)
+    # sbibm_jax's collate already tokenizes theta with a trailing channel
+    # axis (verified against the real gaussian_random_field loader), so the
+    # fake batch here mirrors that real shape rather than a bare (4, 2).
+    theta = np.zeros((4, 2, 1), dtype=np.float32)
     x = np.zeros((4, 8, 8, 1), dtype=np.float32)
     obs, cond = mod.to_obs_cond((theta, x))
     assert obs.shape == (4, 8, 8, 1)     # obs = the field, native shape
@@ -138,3 +141,16 @@ def test_plot_helpers_write_files(tmp_path):
                            path=str(p_pk))
     mod.plot_losses(np.ones(10), np.ones(10), val_every=100, path=str(p_loss))
     assert p_grid.exists() and p_pk.exists() and p_loss.exists()
+
+
+def test_main_exists_and_smoke_config_is_tiny():
+    import yaml
+    mod = _load_script_module()
+    assert callable(mod.main)
+    smoke = (_REPO_ROOT / "examples/sbi-benchmarks/gaussian_random_field"
+             / "tarflow/config/config_smoke.yaml")
+    with open(smoke) as f:
+        cfg = yaml.safe_load(f)
+    assert cfg["training"]["nsteps"] <= 50          # cheap enough for CPU
+    assert cfg["model"]["head_dim"] % 4 == 0        # rope requirement holds
+    assert cfg["sampling"]["nsamples"] <= 4
