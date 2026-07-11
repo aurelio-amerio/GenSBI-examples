@@ -83,3 +83,31 @@ def test_build_training_config_merges_defaults_and_overrides(tmp_path):
     assert tc["max_lr"] == 4.0e-4
     assert tc["experiment_id"] == 7
     assert tc["checkpoint_dir"] == str(tmp_path / "ckpt")
+
+
+def test_to_obs_cond_swaps_and_passes_shapes_through():
+    mod = _load_script_module()
+    # sbibm_jax's collate already tokenizes theta with a trailing channel
+    # axis (verified against the real gaussian_random_field loaders), so the
+    # fake batch here mirrors that real shape rather than a bare (4, 2).
+    theta = np.zeros((4, 2, 1), dtype=np.float32)
+    x = np.zeros((4, 8, 8, 1), dtype=np.float32)
+    obs, cond = mod.to_obs_cond((theta, x))
+    assert obs.shape == (4, 8, 8, 1)     # obs = the field, native shape
+    assert cond.shape == (4, 2, 1)       # cond = theta, channel-carrying
+
+
+def test_heldout_bits_per_dim_matches_gaussian_at_identity_init():
+    # zero_init=True (TarFlowParams default) makes every MetaBlock the
+    # identity, so the untrained flow is exactly N(0, I): bits/dim of
+    # N(0,1) data must equal 0.5*log2(2*pi*e) ~= 2.047 up to MC error.
+    mod = _load_script_module()
+    from flax import nnx
+    import jax
+    flow = mod.build_flow(nnx.Rngs(0), _TINY_MODEL_CFG)
+    k1, k2 = jax.random.split(jax.random.key(0))
+    fields = np.asarray(jax.random.normal(k1, (256, 8, 8, 1)))
+    theta = np.asarray(jax.random.normal(k2, (256, 2, 1)))
+    got = mod.heldout_bits_per_dim(flow, fields, theta, batch_size=128)
+    expected = 0.5 * np.log2(2 * np.pi * np.e)
+    assert abs(got - expected) < 0.05

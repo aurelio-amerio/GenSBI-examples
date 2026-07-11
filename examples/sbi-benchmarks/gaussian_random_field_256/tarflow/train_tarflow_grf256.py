@@ -89,3 +89,37 @@ def build_training_config(config, checkpoint_dir):
     tc.update(config.get("training", {}))
     tc["checkpoint_dir"] = checkpoint_dir
     return tc
+
+
+def to_obs_cond(batch):
+    """Loader yields (theta, x); the flow pipeline wants (obs=x, cond=theta).
+
+    sbibm_jax's collate already tokenizes both: x arrives in native image
+    shape (B, 256, 256, 1), theta already carries the trailing channel axis
+    the VectorConditioner expects, (B, 2, 1) -- no further reshape needed
+    here, just the obs/cond swap.
+    Module-level (not a lambda) so it survives pickling if it ever moves
+    before a prefetch stage.
+    """
+    theta, x = batch
+    return x, theta
+
+
+def heldout_bits_per_dim(flow, fields_norm, theta_norm, batch_size=64):
+    """Exact mean NLL of held-out fields under the flow, in bits/dim.
+
+    Inputs are in normalized units (the flow's training space); the constant
+    Jacobian of the dataset normalization is omitted, so values compare
+    across runs of this example, not across normalization schemes.
+    fields_norm: (N, H, W, 1); theta_norm: (N, cond_dim, 1). Calls
+    flow.log_prob directly -- batched cond is native TarFlow, no pipeline
+    single-observation restriction.
+    """
+    n = fields_norm.shape[0]
+    ndim = int(np.prod(fields_norm.shape[1:]))
+    lps = []
+    for i in range(0, n, batch_size):
+        lp = flow.log_prob(jnp.asarray(fields_norm[i:i + batch_size]),
+                           jnp.asarray(theta_norm[i:i + batch_size]))
+        lps.append(np.asarray(lp, dtype=np.float64))
+    return float(-np.concatenate(lps).mean() / (ndim * np.log(2.0)))
