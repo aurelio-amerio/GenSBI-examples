@@ -6,7 +6,6 @@ import importlib.util
 import pathlib
 
 import numpy as np
-import pytest
 
 # --- load the example script as a module (it lives outside the package) ---
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -85,7 +84,7 @@ def test_build_training_config_merges_defaults_and_overrides(tmp_path):
     assert tc["checkpoint_dir"] == str(tmp_path / "ckpt")
 
 
-def test_to_obs_cond_swaps_and_adds_channel():
+def test_to_obs_cond_swaps_and_passes_shapes_through():
     mod = _load_script_module()
     # sbibm_jax's collate already tokenizes theta with a trailing channel
     # axis (verified against the real gaussian_random_field loader), so the
