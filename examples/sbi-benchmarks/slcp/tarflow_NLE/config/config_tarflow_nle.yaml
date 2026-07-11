@@ -56,5 +56,16 @@ sampler:
   inner_step_size: 0.1
   inner_num_integration_steps: 5
 
+# Nested slice sampler (blackjax nss): the second C2ST sampler, scored alongside the
+# tempered SMC above. Handles the multimodal SLCP posterior without tempering and also
+# estimates the log evidence. num_samples is the number of equal-weight posterior draws
+# returned (matched to the reference-posterior count so the c2st classes stay balanced);
+# num_delete and num_inner_steps resolve from num_live / target dim when left unset.
+nested_sampler:
+  num_live: 500
+  num_samples: 10000
+  dlogz: -3.0
+  max_iterations: 100000
+
 evaluation:
   observation_idx: 1

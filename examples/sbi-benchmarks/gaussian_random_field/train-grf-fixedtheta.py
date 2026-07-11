@@ -137,6 +137,8 @@ def make_fixed_theta_loader(online_task, batch_size, theta_raw):
         return jnp.broadcast_to(theta_const.astype(template.dtype), template.shape)
 
     online_task.task.get_prior = fixed_get_prior
+    # num_workers=0 (in-process) on purpose: spawn workers would pickle the
+    # task, and the monkeypatched prior closure must not cross that boundary.
     return online_task.get_online_train_loader(batch_size).map(swap_obs_cond)
 
 

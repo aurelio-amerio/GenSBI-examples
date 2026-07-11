@@ -8,6 +8,11 @@ truth-vs-samples field grid, and radial power-spectrum overlays in imgs/.
 The model is chosen by the config's model section: a `fielddit:` key builds
 FieldDiT (configs 1-3), a `pixeldit:` key builds PixelDiT (config 6).
 
+Training data comes from the online sampler (fresh prior + simulator draws
+each batch) by default; set `training.online: false` to train on the
+pre-generated HF train split instead. `training.max_workers` sets the CPU
+simulation workers (online) or grain mp_prefetch workers (offline).
+
 Usage (conda env `gensbi`):
     python train-grf.py --config config/config_1.yaml
     python train-grf.py --config config/config_6.yaml
@@ -210,25 +215,38 @@ def main(config_path):
 
 
     # --- data ---
+    # Two train samplers, selected by training.online (default true):
+    #   online  -> OnlineTaskDataset: fresh (theta, x) from prior + simulator
+    #              every batch; max_workers>=1 simulates in CPU spawn workers,
+    #              leaving the GPU to the training step.
+    #   offline -> TaskDataset: the pre-generated HF train split, with grain
+    #              mp_prefetch when max_workers>=1.
+    # The offline task is always built: it serves the val loader and df_test.
+    online = tcfg.get("online", True)
+    max_workers = tcfg.get("max_workers")  # None -> in-process / no prefetch
+
     task = OnlineTaskDataset(
         "gaussian_random_field_256",
         normalize=True,
         dtype=jnp.bfloat16,
-        # dtype=jnp.float32,
-        # use_prefetching=True,
-        # max_workers=tcfg.get("max_workers"),  # None -> no prefetch
     )
-
     offline_task = TaskDataset(
         "gaussian_random_field_256",
         normalize=True,
         dtype=jnp.bfloat16,
+        max_workers=None if online else max_workers,
     )
     # NOTE: this .map runs in the main process (mp_prefetch is the loader's
     # last stage). Free for a tuple swap; move it before prefetch if it ever
     # does real per-batch work.
-    # train_loader = task.get_train_loader(tcfg["batch_size"]).map(swap_obs_cond)
-    train_loader = task.get_online_train_loader(tcfg["batch_size"]).map(swap_obs_cond)
+    if online:
+        train_loader = task.get_online_train_loader(
+            tcfg["batch_size"], num_workers=max_workers or 0
+        ).map(swap_obs_cond)
+    else:
+        train_loader = offline_task.get_train_loader(
+            tcfg["batch_size"]
+        ).map(swap_obs_cond)
     val_loader = offline_task.get_val_loader(tcfg["val_batch_size"]).map(swap_obs_cond)
 
     # --- model + pipeline ---

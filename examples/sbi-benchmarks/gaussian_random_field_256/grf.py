@@ -1,7 +1,6 @@
 #%%
 import os
 
-from gensbi_examples.tasks import GravitationalLensing 
 os.environ["JAX_PLATFORMS"] = "cpu"
 
 import numpy as np

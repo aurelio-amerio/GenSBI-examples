@@ -156,7 +156,7 @@ def build_sampler(sampler_cfg):
     """
     return TemperedSMC(
         num_particles=int(sampler_cfg.get("num_particles", 20000)),
-        target_ess=float(sampler_cfg.get("target_ess", 0.5)),
+        target_ess=float(sampler_cfg.get("target_ess", 0.9)),
         num_mcmc_steps=int(sampler_cfg.get("num_mcmc_steps", 10)),
         inner_kernel=str(sampler_cfg.get("inner_kernel", "mclmc")),
         inner_step_size=float(sampler_cfg.get("inner_step_size", 0.1)),
