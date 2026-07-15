@@ -50,7 +50,10 @@ training:
 # num_particles is the number of posterior samples returned.
 sampler:
   num_particles: 20000
-  target_ess: 0.5
+  target_ess: 0.9              # blackjax 1.6 (#914) corrected the adaptive-tempering ESS
+                               # solver; target_ess=0.5 now under-anneals the beta ladder
+                               # (coarse schedule -> particles left short of the modes).
+                               # 0.9 matches the retuned library default (gensbi 898260d).
   num_mcmc_steps: 20            # more rejuvenation than two-moons for the 5-D target
   inner_kernel: mclmc            # mclmc (adjusted MCLMC) | nuts
   inner_step_size: 0.1
@@ -62,9 +65,16 @@ sampler:
 # returned (matched to the reference-posterior count so the c2st classes stay balanced);
 # num_delete and num_inner_steps resolve from num_live / target dim when left unset.
 nested_sampler:
-  num_live: 500
+  num_live: 2000               # was 500: NS's usable posterior ESS scales with num_live.
+                               # With num_samples=10000 drawn *with replacement*, too few
+                               # live points -> ESS << 10000 -> heavily duplicated draws
+                               # that c2st separates from the smooth reference (the 0.888).
   num_samples: 10000
-  dlogz: -3.0
+  dlogz: -5.0                  # was -3.0: stop once live evidence < exp(-5) of accumulated
+                               # (relative remaining-evidence, NOT an absolute-logZ threshold).
+                               # -3 stopped a touch early; -5 runs the tail out further.
+  num_inner_steps: 15          # was auto max(5, 2*dim)=10: more constrained slice moves per
+                               # replacement -> better decorrelation across the SLCP modes.
   max_iterations: 100000
 
 evaluation:
