@@ -1,5 +1,5 @@
 experiment_name = tarflow_nle_slcp
-version = 1a
+version = 1c_ns_rejuv10_nl8000
 workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/slcp/tarflow_NLE
 script_path = train_tarflow_nle.py
 

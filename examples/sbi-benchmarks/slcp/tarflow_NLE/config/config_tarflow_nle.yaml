@@ -65,10 +65,12 @@ sampler:
 # returned (matched to the reference-posterior count so the c2st classes stay balanced);
 # num_delete and num_inner_steps resolve from num_live / target dim when left unset.
 nested_sampler:
-  num_live: 2000               # was 500: NS's usable posterior ESS scales with num_live.
-                               # With num_samples=10000 drawn *with replacement*, too few
-                               # live points -> ESS << 10000 -> heavily duplicated draws
-                               # that c2st separates from the smooth reference (the 0.888).
+  num_live: 8000               # was 2000 (and 500 before that): posterior ESS *and*
+                               # mode-weight accuracy both scale with num_live. At 2000 the
+                               # per-run (theta3,theta4) mode occupancies fluctuate by
+                               # +-0.06-0.08 around the true ~0.25 each (seed-dependent; the
+                               # residual C2ST gap vs SMC). Outer steps stay ~constant
+                               # (num_delete scales along), so wall-clock grows sublinearly.
   num_samples: 10000
   dlogz: -5.0                  # was -3.0: stop once live evidence < exp(-5) of accumulated
                                # (relative remaining-evidence, NOT an absolute-logZ threshold).
@@ -76,6 +78,16 @@ nested_sampler:
   num_inner_steps: 15          # was auto max(5, 2*dim)=10: more constrained slice moves per
                                # replacement -> better decorrelation across the SLCP modes.
   max_iterations: 100000
+  num_rejuvenation_steps: 10   # posterior-invariant slice moves per equal-weight draw after
+                               # resampling: with-replacement resampling duplicates draws
+                               # whenever num_samples ~ run ESS, and the c2st classifier keys
+                               # on the repeated rows (the residual NS-vs-MCMC gap). Local
+                               # moves break every atom without touching mode weights.
 
 evaluation:
   observation_idx: 1
+  c2st_samplers: [NS]          # rejuvenation rerun: skip the MCMC pass (its c2st files
+                               # from the previous run stand as the comparison baseline)
+  c2st_name_suffix: "_rejuv10_nl8000" # c2st_results_5_..._NS_rejuv10_nl8000.txt, alongside
+                               # the _NS.txt (num_live=2000, duplicated draws) and
+                               # _NS_rejuv10.txt (2000, rejuvenated) files for comparison
