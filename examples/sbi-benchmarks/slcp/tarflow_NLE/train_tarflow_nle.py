@@ -36,7 +36,7 @@ import matplotlib.pyplot as plt
 
 from gensbi.models import TarFlow, TarFlowParams
 from gensbi.recipes import ConditionalFlowPipeline
-from gensbi.inference import NLEPosterior, TemperedSMC
+from gensbi.inference import NLEPosterior, TemperedSMC, NestedSampler
 from gensbi.diagnostics.metrics import c2st
 from gensbi.utils.plotting import plot_marginals
 from sbibm_jax.data import TaskDataset
@@ -162,7 +162,7 @@ def build_sampler(sampler_cfg):
     """
     return TemperedSMC(
         num_particles=int(sampler_cfg.get("num_particles", 20000)),
-        target_ess=float(sampler_cfg.get("target_ess", 0.5)),
+        target_ess=float(sampler_cfg.get("target_ess", 0.9)),
         num_mcmc_steps=int(sampler_cfg.get("num_mcmc_steps", 10)),
         inner_kernel=str(sampler_cfg.get("inner_kernel", "mclmc")),
         inner_step_size=float(sampler_cfg.get("inner_step_size", 0.1)),
@@ -170,46 +170,91 @@ def build_sampler(sampler_cfg):
     )
 
 
-def compute_c2st(pipeline, task, prior, sampler_cfg, key=None):
+def build_nested_sampler(ns_cfg):
+    """Nested slice sampler for the complex, multimodal SLCP posterior.
+
+    An alternative to tempered SMC: blackjax nested slice sampling walks live points
+    from the prior inward, handling multimodal posteriors without tempering and also
+    returning a log-evidence estimate. num_samples is the number of equal-weight
+    posterior draws returned (matched by default to the reference-posterior count so the
+    c2st classes stay balanced). num_delete and num_inner_steps resolve from num_live and
+    the target dim when left unset.
+    """
+    kwargs = dict(
+        num_live=int(ns_cfg.get("num_live", 500)),
+        num_samples=int(ns_cfg.get("num_samples", 10000)),
+        dlogz=float(ns_cfg.get("dlogz", -3.0)),
+        max_iterations=int(ns_cfg.get("max_iterations", 100_000)),
+        num_rejuvenation_steps=int(ns_cfg.get("num_rejuvenation_steps", 0)),
+    )
+    if ns_cfg.get("num_delete") is not None:
+        kwargs["num_delete"] = int(ns_cfg["num_delete"])
+    if ns_cfg.get("num_inner_steps") is not None:
+        kwargs["num_inner_steps"] = int(ns_cfg["num_inner_steps"])
+    return NestedSampler(**kwargs)
+
+
+def compute_c2st(pipeline, task, prior, make_sampler, key=None):
     """C2ST accuracy per observation for the raw and EMA NLE posteriors.
 
     For each of the task's reference observations, rebuild the NLE posterior (likelihood
-    flow + prior) and draw posterior samples with tempered SMC, then score them against
-    the reference posterior samples with a classifier two-sample test. Accuracy ~0.5
-    means the recovered posterior is indistinguishable from the reference; ~1.0 means
-    they are easily told apart. Each SMC sample is subsampled to the reference count so
-    the two c2st classes stay balanced (an imbalance would shift the chance accuracy away
-    from 0.5). SMC is run once per observation for both the raw and EMA flows. Returns
-    {"raw": [...], "ema": [...]} of per-observation accuracies.
+    flow + prior) and draw posterior samples with the sampler built by ``make_sampler``
+    (a zero-arg factory returning a fresh sampler -- tempered SMC or nested sampling),
+    then score them against the reference posterior samples with a classifier two-sample
+    test. Accuracy ~0.5 means the recovered posterior is indistinguishable from the
+    reference; ~1.0 means they are easily told apart. Each posterior sample is subsampled
+    to the reference count so the two c2st classes stay balanced (an imbalance would shift
+    the chance accuracy away from 0.5). The sampler is run once per observation for both
+    the raw and EMA flows. Returns ``(results, evidence)``, each a
+    ``{"raw": [...], "ema": [...]}`` of per-observation C2ST accuracies and sampler
+    log-evidences respectively.
     """
     if key is None:
         key = jax.random.PRNGKey(0)
     results = {"raw": [], "ema": []}
+    evidence = {"raw": [], "ema": []}
     for tag, use_ema in (("raw", False), ("ema", True)):
         posterior = build_posterior(pipeline, prior, use_ema=use_ema)
         for idx in range(1, task.num_observations + 1):
             obs, reference_samples = task.get_reference(idx)
-            sampler = build_sampler(sampler_cfg)
+            sampler = make_sampler()
             key, subkey = jax.random.split(key)
-            samples = posterior.sample(subkey, obs, sampler=sampler)
+            samples, info = posterior.sample(subkey, obs, sampler=sampler,
+                                             return_info=True)
             post = samples[..., 0]
             n = min(reference_samples.shape[0], post.shape[0])
             acc = float(c2st(reference_samples[:n], post[:n]))
             results[tag].append(acc)
-            print(f"C2ST [{tag}] observation={idx}: {acc:.4f}")
-    return results
+            # Both samplers report a log-evidence (SmcInfo / NestedSamplerInfo); print it
+            # alongside the C2ST. For NS also surface ess + unique-draw count -- the direct
+            # read on whether equal-weight resampling is duplicating draws (ess << num_samples
+            # inflates C2ST regardless of how well the modes are covered).
+            logZ = float(getattr(info, "log_evidence", float("nan")))
+            evidence[tag].append(logZ)
+            extra = f" logZ={logZ:.3f}"
+            if hasattr(info, "ess"):
+                n_uniq = int(np.unique(np.asarray(post), axis=0).shape[0])
+                extra += (f" (err={info.log_evidence_err:.3f}) ess={info.ess:.0f}"
+                          f" unique={n_uniq}/{post.shape[0]}")
+            print(f"C2ST [{tag}] observation={idx}: {acc:.4f}{extra}")
+    return results, evidence
 
 
-def save_c2st_results(c2st_dir, accuracies, tag, experiment_id, method, model):
+def save_c2st_results(c2st_dir, accuracies, tag, experiment_id, method, model,
+                      sampler_name):
     """Write per-observation c2st accuracies and their mean +- std to a txt file.
 
     Mirrors scripts/train_sbi_model.py. tag is "raw" or "ema" and selects both the
-    filename suffix and the in-file labels. Returns the path written.
+    filename suffix and the in-file labels. sampler_name ("MCMC" or "NS", plus any
+    evaluation.c2st_name_suffix) is appended to the filename so results from the
+    tempered-SMC and nested-sampling posteriors (and from reruns with different
+    sampler settings) do not collide. Returns the path written.
     """
     suffix = "_ema" if tag == "ema" else ""
     label = "EMA " if tag == "ema" else ""
     path = os.path.join(
-        c2st_dir, f"c2st_results{suffix}_{experiment_id}_{method}_{model}.txt"
+        c2st_dir,
+        f"c2st_results{suffix}_{experiment_id}_{method}_{model}_{sampler_name}.txt",
     )
     with open(path, "w") as f:
         for idx, acc in enumerate(accuracies, start=1):
@@ -245,6 +290,7 @@ def main():
     model_cfg = config["model"]
     train_cfg = config["training"]
     sampler_cfg = config["sampler"]
+    ns_cfg = config.get("nested_sampler", {})
     eval_cfg = config["evaluation"]
 
     # --- task / data (raw loader: normalize=False; x is standardized in-flow) ---
@@ -284,21 +330,52 @@ def main():
 
     prior = build_prior(task_name)
     posterior = build_posterior(pipeline, prior, use_ema=True)
-    sampler = build_sampler(sampler_cfg)
-    print(f"Sampling multimodal posterior with tempered SMC "
-          f"(num_particles={sampler.num_particles}, inner_kernel={sampler.inner_kernel})...")
-    samples, info = posterior.sample(jax.random.PRNGKey(0), obs,
-                                     sampler=sampler, return_info=True)  # (n, dim_theta, 1)
-    print(f"SMC done: {info.num_temperature_steps} temperature steps, "
-          f"log_evidence={info.log_evidence:.3f}")
 
-    # --- corner plot of the posterior samples with the true value marked ---
-    plot_marginals(np.asarray(samples[..., 0]), plot_levels=False, backend="seaborn",
-                   gridsize=50, true_param=true_param)
-    out_path = os.path.join(img_dir, f"posterior_marginals_obs{idx}.png")
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close("all")
-    print(f"Saved posterior marginals to {out_path}")
+    def _plot_marginals(post_samples, sampler_tag):
+        """Corner plot of one sampler's posterior draws with the true value marked."""
+        plot_marginals(np.asarray(post_samples[..., 0]), plot_levels=False,
+                       backend="seaborn", gridsize=50, true_param=true_param)
+        out_path = os.path.join(img_dir,
+                                f"posterior_marginals_obs{idx}_{sampler_tag}.png")
+        plt.savefig(out_path, dpi=300, bbox_inches="tight")
+        plt.close("all")
+        print(f"Saved {sampler_tag} posterior marginals to {out_path}")
+
+    # Which posterior samplers to run (previews AND the C2ST loop below).
+    # evaluation.c2st_samplers narrows a rerun to one sampler (e.g. [NS]) so the
+    # other's slow C2ST pass is skipped and its result files are left untouched.
+    c2st_samplers = list(eval_cfg.get("c2st_samplers", ["NS", "MCMC"]))
+
+    if "MCMC" in c2st_samplers:
+        # --- tempered SMC ("MCMC") single-observation preview: evidence + corner plot ---
+        sampler = build_sampler(sampler_cfg)
+        print(f"Sampling multimodal posterior with tempered SMC "
+              f"(num_particles={sampler.num_particles}, inner_kernel={sampler.inner_kernel})...")
+        smc_samples, smc_info = posterior.sample(jax.random.PRNGKey(0), obs,
+                                                 sampler=sampler, return_info=True)
+        print(f"SMC done: {smc_info.num_temperature_steps} temperature steps, "
+              f"log_evidence={smc_info.log_evidence:.3f}")
+        _plot_marginals(smc_samples, "MCMC")
+
+    if "NS" in c2st_samplers:
+        # --- nested sampling single-observation preview: evidence + ess/unique + corner plot.
+        # A fast read (before the slow full C2ST) on whether NS recovers the modes and how many
+        # independent draws it actually supports: ess << num_samples means the equal-weight
+        # resampling is duplicating draws (which inflates C2ST regardless of mode coverage);
+        # with num_rejuvenation_steps > 0 the duplicates are broken and unique should be
+        # num_samples/num_samples. ---
+        ns_sampler = build_nested_sampler(ns_cfg)
+        print(f"Sampling with nested sampling (num_live={ns_sampler.num_live}, "
+              f"num_samples={ns_sampler.num_samples}, dlogz={ns_sampler.dlogz}, "
+              f"num_rejuvenation_steps={ns_sampler.num_rejuvenation_steps})...")
+        ns_samples, ns_info = posterior.sample(jax.random.PRNGKey(0), obs,
+                                               sampler=ns_sampler, return_info=True)
+        ns_post = np.asarray(ns_samples[..., 0])
+        n_uniq = int(np.unique(ns_post, axis=0).shape[0])
+        print(f"NS done: log_evidence={ns_info.log_evidence:.3f} +- {ns_info.log_evidence_err:.3f}, "
+              f"ess={ns_info.ess:.0f}, num_dead={ns_info.num_dead}, "
+              f"unique={n_uniq}/{ns_post.shape[0]}")
+        _plot_marginals(ns_samples, "NS")
 
     # --- C2ST: score the SMC posterior against the reference posterior ---
     strategy = config.get("strategy", {})
@@ -309,16 +386,33 @@ def main():
     c2st_dir = os.path.join(exp_dir, "c2st_results")
     os.makedirs(c2st_dir, exist_ok=True)
 
+    # Score the selected posterior samplers (evaluation.c2st_samplers). NS is run
+    # first (it is the one under scrutiny, so surface its C2ST before the slower
+    # SMC pass), then the tempered-SMC ("MCMC"). Results are written to separate
+    # files (see save_c2st_results); evaluation.c2st_name_suffix tags a rerun's
+    # files (e.g. "_rejuv10") so they sit alongside the originals for comparison.
+    name_suffix = str(eval_cfg.get("c2st_name_suffix", ""))
+    methods = tuple(
+        (name, factory) for name, factory in (
+            ("NS", lambda: build_nested_sampler(ns_cfg)),
+            ("MCMC", lambda: build_sampler(sampler_cfg)),
+        ) if name in c2st_samplers
+    )
     print(f"Running C2ST over {task.num_observations} observations "
-          f"(tempered SMC per observation, x2 for raw+EMA; this is slow)...")
-    c2st_results = compute_c2st(pipeline, task, prior, sampler_cfg)
-    for tag in ("raw", "ema"):
-        accs = c2st_results[tag]
-        label = "EMA" if tag == "ema" else "raw"
-        print(f"Average C2ST accuracy [{label}]: "
-              f"{np.mean(accs):.4f} +- {np.std(accs):.4f}")
-        path = save_c2st_results(c2st_dir, accs, tag, experiment_id, method, model)
-        print(f"Saved C2ST results to {path}")
+          f"(x2 for raw+EMA, samplers: {', '.join(n for n, _ in methods)}; "
+          f"this is slow)...")
+    for sampler_name, make_sampler in methods:
+        print(f"--- C2ST with {sampler_name} sampler ---")
+        c2st_results, evidence = compute_c2st(pipeline, task, prior, make_sampler)
+        for tag in ("raw", "ema"):
+            accs = c2st_results[tag]
+            label = "EMA" if tag == "ema" else "raw"
+            print(f"Average C2ST accuracy [{label}, {sampler_name}]: "
+                  f"{np.mean(accs):.4f} +- {np.std(accs):.4f}"
+                  f"  |  mean logZ={np.nanmean(evidence[tag]):.3f}")
+            path = save_c2st_results(c2st_dir, accs, tag, experiment_id, method,
+                                     model, sampler_name + name_suffix)
+            print(f"Saved C2ST results to {path}")
     print("C2ST complete.")
 
 
