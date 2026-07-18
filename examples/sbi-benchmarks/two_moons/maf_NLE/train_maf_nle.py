@@ -316,7 +316,7 @@ def main():
     _report(f"[NS] log_evidence={ns_info.log_evidence:.4f} +- {ns_info.log_evidence_err:.4f}, "
             f"ess={ns_info.ess:.0f}, num_dead={ns_info.num_dead}, "
             f"unique={n_uniq}/{ns_post.shape[0]}")
-    _plot_marginals(ns_samples, "NS", range_=((-0.9, 0.4), (-0.4, 0.9)))
+    _plot_marginals(ns_samples, "NS", range_=((-0.9, -0.4), (0.4, 0.9)))
 
     diag_path = save_diagnostics(diag_dir, idx, diag_lines)
     print(f"Saved diagnostics to {diag_path}")
