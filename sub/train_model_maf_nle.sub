@@ -1,6 +1,6 @@
 experiment_name = maf_nle_slcp
 version = 1a    
-workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/slcp/maf_NLE
+workdir = /lhome/ific/a/aamerio/data/github/GenSBI-examples/examples/sbi-benchmarks/two_moons/maf_NLE
 script_path = train_maf_nle.py
 
 universe = vanilla

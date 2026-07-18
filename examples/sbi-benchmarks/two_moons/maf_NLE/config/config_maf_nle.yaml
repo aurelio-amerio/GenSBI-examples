@@ -36,11 +36,26 @@ training:
 # and populates all modes. num_particles is the number of posterior samples returned.
 sampler:
   num_particles: 20000
-  target_ess: 0.5
+  target_ess: 0.9
   num_mcmc_steps: 10
   inner_kernel: mclmc            # mclmc (adjusted MCLMC) | nuts
   inner_step_size: 0.1
   inner_num_integration_steps: 5
+
+# Nested slice sampler (blackjax nss): a cross-check sampler for the same posterior.
+# Handles the multimodal two-moons posterior without tempering and also estimates the
+# log evidence. num_samples is the number of equal-weight posterior draws returned;
+# num_delete and num_inner_steps resolve from num_live / target dim when left unset.
+nested_sampler:
+  num_live: 2000
+  num_samples: 10000
+  dlogz: -5.0                   # stop once live evidence < exp(-5) of accumulated
+                               # (relative remaining evidence, not an absolute-logZ threshold).
+  max_iterations: 100000
+  num_rejuvenation_steps: 10   # posterior-invariant slice moves per equal-weight draw after
+                               # resampling: with-replacement resampling duplicates draws when
+                               # num_samples ~ run ESS; local moves break every atom without
+                               # touching mode weights.
 
 evaluation:
   observation_idx: 8

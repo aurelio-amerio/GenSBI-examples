@@ -1,0 +1,4 @@
+NLE posterior diagnostics for observation=8
+true_param: [-0.7995  0.4968]
+[MCMC] num_temperature_steps=14, log_evidence=-0.6994
+[NS] log_evidence=-0.5664 +- 0.0474, ess=6297, num_dead=22400, unique=10000/10000

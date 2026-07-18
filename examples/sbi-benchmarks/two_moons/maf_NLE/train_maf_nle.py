@@ -1,5 +1,5 @@
 """Two-moons NLE example: train a conditional MAF likelihood q(x|theta) and
-sample the (multimodal) posterior with tempered SMC.
+sample the (multimodal) posterior two ways -- tempered SMC and nested sampling.
 
 Run (on a GPU node with HF access, via the gensbi conda env):
     python train_maf_nle.py --config config/config_maf_nle.yaml
@@ -9,7 +9,11 @@ models q(x | theta). The posterior is recovered at inference time by combining t
 learned likelihood with the task prior via gensbi NLEPosterior. Two-moons posteriors
 are multimodal, so we sample with TemperedSMC (a particle cloud walked from prior to
 posterior) instead of a single MCMC/MCLMC chain, which would capture only one mode.
-Helpers are module-level and import-safe so they can be smoke-tested on CPU.
+As a cross-check we also sample with NestedSampler (blackjax nested slice sampling),
+which handles the multimodal posterior without tempering and returns a log-evidence
+estimate; the two posteriors are saved to separate corner plots (the PNG filenames
+carry an "MCMC" or "NS" suffix). Helpers are module-level and import-safe so they can
+be smoke-tested on CPU.
 """
 
 import os
@@ -31,7 +35,7 @@ import matplotlib.pyplot as plt
 from gensbi.normalizing_flows import Affine, RQSpline
 from gensbi.models import MAFlow, MAFlowParams
 from gensbi.recipes import ConditionalFlowPipeline
-from gensbi.inference import NLEPosterior, TemperedSMC
+from gensbi.inference import NLEPosterior, TemperedSMC, NestedSampler
 from gensbi.utils.plotting import plot_marginals
 from sbibm_jax.data import TaskDataset
 from sbibm_jax.tasks import get_task
@@ -159,6 +163,44 @@ def build_sampler(sampler_cfg):
     )
 
 
+def build_nested_sampler(ns_cfg):
+    """Nested slice sampler for the multimodal two-moons posterior.
+
+    An alternative to tempered SMC: blackjax nested slice sampling walks live points
+    from the prior inward, handling the multimodal posterior without tempering and also
+    returning a log-evidence estimate. num_samples is the number of equal-weight
+    posterior draws returned. num_delete and num_inner_steps resolve from num_live and
+    the target dim when left unset. num_rejuvenation_steps > 0 applies posterior-invariant
+    slice moves per equal-weight draw after resampling, breaking the duplicate rows that
+    with-replacement resampling produces when num_samples ~ run ESS.
+    """
+    kwargs = dict(
+        num_live=int(ns_cfg.get("num_live", 2000)),
+        num_samples=int(ns_cfg.get("num_samples", 20000)),
+        dlogz=float(ns_cfg.get("dlogz", -5.0)),
+        max_iterations=int(ns_cfg.get("max_iterations", 100_000)),
+        num_rejuvenation_steps=int(ns_cfg.get("num_rejuvenation_steps", 10)),
+    )
+    if ns_cfg.get("num_delete") is not None:
+        kwargs["num_delete"] = int(ns_cfg["num_delete"])
+    if ns_cfg.get("num_inner_steps") is not None:
+        kwargs["num_inner_steps"] = int(ns_cfg["num_inner_steps"])
+    return NestedSampler(**kwargs)
+
+
+def save_diagnostics(diag_dir, idx, lines):
+    """Write the per-sampler diagnostics collected for one observation to a txt file.
+
+    Persists the same numbers printed to stdout -- most importantly each sampler's
+    log-evidence (SMC and NS estimate the same log Z, so the two are a mutual cross-check)
+    -- so results survive past the console. Returns the path written.
+    """
+    path = os.path.join(diag_dir, f"diagnostics_obs{idx}.txt")
+    with open(path, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    return path
+
+
 def parse_args():
     here = os.path.dirname(os.path.abspath(__file__))
     default_config = os.path.join(here, "config", "config_maf_nle.yaml")
@@ -177,12 +219,15 @@ def main():
     exp_dir = os.path.dirname(os.path.abspath(__file__))
     checkpoint_dir = os.path.join(exp_dir, "checkpoints")
     img_dir = os.path.join(exp_dir, "imgs")
+    diag_dir = os.path.join(exp_dir, "diagnostics")
     os.makedirs(img_dir, exist_ok=True)
+    os.makedirs(diag_dir, exist_ok=True)
 
     task_name = config["task_name"]
     model_cfg = config["model"]
     train_cfg = config["training"]
     sampler_cfg = config["sampler"]
+    ns_cfg = config.get("nested_sampler", {})
     eval_cfg = config["evaluation"]
 
     # --- task / data (raw loader: normalize=False; x is standardized in-flow) ---
@@ -215,28 +260,66 @@ def main():
         pipeline.train(nnx.Rngs(0))
         print("Training complete.")
 
-    # --- NLE posterior via tempered SMC for one observation ---
+    # --- NLE posterior for one observation, sampled two ways (SMC + nested sampling) ---
     idx = int(eval_cfg["observation_idx"])
     obs, _ = task.get_reference(idx)
     true_param = np.asarray(task.get_true_parameters(idx)).reshape(-1)
 
     prior = build_prior(task_name)
     posterior = build_posterior(pipeline, prior, use_ema=True)
+
+    def _plot_marginals(post_samples, sampler_tag, range_=None):
+        """Corner plot of one sampler's posterior draws with the true value marked.
+
+        The sampler tag ("MCMC" or "NS") is appended to the filename so the tempered-SMC
+        and nested-sampling posteriors are saved to distinct PNGs.
+        """
+        plot_marginals(np.asarray(post_samples[..., 0]), plot_levels=False,
+                       backend="seaborn", gridsize=50, true_param=true_param,
+                       range=range_, figsize=(4, 4))
+        out_path = os.path.join(img_dir,
+                                f"posterior_marginals_obs{idx}_{sampler_tag}.png")
+        plt.savefig(out_path, dpi=300, bbox_inches="tight")
+        plt.close("all")
+        print(f"Saved {sampler_tag} posterior marginals to {out_path}")
+
+    # Diagnostic lines are both printed and collected here, then written to a txt file
+    # at the end so the numbers (especially the log-evidence) survive past the console.
+    diag_lines = [f"NLE posterior diagnostics for observation={idx}",
+                  f"true_param: {np.array2string(true_param, precision=4)}"]
+
+    def _report(line):
+        print(line)
+        diag_lines.append(line)
+
+    # --- tempered SMC ("MCMC"): evidence + corner plot ---
     sampler = build_sampler(sampler_cfg)
     print(f"Sampling multimodal posterior with tempered SMC "
           f"(num_particles={sampler.num_particles}, inner_kernel={sampler.inner_kernel})...")
-    samples, info = posterior.sample(jax.random.PRNGKey(0), obs,
-                                     sampler=sampler, return_info=True)  # (n, dim_theta, 1)
-    print(f"SMC done: {info.num_temperature_steps} temperature steps, "
-          f"log_evidence={info.log_evidence:.3f}")
+    smc_samples, smc_info = posterior.sample(jax.random.PRNGKey(0), obs,
+                                             sampler=sampler, return_info=True)  # (n, dim_theta, 1)
+    _report(f"[MCMC] num_temperature_steps={smc_info.num_temperature_steps}, "
+            f"log_evidence={smc_info.log_evidence:.4f}")
+    _plot_marginals(smc_samples, "MCMC", range_=((-0.9, 0.4), (-0.4, 0.9)))
 
-    # --- contour plot of the posterior samples with the true value marked ---
-    plot_marginals(np.asarray(samples[..., 0]), plot_levels=False, backend="seaborn",
-                   gridsize=50, true_param=true_param)
-    out_path = os.path.join(img_dir, f"posterior_marginals_obs{idx}.png")
-    plt.savefig(out_path, dpi=300, bbox_inches="tight")
-    plt.close("all")
-    print(f"Saved posterior marginals to {out_path}")
+    # --- nested sampling ("NS"): evidence + ess/unique-draw count + corner plot.
+    # ess << num_samples means the equal-weight resampling is duplicating draws; with
+    # num_rejuvenation_steps > 0 the duplicates are broken and unique should be num_samples. ---
+    ns_sampler = build_nested_sampler(ns_cfg)
+    print(f"Sampling with nested sampling (num_live={ns_sampler.num_live}, "
+          f"num_samples={ns_sampler.num_samples}, dlogz={ns_sampler.dlogz}, "
+          f"num_rejuvenation_steps={ns_sampler.num_rejuvenation_steps})...")
+    ns_samples, ns_info = posterior.sample(jax.random.PRNGKey(0), obs,
+                                           sampler=ns_sampler, return_info=True)
+    ns_post = np.asarray(ns_samples[..., 0])
+    n_uniq = int(np.unique(ns_post, axis=0).shape[0])
+    _report(f"[NS] log_evidence={ns_info.log_evidence:.4f} +- {ns_info.log_evidence_err:.4f}, "
+            f"ess={ns_info.ess:.0f}, num_dead={ns_info.num_dead}, "
+            f"unique={n_uniq}/{ns_post.shape[0]}")
+    _plot_marginals(ns_samples, "NS", range_=((-0.9, 0.4), (-0.4, 0.9)))
+
+    diag_path = save_diagnostics(diag_dir, idx, diag_lines)
+    print(f"Saved diagnostics to {diag_path}")
 
 
 if __name__ == "__main__":
