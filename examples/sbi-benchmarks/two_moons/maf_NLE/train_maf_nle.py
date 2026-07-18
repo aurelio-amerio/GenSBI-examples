@@ -276,7 +276,7 @@ def main():
         """
         plot_marginals(np.asarray(post_samples[..., 0]), plot_levels=False,
                        backend="seaborn", gridsize=50, true_param=true_param,
-                       range=range_, figsize=(4, 4))
+                       range=range_)
         out_path = os.path.join(img_dir,
                                 f"posterior_marginals_obs{idx}_{sampler_tag}.png")
         plt.savefig(out_path, dpi=300, bbox_inches="tight")
