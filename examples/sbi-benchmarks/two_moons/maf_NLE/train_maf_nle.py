@@ -300,7 +300,7 @@ def main():
                                              sampler=sampler, return_info=True)  # (n, dim_theta, 1)
     _report(f"[MCMC] num_temperature_steps={smc_info.num_temperature_steps}, "
             f"log_evidence={smc_info.log_evidence:.4f}")
-    _plot_marginals(smc_samples, "MCMC", range_=((-0.9, 0.4), (-0.4, 0.9)))
+    _plot_marginals(smc_samples, "MCMC", range_=((-0.9, -0.4), (0.4, 0.9)))
 
     # --- nested sampling ("NS"): evidence + ess/unique-draw count + corner plot.
     # ess << num_samples means the equal-weight resampling is duplicating draws; with
