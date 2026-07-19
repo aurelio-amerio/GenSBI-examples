@@ -1,0 +1,59 @@
+task_name: spherical_grf
+
+strategy:
+  method: "flow"
+  model: "flux"
+
+# 1D sinusoidal cond ids over NEST order — baseline arm of the A/B against
+# config_healpix.yaml (spherical HEALPix RoPE).
+ids:
+  cond_kind: "pos1d"
+
+data:
+  nside: 64
+  seed: 0
+
+encoder:
+  embed_dim: 32
+  depths: [2, 2, 6, 2, 2]
+  num_heads: [4, 8, 16, 16, 16]
+  window_size: 16
+
+model:
+  in_channels: 1
+  vec_in_dim: null
+  context_in_dim: 512
+  mlp_ratio: 4.0
+  num_heads: 6
+  depth: 4
+  depth_single_blocks: 4
+  axes_dim: [64]           # hidden_size = sum(axes_dim) * heads = 384
+  theta: null              # null -> Flux1Params default (10 * (dim_obs + dim_cond) = 510)
+  qkv_bias: true
+  param_dtype: "float32"
+  id_embedding_strategy: ["absolute", "pos1d"]
+
+optimizer:
+  warmup_steps: 500
+  decay_transition: 0.85
+  max_lr: 1.0e-3
+  min_lr: 0.0
+
+training:
+  batch_size: 128
+  val_batch_size: 256
+  nsteps: 20000
+  ema_decay: 0.999
+  multistep: 1
+  early_stopping: true
+  val_every: 100
+  experiment_id: "spherical_grf_fm_pos1d"
+  train_model: true
+  restore_model: false
+
+evaluation:
+  observations: [1, 2, 3]
+  num_posterior_samples: 10000
+  sample_step_size: 0.01
+  tarp_pairs: 200
+  tarp_posterior_samples: 1000
