@@ -142,7 +142,7 @@ SAMPLE_STEP_SIZE = 0.25 if QUICK else _EVAL["sample_step_size"]
 TARP_PAIRS = 2 if QUICK else _EVAL["tarp_pairs"]
 TARP_POSTERIOR_SAMPLES = 8 if QUICK else _EVAL["tarp_posterior_samples"]
 
-EXPERIMENT_ID = _TRAIN["experiment_id"] + ("_quick" if QUICK else "")
+EXPERIMENT_ID = _TRAIN["run_name"] + ("_quick" if QUICK else "")
 CHECKPOINT_DIR = os.path.join(BASE_DIR, "checkpoints", EXPERIMENT_ID)
 IMGS_DIR = os.path.join(BASE_DIR, "imgs")
 RESULTS_FILE = os.path.join(BASE_DIR, f"{EXPERIMENT_ID}_results.txt")

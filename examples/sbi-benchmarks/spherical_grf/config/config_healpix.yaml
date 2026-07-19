@@ -49,7 +49,8 @@ training:
   multistep: 1
   early_stopping: true
   val_every: 100
-  experiment_id: "spherical_grf_fm_healpix"
+  experiment_id: 1          # orbax checkpoint step — must be an int (repo convention)
+  run_name: "spherical_grf_fm_healpix"   # file/dir naming stem for results, imgs, checkpoints
   train_model: true
   restore_model: false
 
