@@ -8,8 +8,7 @@ over the 3-dim posterior (logA, n, alpha) of the
 sbibm-jax `spherical_grf` task. Training data streams from the published
 HF dataset (offline TaskDataset, NEST ordering, Hub normalization stats;
 first use downloads ~24 GB into the HF cache). TARP pairs are still
-simulated fresh via the task's healpy simulator. Design doc:
-docs/superpowers/specs/2026-07-18-spherical-grf-flowmatch-example-design.md
+simulated fresh via the task's healpy simulator.
 
 Run headless. The script defaults to the GPU (``JAX_PLATFORMS=cuda``) and
 will fail fast on a machine with no CUDA device.
