@@ -22,8 +22,6 @@ request_memory = 32 GB
 request_gpus   = 1
 
 +UseNvidiaA100 = True
-# cuDNN dropped Volta support; require Ampere or newer.
-requirements = (TARGET.Gpus_Capability >= 8.0)
 
 log    = condor_logs/spherical_grf_$Fn(config)_a100.log
 output = condor_logs/spherical_grf_$Fn(config)_a100.out

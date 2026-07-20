@@ -1,0 +1,3 @@
+quick=False batch=128 nsteps=50000 workers=8 nside=64 embed_dim=32 depths=(2, 2, 6, 2, 2) window=16 cond=48x512 flux=4d+4s heads=6 ids=('absolute', 'rope') cond_ids=healpix-rope
+data: HF aurelio-amerio/SBI-benchmarks-test/spherical_grf, Hub stats x_mean=-1.75098e-06 x_std=129.503 (17.0s)
+training: 499 steps in 20168s, final train loss 0.1045, final val loss 0.1564

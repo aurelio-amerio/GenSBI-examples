@@ -64,6 +64,7 @@ from gensbi.recipes.flux1 import parse_flux1_params
 from gensbi.recipes.utils import init_ids_1d, parse_training_config
 from gensbi.utils.plotting import plot_marginals
 from gensbi.diagnostics import run_tarp, plot_tarp
+from gensbi.diagnostics.metrics import c2st
 
 from sbibm_jax.tasks import get_task
 from sbibm_jax.data import TaskDataset
@@ -258,6 +259,17 @@ def evaluate(pipeline, ds, log):
             f"std {np.array2string(flow.std(0), precision=3)} | "
             f"ref mean {np.array2string(ref.mean(0), precision=3)} "
             f"std {np.array2string(ref.std(0), precision=3)}")
+
+        # C2ST: classifier accuracy of flow vs reference posterior samples.
+        # 0.5 = indistinguishable (ideal), 1.0 = perfectly separable. Balance
+        # the two sets to equal size so the classifier baseline is 0.5.
+        n_c2st = int(min(flow.shape[0], ref.shape[0]))
+        _rng = np.random.default_rng(SEED + i)
+        f_c = flow[_rng.choice(flow.shape[0], n_c2st, replace=False)]
+        r_c = ref[_rng.choice(ref.shape[0], n_c2st, replace=False)]
+        c2st_acc = float(c2st(jnp.asarray(f_c), jnp.asarray(r_c), seed=SEED))
+        log(f"obs {i}: C2ST(flow vs ref) = {c2st_acc:.3f} over {n_c2st} "
+            f"samples (0.5=indistinguishable, 1.0=separable)")
 
         # Overlay: reference (blue) under flow posterior (orange).
         fig = corner(ref, labels=labels, truths=list(theta_true), color="C0",
