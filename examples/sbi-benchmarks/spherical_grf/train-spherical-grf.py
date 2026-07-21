@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Flow-matching NPE on the spherical GRF task with a HealSwin encoder.
 
-A HEALPix-native Swin encoder compresses each nside-64 spherical map to 48
-bottleneck tokens (nside 2, 512 features), which condition a gensbi Flux1
+A HEALPix-native Swin encoder compresses each nside-64 spherical map to a
+bottleneck token grid (config-derived; 768 tokens x 512 features at nside 8
+for config_healpix.yaml), which conditions a gensbi Flux1
 flow-matching model, via spherical HEALPix RoPE ids (see COND_ID_KIND),
 over the 3-dim posterior (logA, n, alpha) of the
 sbibm-jax `spherical_grf` task. Training data streams from the published
@@ -40,6 +41,7 @@ else:
     os.environ.setdefault("JAX_PLATFORMS", "cuda")
 
 import time
+from math import isqrt
 
 import jax
 import jax.numpy as jnp
@@ -104,7 +106,9 @@ EMBED_DIM = _ENC["embed_dim"]
 DEPTHS = tuple(_ENC["depths"])
 ENC_NUM_HEADS = tuple(_ENC["num_heads"])
 WINDOW_SIZE = _ENC["window_size"]
-NSIDE_BOTTLENECK = NSIDE // (2 * 2 ** (len(DEPTHS) - 1))  # patch /2, then mergings
+PATCH_SIZE = _ENC.get("patch_size", 4)  # power of four; 1 = no regrouping
+# patch embed divides nside by sqrt(patch_size), each merging halves it
+NSIDE_BOTTLENECK = NSIDE // (isqrt(PATCH_SIZE) * 2 ** (len(DEPTHS) - 1))
 COND_TOKENS = 12 * NSIDE_BOTTLENECK ** 2
 COND_FEATURES = EMBED_DIM * 2 ** (len(DEPTHS) - 1)
 
@@ -133,6 +137,7 @@ NSTEPS = 5 if QUICK else _TRAIN["nsteps"]
 NUM_WORKERS = 0 if QUICK else min(8, max(1, (os.cpu_count() or 2) - 2))
 TRAIN_MODEL = _TRAIN["train_model"]
 RESTORE_MODEL = _TRAIN["restore_model"]
+VAL_EVERY = 2 if QUICK else _TRAIN["val_every"]
 
 # evaluation
 _EVAL = CONFIG["evaluation"]
@@ -158,6 +163,9 @@ def make_encoder_params() -> HealSwinParams:
         depths=DEPTHS,
         num_heads=ENC_NUM_HEADS,
         window_size=WINDOW_SIZE,
+        patch_size=PATCH_SIZE,
+        dtype=_ENC.get("dtype", "bfloat16"),
+        param_dtype=_ENC.get("param_dtype", "float32"),
     )
 
 
@@ -176,7 +184,7 @@ class SphericalGRFModel(nnx.Module):
 
     def __call__(self, t, obs, obs_ids, cond, cond_ids,
                  conditioned=True, guidance=None, **kwargs):
-        tokens, _skips = self.encoder(cond)  # (B, NPIX, 1) -> (B, 48, 512)
+        tokens, _skips = self.encoder(cond)  # (B, NPIX, 1) -> (B, COND_TOKENS, COND_FEATURES)
         return self.flux(t=t, obs=obs, obs_ids=obs_ids, cond=tokens,
                          cond_ids=cond_ids, conditioned=conditioned,
                          guidance=guidance)
@@ -190,7 +198,7 @@ def make_datasets():
     Normalization stats come from the published Hub metadata.
     """
     ds = TaskDataset(
-        "spherical_grf", ordering="nest", normalize=True,
+        "spherical_grf", ordering="nest", normalize=True, dtype=np.float32,
         seed=SEED, max_workers=NUM_WORKERS,
     )
     train_loader = ds.get_train_loader(BATCH_SIZE)
@@ -319,6 +327,34 @@ def tarp_diagnostic(pipeline, ds, log, key):
         f"in {time.time() - t0:.0f}s -> {EXPERIMENT_ID}_tarp.png")
 
 
+def save_loss_history(losses, val_losses, log):
+    """Persist the loss history to .npz and plot train/val vs step.
+
+    ``pipeline.train`` records one point every ``val_every`` steps: ``losses``
+    is the 0.99-EMA of the batch loss, ``val_losses`` the validation loss.
+    """
+    losses = np.asarray(losses)
+    val_losses = np.asarray(val_losses)
+    steps = (np.arange(len(losses)) + 1) * VAL_EVERY
+    npz_path = os.path.join(BASE_DIR, f"{EXPERIMENT_ID}_losses.npz")
+    np.savez(npz_path, steps=steps, train_loss=losses, val_loss=val_losses)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(steps, losses, label="train (EMA)", color="C0")
+    ax.plot(steps, val_losses, label="val", color="C1")
+    ax.set_yscale("log")
+    ax.set_xlabel("training step")
+    ax.set_ylabel("flow-matching loss")
+    ax.set_title(f"{EXPERIMENT_ID}: loss history")
+    ax.legend()
+    ax.grid(True, which="both", alpha=0.3)
+    loss_png = os.path.join(IMGS_DIR, f"{EXPERIMENT_ID}_loss.png")
+    fig.savefig(loss_png, dpi=100, bbox_inches="tight")
+    plt.close(fig)
+    log(f"loss history: {len(losses)} points -> {os.path.basename(loss_png)}, "
+        f"{os.path.basename(npz_path)}")
+
+
 def main():
     os.makedirs(IMGS_DIR, exist_ok=True)
     results_file = open(RESULTS_FILE, "w")
@@ -330,7 +366,10 @@ def main():
 
     log(f"quick={QUICK} batch={BATCH_SIZE} nsteps={NSTEPS} workers={NUM_WORKERS} "
         f"nside={NSIDE} embed_dim={EMBED_DIM} depths={DEPTHS} window={WINDOW_SIZE} "
-        f"cond={COND_TOKENS}x{COND_FEATURES} "
+        f"patch={PATCH_SIZE} cond={COND_TOKENS}x{COND_FEATURES} "
+        f"enc_dtype={_ENC.get('dtype', 'bfloat16')}/{_ENC.get('param_dtype', 'float32')} "
+        f"flux_dtype={FLUX_PARAMS_DICT['dtype'].__name__}"
+        f"/{FLUX_PARAMS_DICT['param_dtype'].__name__} "
         f"flux={FLUX_PARAMS_DICT['depth']}d+{FLUX_PARAMS_DICT['depth_single_blocks']}s "
         f"heads={FLUX_PARAMS_DICT['num_heads']} "
         f"ids={FLUX_PARAMS_DICT['id_embedding_strategy']} cond_ids={COND_ID_KIND}")
@@ -350,6 +389,7 @@ def main():
         log(f"training: {len(losses)} steps in {time.time() - t0:.0f}s, "
             f"final train loss {float(losses[-1]):.4f}, "
             f"final val loss {float(val_losses[-1]):.4f}")
+        save_loss_history(losses, val_losses, log)
     if RESTORE_MODEL:
         pipeline.restore_model()
         pipeline._wrap_model()
@@ -367,10 +407,11 @@ if __name__ == "__main__" and os.environ.get("SMOKE") == "1":
     model.eval()
     B = 2
     obs_ids, _ = init_ids_1d(DIM_THETA, 0)  # (1, 3, 2) — broadcast over batch
+    print("cond tokens:", COND_TOKENS, "features:", COND_FEATURES)
     if COND_ID_KIND == "healpix-rope":
-        cond_ids, _ = COND_STRATEGY.build(COND_TOKENS)  # (1, 48, 3) float32
+        cond_ids, _ = COND_STRATEGY.build(COND_TOKENS)  # (1, COND_TOKENS, 3) float32
     else:
-        cond_ids, _ = init_ids_1d(COND_TOKENS, 1)  # (1, 48, 2)
+        cond_ids, _ = init_ids_1d(COND_TOKENS, 1)  # (1, COND_TOKENS, 2)
     v = model(
         t=jnp.full((B,), 0.5),
         obs=jnp.zeros((B, DIM_THETA, 1)),
