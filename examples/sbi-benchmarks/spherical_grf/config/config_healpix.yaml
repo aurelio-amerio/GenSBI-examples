@@ -47,8 +47,8 @@ optimizer:
   min_lr: 1.0e-6
 
 training:
-  batch_size: 64            # halved from 128: batch-128 training OOM'd (156 GiB alloc, A100)
-  val_batch_size: 128
+  batch_size: 32            # batch-128 training OOM'd (209 GiB peak); A100s here are 40 GB
+  val_batch_size: 64
   nsteps: 50000
   ema_decay: 0.999
   multistep: 1
