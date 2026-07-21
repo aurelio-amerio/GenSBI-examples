@@ -91,6 +91,17 @@ No changes to GenSBI, HEAL-SWIN-nnx, or sbibm-jax; no changes to
 ## Final step: submit the training job
 
 After implementation and verification, submit the GPU run (the sub file
-already targets `config_healpix.yaml` on an A100):
+already targets `config_healpix.yaml` on an A100). HTCondor may resolve
+relative paths in the sub file against the submission directory, so first
+verify path resolution with a dry run, submitting from the sub file's own
+directory:
 
-    condor_submit examples/sbi-benchmarks/spherical_grf/sub/spherical_grf.sub
+    cd examples/sbi-benchmarks/spherical_grf/sub
+    condor_submit -dry-run /dev/stdout spherical_grf.sub  # inspect resolved
+                                                          # log/output/error
+                                                          # and argument paths
+    condor_submit spherical_grf.sub
+
+If the dry run shows the `condor_logs/...` or executable paths resolving
+wrong, fix the submission directory (or the sub file) before the real
+submission.
