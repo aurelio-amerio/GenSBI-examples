@@ -32,10 +32,10 @@ model:
   vec_in_dim: null
   context_in_dim: 1024     # = encoder embed_dim * 2^(len(depths)-1); asserted
   mlp_ratio: 4.0
-  num_heads: 6
+  num_heads: 8
   depth: 4
   depth_single_blocks: 8
-  axes_dim: [22, 22, 20]   # (x, y, z); sum = 64 = hidden/heads
+  axes_dim: [32, 32, 32]   # (x, y, z); sum = 96 = hidden/heads -> hidden 768
   theta: null              # null -> derived from HealpixRope(nside_bottleneck).theta
   qkv_bias: true
   param_dtype: "float32"   # fp32 master weights
