@@ -49,8 +49,8 @@ optimizer:
   min_lr: 1.0e-6
 
 training:
-  batch_size: 64            # A100 target; halve to 32 if it OOMs
-  val_batch_size: 128
+  batch_size: 32            # batch 64 OOM'd on 40 GB A100 (61.5 GiB alloc); ~31 GiB at 32
+  val_batch_size: 64
   nsteps: 50000
   ema_decay: 0.999
   multistep: 1
