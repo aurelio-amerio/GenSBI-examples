@@ -21,10 +21,10 @@ request_cpus   = 8
 request_memory = 32 GB
 request_gpus   = 1
 
-+UseNvidiaA100 = True
++UseNvidiaH100 = True
 
-log    = condor_logs/spherical_grf_$Fn(config)_a100.log
-output = condor_logs/spherical_grf_$Fn(config)_a100.out
-error  = condor_logs/spherical_grf_$Fn(config)_a100.err
+log    = condor_logs/spherical_grf_$Fn(config)_h100.log
+output = condor_logs/spherical_grf_$Fn(config)_h100.out
+error  = condor_logs/spherical_grf_$Fn(config)_h100.err
 
 queue
