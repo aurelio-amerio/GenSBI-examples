@@ -1,0 +1,69 @@
+task_name: spherical_grf
+
+strategy:
+  method: "flow"
+  model: "flux"
+
+# Pipeline-side cond-id builder: "healpix-rope" (spherical RoPE on HEALPix
+# pixel-center 3D coords, gensbi.recipes.HealpixRope) or "pos1d" (1D
+# sinusoidal ids over NEST order — the A/B baseline, see config_pos1d.yaml).
+ids:
+  cond_kind: "healpix-rope"
+
+data:
+  nside: 64
+  seed: 0
+
+# HealSwin encoder, exp-3 memory-lean variant: window 16 (vs 64) shrinks the
+# per-window attention 16x, and a 5th stage adds one more merging
+# 64 -> 32 -> 16 -> 8 -> 4 (192 bottleneck tokens x 1024 features), so it
+# fits a 40 GB A100 where the exp-2 window-64/4-stage model could not.
+encoder:
+  embed_dim: 64
+  depths: [2, 2, 6, 2, 2]
+  num_heads: [4, 8, 16, 16, 16]
+  window_size: 16
+  patch_size: 1
+  param_dtype: "float32"   # fp32 master weights
+  dtype: "bfloat16"        # bf16 compute
+
+model:
+  in_channels: 1
+  vec_in_dim: null
+  context_in_dim: 1024     # = encoder embed_dim * 2^(len(depths)-1); asserted
+  mlp_ratio: 4.0
+  num_heads: 6
+  depth: 4
+  depth_single_blocks: 8
+  axes_dim: [22, 22, 20]   # (x, y, z); sum = 64 = hidden/heads
+  theta: null              # null -> derived from HealpixRope(nside_bottleneck).theta
+  qkv_bias: true
+  param_dtype: "float32"   # fp32 master weights
+  dtype: "bfloat16"        # bf16 compute
+  id_embedding_strategy: ["absolute", "rope"]   # model-side: apply RoPE to cond ids
+
+optimizer:
+  warmup_steps: 500
+  decay_transition: 0.85
+  max_lr: 1.0e-4
+  min_lr: 1.0e-6
+
+training:
+  batch_size: 64            # A100 target; halve to 32 if it OOMs
+  val_batch_size: 128
+  nsteps: 50000
+  ema_decay: 0.999
+  multistep: 1
+  early_stopping: true
+  val_every: 100
+  experiment_id: 3          # orbax checkpoint step — must be an int (repo convention)
+  run_name: "spherical_grf_fm_healpix_3"   # file/dir naming stem for results, imgs, checkpoints
+  train_model: true
+  restore_model: false
+
+evaluation:
+  observations: [1, 2, 3]
+  num_posterior_samples: 10000
+  sample_step_size: 0.01
+  tarp_pairs: 200
+  tarp_posterior_samples: 1000

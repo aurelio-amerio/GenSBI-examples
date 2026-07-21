@@ -1,0 +1,28 @@
+# HTCondor submit file — spherical GRF exp-3 (memory-lean HealSwin) on A100.
+#
+#     condor_submit sub/spherical_grf_a100.sub
+#
+# A100 (40 GB) variant of spherical_grf.sub: window-16 / 5-stage encoder
+# (config_healpix_3.yaml) sized to fit the smaller card. See the sibling
+# spherical_grf.sub for the H100 exp-2 run.
+repo_root   = /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples
+example_dir = $(repo_root)/examples/sbi-benchmarks/spherical_grf
+config      = config_healpix_3.yaml
+
+universe   = vanilla
+initialdir = $(example_dir)/sub
+executable = $(example_dir)/sub/run_spherical_grf.sh
+arguments  = "$(example_dir) $(config)"
+getenv     = True
+
+request_cpus   = 8
+request_memory = 32 GB
+request_gpus   = 1
+
++UseNvidiaA100 = True
+
+log    = condor_logs/spherical_grf_$Fn(config)_a100.log
+output = condor_logs/spherical_grf_$Fn(config)_a100.out
+error  = condor_logs/spherical_grf_$Fn(config)_a100.err
+
+queue
