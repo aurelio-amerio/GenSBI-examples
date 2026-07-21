@@ -13,4 +13,8 @@ cd "$1"
 # environment) — activate an env with gensbi + heal-swin-nnx + sbibm-jax
 # before condor_submit.
 unset JAX_PLATFORMS
+
+eval "$(conda shell.bash hook)"
+conda activate /lhome/ific/a/aamerio/miniforge3/envs/gensbi
+
 exec python train-spherical-grf.py --config "config/$2"
