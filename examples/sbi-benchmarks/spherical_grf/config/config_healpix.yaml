@@ -14,12 +14,16 @@ data:
   nside: 64
   seed: 0
 
-# HealSwin encoder: patch embed nside 64->32, then 4 mergings 32->...->2.
+# HealSwin encoder: patch_size 1 keeps the nside-64 grid, then 3 mergings
+# 64 -> 32 -> 16 -> 8 (768 bottleneck tokens x 512 features).
 encoder:
-  embed_dim: 32
-  depths: [2, 2, 6, 2, 2]
-  num_heads: [4, 8, 16, 16, 16]
-  window_size: 16
+  embed_dim: 64
+  depths: [2, 2, 6, 2]
+  num_heads: [4, 8, 16, 16]
+  window_size: 64
+  patch_size: 1
+  param_dtype: "float32"   # fp32 master weights
+  dtype: "bfloat16"        # bf16 compute
 
 model:
   in_channels: 1
@@ -28,11 +32,12 @@ model:
   mlp_ratio: 4.0
   num_heads: 6
   depth: 4
-  depth_single_blocks: 4
+  depth_single_blocks: 8
   axes_dim: [22, 22, 20]   # (x, y, z); sum = 64 = hidden/heads
   theta: null              # null -> derived from HealpixRope(nside_bottleneck).theta
   qkv_bias: true
-  param_dtype: "float32"
+  param_dtype: "float32"   # fp32 master weights
+  dtype: "bfloat16"        # bf16 compute
   id_embedding_strategy: ["absolute", "rope"]   # model-side: apply RoPE to cond ids
 
 optimizer:
@@ -49,10 +54,10 @@ training:
   multistep: 1
   early_stopping: true
   val_every: 100
-  experiment_id: 1          # orbax checkpoint step — must be an int (repo convention)
-  run_name: "spherical_grf_fm_healpix"   # file/dir naming stem for results, imgs, checkpoints
-  train_model: false        # eval-only recovery: reload the saved step-1 checkpoint
-  restore_model: true       # (100k-sample eval OOM'd; retrain not needed)
+  experiment_id: 2          # orbax checkpoint step — must be an int (repo convention)
+  run_name: "spherical_grf_fm_healpix_2"   # file/dir naming stem for results, imgs, checkpoints
+  train_model: true
+  restore_model: false
 
 evaluation:
   observations: [1, 2, 3]
