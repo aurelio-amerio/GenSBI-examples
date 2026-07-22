@@ -58,12 +58,13 @@ training:
   val_every: 100
   experiment_id: 3          # orbax checkpoint step — must be an int (repo convention)
   run_name: "spherical_grf_fm_healpix_3"   # file/dir naming stem for results, imgs, checkpoints
-  train_model: true
-  restore_model: false
+  train_model: false        # eval-only recovery: model trained by cluster 1098436
+  restore_model: true       # (10k-in-one-batch sampling OOM'd; retrain not needed)
 
 evaluation:
   observations: [1, 2, 3]
   num_posterior_samples: 10000
+  sample_chunk_size: 1000   # sampler memory scales with chunk (~5 GiB here)
   sample_step_size: 0.01
   tarp_pairs: 200
   tarp_posterior_samples: 1000

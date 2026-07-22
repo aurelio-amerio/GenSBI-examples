@@ -144,6 +144,9 @@ _EVAL = CONFIG["evaluation"]
 EVAL_OBSERVATIONS = (1,) if QUICK else tuple(_EVAL["observations"])
 NUM_POSTERIOR_SAMPLES = 64 if QUICK else _EVAL["num_posterior_samples"]
 SAMPLE_STEP_SIZE = 0.25 if QUICK else _EVAL["sample_step_size"]
+# Jitted-sampler memory scales with nsamples; chunk to fit the GPU. Default
+# (no config key) = one chunk, the pre-change behavior.
+SAMPLE_CHUNK = 16 if QUICK else _EVAL.get("sample_chunk_size", NUM_POSTERIOR_SAMPLES)
 TARP_PAIRS = 2 if QUICK else _EVAL["tarp_pairs"]
 TARP_POSTERIOR_SAMPLES = 8 if QUICK else _EVAL["tarp_posterior_samples"]
 
@@ -253,14 +256,20 @@ def evaluate(pipeline, ds, log):
         x_o = prep_x(np.asarray(x_raw).reshape(1, -1), ds)  # (1, NPIX, 1)
         theta_true = np.asarray(ds.get_true_parameters(i)).reshape(-1)
         ref = np.asarray(ref)
-        key, sk = jax.random.split(key)
         t0 = time.time()
         # One condition -> sample; sample_batched is for batches of conditions.
-        samples = pipeline.sample(
-            sk, x_o, NUM_POSTERIOR_SAMPLES, step_size=SAMPLE_STEP_SIZE,
-        )
+        # Chunked: 10k samples in one jitted batch OOM'd a 40 GB A100 for the
+        # patch-1 models (52 GiB); each chunk is an independent sampler call.
+        chunks = []
+        for start in range(0, NUM_POSTERIOR_SAMPLES, SAMPLE_CHUNK):
+            key, sk = jax.random.split(key)
+            n = min(SAMPLE_CHUNK, NUM_POSTERIOR_SAMPLES - start)
+            chunks.append(np.asarray(pipeline.sample(
+                sk, x_o, n, step_size=SAMPLE_STEP_SIZE,
+            )))
+        samples = np.concatenate(chunks, axis=0)
         # ds theta stats are tokenized (1, 3, 1); un-tokenize after unnorm.
-        flow = np.asarray(ds.unnormalize_theta(np.asarray(samples)))[:, :, 0]  # (S, 3)
+        flow = np.asarray(ds.unnormalize_theta(samples))[:, :, 0]  # (S, 3)
         log(f"obs {i}: {flow.shape[0]} samples in {time.time() - t0:.0f}s | "
             f"true {np.array2string(theta_true, precision=3)} | "
             f"flow mean {np.array2string(flow.mean(0), precision=3)} "
