@@ -7,7 +7,7 @@
 # spherical_grf.sub for the H100 exp-2 run.
 repo_root   = /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples
 example_dir = $(repo_root)/examples/sbi-benchmarks/spherical_grf
-config      = config_healpix_3.yaml
+config      = config_healpix_5.yaml
 
 universe   = vanilla
 initialdir = $(example_dir)/sub

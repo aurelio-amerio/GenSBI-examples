@@ -38,6 +38,7 @@ import sys
 if __name__ != "__main__":
     os.environ["JAX_PLATFORMS"] = "cpu"
 else:
+    os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".90"
     os.environ.setdefault("JAX_PLATFORMS", "cuda")
 
 import time
@@ -145,8 +146,8 @@ EVAL_OBSERVATIONS = (1,) if QUICK else tuple(_EVAL["observations"])
 NUM_POSTERIOR_SAMPLES = 64 if QUICK else _EVAL["num_posterior_samples"]
 SAMPLE_STEP_SIZE = 0.25 if QUICK else _EVAL["sample_step_size"]
 # Jitted-sampler memory scales with nsamples; chunk to fit the GPU. Default
-# (no config key) = one chunk, the pre-change behavior.
-SAMPLE_CHUNK = 16 if QUICK else _EVAL.get("sample_chunk_size", NUM_POSTERIOR_SAMPLES)
+# (no config key) = None = one device call, the pre-change behavior.
+SAMPLE_CHUNK = 16 if QUICK else _EVAL.get("sample_chunk_size", None)
 TARP_PAIRS = 2 if QUICK else _EVAL["tarp_pairs"]
 TARP_POSTERIOR_SAMPLES = 8 if QUICK else _EVAL["tarp_posterior_samples"]
 
@@ -258,16 +259,13 @@ def evaluate(pipeline, ds, log):
         ref = np.asarray(ref)
         t0 = time.time()
         # One condition -> sample; sample_batched is for batches of conditions.
-        # Chunked: 10k samples in one jitted batch OOM'd a 40 GB A100 for the
-        # patch-1 models (52 GiB); each chunk is an independent sampler call.
-        chunks = []
-        for start in range(0, NUM_POSTERIOR_SAMPLES, SAMPLE_CHUNK):
-            key, sk = jax.random.split(key)
-            n = min(SAMPLE_CHUNK, NUM_POSTERIOR_SAMPLES - start)
-            chunks.append(np.asarray(pipeline.sample(
-                sk, x_o, n, step_size=SAMPLE_STEP_SIZE,
-            )))
-        samples = np.concatenate(chunks, axis=0)
+        # chunk_size bounds device memory: 10k samples in one jitted batch
+        # OOM'd a 40 GB A100 for the patch-1 models (52 GiB).
+        key, sk = jax.random.split(key)
+        samples = np.asarray(pipeline.sample(
+            sk, x_o, NUM_POSTERIOR_SAMPLES, chunk_size=SAMPLE_CHUNK,
+            step_size=SAMPLE_STEP_SIZE,
+        ))
         # ds theta stats are tokenized (1, 3, 1); un-tokenize after unnorm.
         flow = np.asarray(ds.unnormalize_theta(samples))[:, :, 0]  # (S, 3)
         log(f"obs {i}: {flow.shape[0]} samples in {time.time() - t0:.0f}s | "
@@ -322,7 +320,7 @@ def tarp_diagnostic(pipeline, ds, log, key):
     x = np.asarray(sim(ks, jnp.asarray(theta)))               # (P, NPIX) RING
     x_tok = prep_x(x, ds)
     post = pipeline.sample_batched(
-        kp, x_tok, TARP_POSTERIOR_SAMPLES, step_size=SAMPLE_STEP_SIZE,
+        kp, x_tok, TARP_POSTERIOR_SAMPLES, step_size=SAMPLE_STEP_SIZE, chunk_size=20
     )
     post = np.asarray(post)[:, :, :, 0]                       # (S, P, 3)
     # ds theta stats are tokenized (1, 3, 1): tokenize, normalize, un-tokenize.

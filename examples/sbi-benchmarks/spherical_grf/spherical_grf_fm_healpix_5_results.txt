@@ -1,0 +1,2 @@
+quick=False batch=64 nsteps=150000 workers=8 nside=64 embed_dim=64 depths=(2, 2, 6, 2) window=16 patch=4 cond=192x512 enc_dtype=bfloat16/float32 flux_dtype=bfloat16/float32 flux=4d+8s heads=6 ids=('absolute', 'rope') cond_ids=healpix-rope
+data: HF aurelio-amerio/SBI-benchmarks-test/spherical_grf, Hub stats x_mean=-1.75098e-06 x_std=129.503 (8.9s)
