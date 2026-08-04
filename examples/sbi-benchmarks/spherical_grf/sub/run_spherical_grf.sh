@@ -1,7 +1,8 @@
 #!/bin/bash
 # HTCondor executable wrapper for the spherical GRF flow-matching example.
 #
-#   $1 = example directory, $2 = config file name (inside $1/config/)
+#   $1 = example directory, $2 = config file name (inside $1/config/),
+#   $3 = training script name (optional, default train-spherical-grf.py)
 set -euo pipefail
 
 cd "$1"
@@ -17,4 +18,4 @@ unset JAX_PLATFORMS
 eval "$(conda shell.bash hook)"
 conda activate /lhome/ific/a/aamerio/miniforge3/envs/gensbi
 
-exec python train-spherical-grf.py --config "config/$2"
+exec python "${3:-train-spherical-grf.py}" --config "config/$2"
