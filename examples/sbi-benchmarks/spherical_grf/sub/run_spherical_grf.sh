@@ -15,6 +15,13 @@ cd "$1"
 # before condor_submit.
 unset JAX_PLATFORMS
 
+# All spherical_grf results (runs 1-7) train on the TEST dataset repo
+# (aurelio-amerio/SBI-benchmarks-test, x_std 129.503). Export explicitly:
+# earlier runs inherited this from the interactive submit shell via
+# getenv=True, which silently flips to the production repo (different
+# normalization stats) when submitting from a shell without it.
+export SBIBM_JAX_USE_TEST=1
+
 eval "$(conda shell.bash hook)"
 conda activate /lhome/ific/a/aamerio/miniforge3/envs/gensbi
 

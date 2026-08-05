@@ -1,14 +1,14 @@
-# HTCondor submit file — spherical GRF exp-6 (v2 script: global bottleneck
-# attention + softer LR schedule) on A100.
+# HTCondor submit file — spherical GRF exp-7 (v2 script; architecture frozen
+# at exp-6: global bottleneck attention) on A100.
 #
 #     condor_submit sub/spherical_grf_a100_v2.sub
 #
-# A100 (40 GB) variant. v2 script adds encoder.global_depth full-attention
-# blocks over the 192 bottleneck tokens (config_healpix_6.yaml); memory is
-# within ~1 GiB of exp-5's ~15 GiB at batch 64.
+# A100 (40 GB) variant. exp-7 = exp-6 + 8x exact isometry augmentation +
+# 300k steps (~27h train; run 6 did 150k in 13.6h), TARP disabled
+# (config_healpix_7.yaml). Memory unchanged: ~15 GiB at batch 64.
 repo_root   = /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples
 example_dir = $(repo_root)/examples/sbi-benchmarks/spherical_grf
-config      = config_healpix_6.yaml
+config      = config_healpix_7.yaml
 script      = train-spherical-grf-v2.py
 
 universe   = vanilla

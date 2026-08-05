@@ -20,7 +20,10 @@ spherical HEALPix RoPE ids (see COND_ID_KIND), over the 3-dim posterior
 (logA, n, alpha) of the sbibm-jax `spherical_grf` task. Training data
 streams from the published HF dataset (offline TaskDataset, NEST ordering,
 Hub normalization stats; first use downloads ~24 GB into the HF cache).
-TARP pairs are still simulated fresh via the task's healpy simulator.
+TARP pairs are still simulated fresh via the task's healpy simulator
+(``evaluation.tarp_pairs: 0`` skips TARP). ``data.augment: true`` enables
+per-sample exact HEALPix isometry augmentation (8 rotations/reflections as
+NEST index permutations) on the training stream (exp-7+).
 
 Run headless. The script defaults to the GPU (``JAX_PLATFORMS=cuda``) and
 will fail fast on a machine with no CUDA device.
@@ -111,6 +114,12 @@ with open(CONFIG_PATH) as f:
 NSIDE = CONFIG["data"]["nside"]
 NPIX = 12 * NSIDE ** 2
 SEED = CONFIG["data"]["seed"]
+# data.augment: per-sample exact HEALPix isometry augmentation (8 group
+# elements: z-rotations by k*90deg x mirror reflection) on the training
+# stream only. Valid because the GRF is statistically isotropic and
+# parity-invariant; exact because these isometries are pure NEST index
+# permutations (no interpolation, C_ell preserved to fp precision).
+AUGMENT = bool(CONFIG["data"].get("augment", False))
 DIM_THETA = 3
 THETA_LABELS = (r"$\log A$", r"$n$", r"$\alpha$")
 
@@ -180,7 +189,8 @@ SAMPLE_STEP_SIZE = 0.25 if QUICK else _EVAL["sample_step_size"]
 # Jitted-sampler memory scales with nsamples; chunk to fit the GPU. Default
 # (no config key) = None = one device call, the pre-change behavior.
 SAMPLE_CHUNK = 16 if QUICK else _EVAL.get("sample_chunk_size", None)
-TARP_PAIRS = 2 if QUICK else _EVAL["tarp_pairs"]
+# tarp_pairs 0 disables the TARP diagnostic entirely (also in QUICK).
+TARP_PAIRS = 0 if _EVAL["tarp_pairs"] == 0 else (2 if QUICK else _EVAL["tarp_pairs"])
 TARP_POSTERIOR_SAMPLES = 8 if QUICK else _EVAL["tarp_posterior_samples"]
 
 EXPERIMENT_ID = _TRAIN["run_name"] + ("_quick" if QUICK else "")
@@ -287,6 +297,40 @@ class SphericalGRFModel(nnx.Module):
                          guidance=guidance)
 
 
+def _isometry_perms(nside):
+    """The 8 exact HEALPix grid isometries as NEST index permutations.
+
+    z-rotations by k*90deg composed with mirror reflection (phi -> -phi) are
+    the rigid motions that map the HEALPix pixelization onto itself, so each
+    is a pure pixel permutation: applying one needs no interpolation and
+    preserves the angular power spectrum to fp precision. Element 0 (k=0, no
+    reflection) is the identity, so unrotated maps stay in the mix.
+    """
+    import healpy as hp
+
+    npix = 12 * nside ** 2
+    th, ph = hp.pix2ang(nside, np.arange(npix), nest=True)
+    perms = np.asarray([
+        hp.ang2pix(nside, th, refl * ph + k * np.pi / 2, nest=True)
+        for refl in (1.0, -1.0) for k in range(4)])
+    assert all(np.array_equal(np.sort(p), np.arange(npix)) for p in perms)
+    return perms
+
+
+def _augmented_batches(loader, perms, seed):
+    """Yield (theta, x) with a per-sample random isometry applied to x.
+
+    x is (B, NPIX, 1) in NEST order; theta is untouched (the GRF posterior
+    is invariant under rotations/reflections of the map). Runs in the main
+    process after grain's mp_prefetch — one (B, NPIX) gather per batch,
+    negligible next to a train step.
+    """
+    rng = np.random.default_rng(seed)
+    for theta, x in loader:
+        idx = perms[rng.integers(len(perms), size=x.shape[0])]
+        yield theta, np.take_along_axis(x, idx[..., None], axis=1)
+
+
 def make_datasets():
     """Offline HF TaskDataset + train/val loaders of normalized NEST (theta, x) batches.
 
@@ -299,6 +343,12 @@ def make_datasets():
         seed=SEED, max_workers=NUM_WORKERS,
     )
     train_loader = ds.get_train_loader(BATCH_SIZE)
+    if AUGMENT:
+        # Training stream only; the pipeline just calls iter()/next() on the
+        # loader, so a generator wrapper is a drop-in. Val stays unaugmented
+        # for comparability with earlier runs.
+        train_loader = _augmented_batches(
+            train_loader, _isometry_perms(NSIDE), SEED + 11)
     # The pipeline draws one fixed val batch at train start.
     val_loader = ds.get_val_loader(VAL_BATCH_SIZE)
     return ds, train_loader, val_loader
@@ -400,7 +450,10 @@ def evaluate(pipeline, ds, log):
                     dpi=100, bbox_inches="tight")
         plt.close("all")
 
-    tarp_diagnostic(pipeline, ds, log, key)
+    if TARP_PAIRS:
+        tarp_diagnostic(pipeline, ds, log, key)
+    else:
+        log("TARP: skipped (evaluation.tarp_pairs = 0)")
 
 
 def tarp_diagnostic(pipeline, ds, log, key):
@@ -465,6 +518,7 @@ def main():
         results_file.flush()
 
     log(f"quick={QUICK} batch={BATCH_SIZE} nsteps={NSTEPS} workers={NUM_WORKERS} "
+        f"augment={AUGMENT} "
         f"nside={NSIDE} embed_dim={EMBED_DIM} depths={DEPTHS} window={WINDOW_SIZE} "
         f"patch={PATCH_SIZE} cond={COND_TOKENS}x{COND_FEATURES} "
         f"global={GLOBAL_DEPTH}x{GLOBAL_NUM_HEADS}h "

@@ -1,0 +1,86 @@
+task_name: spherical_grf
+
+strategy:
+  method: "flow"
+  model: "flux"
+
+# Pipeline-side cond-id builder: "healpix-rope" (spherical RoPE on HEALPix
+# pixel-center 3D coords, gensbi.recipes.HealpixRope) or "pos1d" (1D
+# sinusoidal ids over NEST order — the A/B baseline, see config_pos1d.yaml).
+ids:
+  cond_kind: "healpix-rope"
+
+# exp-7 vs exp-6: architecture FROZEN (attribution). Two training-side
+# changes, both aimed at exp-6's diagnosis (val loss still falling at 150k;
+# train/val gap ~33%; logA 40% over-dispersed vs reference):
+#   1. data.augment — 8x exact HEALPix isometry augmentation (z-rotations by
+#      k*90deg x reflection = pure NEST permutations; GRF is isotropic and
+#      parity-invariant, so labels are unchanged and C_ell is exact).
+#   2. nsteps 150k -> 300k (2x training; ~27h on A100, run 6 did 150k in
+#      13.6h). TARP disabled (tarp_pairs 0) to drop the ~68 min eval tail
+#      until posteriors match the reference more closely.
+data:
+  nside: 64
+  seed: 0
+  augment: true   # per-sample random isometry on the training stream only
+
+# HealSwin encoder: patch_size 4 embeds the nside-64 map on an nside-32 grid,
+# then 3 mergings 32 -> 16 -> 8 -> 4 (192 bottleneck tokens x 512 features).
+# v2 script: windowed attention is face-bounded, so global_depth adds
+# 2 full-attention blocks over the 192 bottleneck tokens (dot-product attn,
+# QK-RMS norm, HEALPix RoPE) — the encoder's only sphere-wide mixing stage.
+encoder:
+  embed_dim: 64
+  depths: [2, 2, 6, 2]
+  num_heads: [4, 8, 16, 16]
+  window_size: 16
+  patch_size: 4
+  global_depth: 2
+  global_num_heads: 8
+  global_axes_dim: [22, 22, 20]   # (x, y, z); sum = 64 = features/heads
+  param_dtype: "float32"   # fp32 master weights
+  dtype: "bfloat16"        # bf16 compute
+
+model:
+  in_channels: 1
+  vec_in_dim: null
+  context_in_dim: 512      # = encoder embed_dim * 2^(len(depths)-1); asserted
+  mlp_ratio: 4.0
+  num_heads: 6
+  depth: 4
+  depth_single_blocks: 8
+  axes_dim: [22, 22, 20]   # (x, y, z); sum = 64 = hidden/heads
+  theta: null              # null -> derived from HealpixRope(nside_bottleneck).theta
+  qkv_bias: true
+  param_dtype: "float32"   # fp32 master weights
+  dtype: "bfloat16"        # bf16 compute
+  id_embedding_strategy: ["absolute", "rope"]   # model-side: apply RoPE to cond ids
+
+# Schedule unchanged from exp-6 (max_lr 7e-5 = sqrt batch-size rule at 64);
+# decay_transition 0.6 now means the cosine tail covers the last 120k steps.
+optimizer:
+  warmup_steps: 500
+  decay_transition: 0.6
+  max_lr: 7.0e-5
+  min_lr: 1.0e-6
+
+training:
+  batch_size: 64            # batch 128 OOM'd on 40 GB A100 (30.75 GiB alloc); ~15 GiB at 64
+  val_batch_size: 64
+  nsteps: 300000
+  ema_decay: 0.999
+  multistep: 1
+  early_stopping: true
+  val_every: 100
+  experiment_id: 7          # orbax checkpoint step — must be an int (repo convention)
+  run_name: "spherical_grf_fm_healpix_7"   # file/dir naming stem for results, imgs, checkpoints
+  train_model: true
+  restore_model: false
+
+evaluation:
+  observations: [1, 2, 3]
+  num_posterior_samples: 10000
+  sample_chunk_size: 1000   # sampler memory scales with chunk (~3 GiB here)
+  sample_step_size: 0.01
+  tarp_pairs: 0             # 0 = skip TARP (re-enable once posteriors match)
+  tarp_posterior_samples: 1000
