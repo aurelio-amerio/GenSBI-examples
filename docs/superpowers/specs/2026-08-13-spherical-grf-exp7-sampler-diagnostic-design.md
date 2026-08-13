@@ -43,7 +43,7 @@ Attribution logic:
    `train-spherical-grf-v2.py` with training stripped), same config-path CLI.
 2. Four small mode configs: `config/config_healpix_7diag_{ode,sde,tarp_ode,tarp_sde}.yaml`.
 3. `sub/spherical_grf_7diag.sub` — one submit file, four `queue` blocks
-   (condor re-reads `config` / GPU attribute between blocks).
+   (condor re-reads `config` between blocks); all jobs A100.
 4. Results under the existing naming convention:
    `spherical_grf_fm_healpix_7diag_<mode>_results.txt`, TARP + overlay pngs
    in `imgs/`.
@@ -114,15 +114,15 @@ Single `spherical_grf_7diag.sub`, four jobs:
 |---|---|---|
 | ode | A100 (`+UseNvidiaA100`) | ~4 h (Euler 0.002 dominates: 5× baseline × 10 obs) |
 | sde | A100 | ~2.5 h (SDE ≈ 2 model evals/step) |
-| tarp_ode | H100 (`+UseNvidiaH100`) | ~1 h |
-| tarp_sde | H100 | ~2.5 h |
+| tarp_ode | A100 | ~1 h |
+| tarp_sde | A100 | ~2.5 h |
 
-Rationale (checked 2026-08-13): 13/14 A100 slots claimed, 1 free; 2/6 H100
-NVL slots free. Matrix jobs go to A100 for hardware consistency with exp-7's
-own eval (baseline reproduction check); TARP jobs are hardware-insensitive
-and start immediately on the free H100s. 8 CPU / 32 GB / 1 GPU per job as in
-the existing sub files. Eval memory is bounded by the sample chunk (~3 GiB),
-far under 40 GB.
+All four jobs on A100 (H100s are reserved for higher-priority work and have
+a slower queue for us). A100 occupancy at design time (2026-08-13): 13/14
+slots claimed, 1 free — jobs will start as slots free up; all four are
+independent, so partial progress is fine. 8 CPU / 32 GB / 1 GPU per job as
+in the existing sub files. Eval memory is bounded by the sample chunk
+(~3 GiB), far under 40 GB.
 
 ## Success criteria
 
