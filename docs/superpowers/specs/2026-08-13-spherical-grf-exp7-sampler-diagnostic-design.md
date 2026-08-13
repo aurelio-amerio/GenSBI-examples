@@ -90,9 +90,9 @@ additional independent 10k draws with independent C2ST seeds → per-obs
 C2ST mean ± std. This prices the exp-6↔exp-7 per-obs shuffling and sets the
 significance threshold for all other comparisons and for exp-8.
 
-**Overlay corner plots**: baseline (config 1) and the config most divergent
-from it — largest mean |Δ(flow std)| vs baseline over obs 1–3, computed
-within each job — obs 1–3 only (30 pngs for everything would be noise).
+**Overlay corner plots**: every variant, obs 1–3 only (18 pngs total; the
+sde job has no in-job baseline to measure divergence against, so "most
+divergent only" logic is dropped for uniformity).
 
 ## TARP jobs
 
