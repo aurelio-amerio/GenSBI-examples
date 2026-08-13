@@ -1,0 +1,34 @@
+# exp-7 sampler diagnostic — SDE matrix job. Design:
+# docs/superpowers/specs/2026-08-13-spherical-grf-exp7-sampler-diagnostic-design.md
+#
+# Stochastic FM samplers (arXiv:2410.02217; score derived from the velocity
+# field): does churn recover the reference dispersion that the ODE
+# under-covers? Merged over base_config; eval-only.
+base_config: config/config_healpix_7.yaml
+
+data:
+  augment: false
+
+training:
+  train_model: false
+  restore_model: true
+
+evaluation:
+  observations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  tarp_pairs: 0
+
+diagnostic:
+  mode: sde                 # output stem: spherical_grf_fm_healpix_7diag_sde
+  variants:
+    - name: nonsingular_a05
+      kind: nonsingular
+      alpha: 0.5
+      step_size: 0.01
+    - name: nonsingular_a10
+      kind: nonsingular
+      alpha: 1.0
+      step_size: 0.01
+    - name: zeroends_a10    # diffusion vanishes at both time ends
+      kind: zeroends
+      alpha: 1.0
+      step_size: 0.01

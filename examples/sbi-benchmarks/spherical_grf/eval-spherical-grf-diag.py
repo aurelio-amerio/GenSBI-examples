@@ -66,6 +66,7 @@ import argparse
 import yaml
 
 from gensbi.core import FlowMatchingMethod
+from gensbi.flow_matching.solver import NonSingularSolver, ZeroEndsSolver
 from gensbi.models import Flux1, Flux1Params, HealSwinEncoder, HealSwinParams
 from gensbi.models.flux1.layers import EmbedND
 from gensbi.models.flux1.math import apply_rope
@@ -371,70 +372,98 @@ def make_pipeline(model, train_loader, val_loader):
     )
 
 
-def evaluate(pipeline, ds, log):
-    """Posterior vs reference for canonical observations, then TARP."""
+def sampler_kwargs(v):
+    """YAML variant dict -> kwargs for pipeline.sample / sample_batched.
+
+    Forwarded through get_sampler to FlowMatchingMethod.build_sampler_fn.
+    QUICK coarsens fixed steps to 0.25 (4 steps) like the training script.
+    """
+    kind = v["kind"]
+    step = v.get("step_size")
+    if QUICK and step is not None:
+        step = 0.25
+    if kind == "euler":
+        return {"step_size": step, "method": "Euler"}
+    if kind == "dopri5":
+        return {"step_size": None, "method": "Dopri5"}  # adaptive; atol=rtol=1e-5
+    if kind == "nonsingular":
+        return {"step_size": step,
+                "solver": (NonSingularSolver, {"alpha": float(v["alpha"])})}
+    if kind == "zeroends":
+        return {"step_size": step,
+                "solver": (ZeroEndsSolver, {"alpha": float(v["alpha"])})}
+    raise ValueError(f"unknown diagnostic variant kind: {kind!r}")
+
+
+def evaluate_matrix(pipeline, ds, log):
+    """Sampler-variant matrix: posterior vs reference for every observation.
+
+    Per variant x obs: mean/std vs reference, C2ST. Baseline-flagged
+    variants get SCATTER_REPEATS extra independent draws on SCATTER_OBS
+    (C2ST mean +/- std prices the run-to-run scatter). Overlay corners for
+    obs 1-3 only, every variant.
+    """
     key = jax.random.PRNGKey(SEED + 7)
     labels = list(THETA_LABELS)
 
-    for i in EVAL_OBSERVATIONS:
-        x_raw, ref = ds.get_reference(i)                  # RING map, (S, 3) ref
-        x_o = prep_x(np.asarray(x_raw).reshape(1, -1), ds)  # (1, NPIX, 1)
-        theta_true = np.asarray(ds.get_true_parameters(i)).reshape(-1)
-        ref = np.asarray(ref)
-        t0 = time.time()
-        # One condition -> sample; sample_batched is for batches of conditions.
-        # chunk_size bounds device memory: 10k samples in one jitted batch
-        # OOM'd a 40 GB A100 for the patch-1 models (52 GiB).
-        key, sk = jax.random.split(key)
-        samples = np.asarray(pipeline.sample(
-            sk, x_o, NUM_POSTERIOR_SAMPLES, chunk_size=SAMPLE_CHUNK,
-            step_size=SAMPLE_STEP_SIZE,
-        ))
-        # ds theta stats are tokenized (1, 3, 1); un-tokenize after unnorm.
-        flow = np.asarray(ds.unnormalize_theta(samples))[:, :, 0]  # (S, 3)
-        log(f"obs {i}: {flow.shape[0]} samples in {time.time() - t0:.0f}s | "
-            f"true {np.array2string(theta_true, precision=3)} | "
-            f"flow mean {np.array2string(flow.mean(0), precision=3)} "
-            f"std {np.array2string(flow.std(0), precision=3)} | "
-            f"ref mean {np.array2string(ref.mean(0), precision=3)} "
-            f"std {np.array2string(ref.std(0), precision=3)}")
+    for v in VARIANTS:
+        kw = sampler_kwargs(v)
+        vname = v["name"]
+        log(f"variant {vname}: {kw}")
+        for i in EVAL_OBSERVATIONS:
+            x_raw, ref = ds.get_reference(i)                 # RING map, (S, 3)
+            x_o = prep_x(np.asarray(x_raw).reshape(1, -1), ds)
+            theta_true = np.asarray(ds.get_true_parameters(i)).reshape(-1)
+            ref = np.asarray(ref)
 
-        # C2ST: classifier accuracy of flow vs reference posterior samples.
-        # 0.5 = indistinguishable (ideal), 1.0 = perfectly separable. Balance
-        # the two sets to equal size so the classifier baseline is 0.5.
-        n_c2st = int(min(flow.shape[0], ref.shape[0]))
-        _rng = np.random.default_rng(SEED + i)
-        f_c = flow[_rng.choice(flow.shape[0], n_c2st, replace=False)]
-        r_c = ref[_rng.choice(ref.shape[0], n_c2st, replace=False)]
-        c2st_acc = float(c2st(jnp.asarray(f_c), jnp.asarray(r_c), seed=SEED))
-        log(f"obs {i}: C2ST(flow vs ref) = {c2st_acc:.3f} over {n_c2st} "
-            f"samples (0.5=indistinguishable, 1.0=separable)")
+            ndraws = 1 + (SCATTER_REPEATS
+                          if v.get("baseline") and i in SCATTER_OBS else 0)
+            c2sts, first_flow, n_c2st = [], None, 0
+            for rep in range(ndraws):
+                t0 = time.time()
+                key, sk = jax.random.split(key)
+                samples = np.asarray(pipeline.sample(
+                    sk, x_o, NUM_POSTERIOR_SAMPLES,
+                    chunk_size=SAMPLE_CHUNK, **kw))
+                flow = np.asarray(ds.unnormalize_theta(samples))[:, :, 0]
+                n_c2st = int(min(flow.shape[0], ref.shape[0]))
+                _rng = np.random.default_rng(SEED + 1000 * rep + i)
+                f_c = flow[_rng.choice(flow.shape[0], n_c2st, replace=False)]
+                r_c = ref[_rng.choice(ref.shape[0], n_c2st, replace=False)]
+                c2sts.append(float(c2st(jnp.asarray(f_c), jnp.asarray(r_c),
+                                        seed=SEED + rep)))
+                if rep == 0:
+                    first_flow = flow
+                    log(f"{vname} obs {i}: {flow.shape[0]} samples in "
+                        f"{time.time() - t0:.0f}s | "
+                        f"true {np.array2string(theta_true, precision=3)} | "
+                        f"flow mean {np.array2string(flow.mean(0), precision=3)} "
+                        f"std {np.array2string(flow.std(0), precision=3)} | "
+                        f"ref mean {np.array2string(ref.mean(0), precision=3)} "
+                        f"std {np.array2string(ref.std(0), precision=3)}")
 
-        # Overlay: reference (blue) under flow posterior (orange).
-        fig = corner(ref, labels=labels, truths=list(theta_true), color="C0",
-                     hist_kwargs={"density": True},
-                     plot_contours=not QUICK, plot_density=not QUICK)
-        corner(flow, fig=fig, color="C1", hist_kwargs={"density": True},
-               plot_contours=not QUICK, plot_density=not QUICK)
-        fig.suptitle(f"obs {i}: reference (blue) vs flow (orange)")
-        fig.savefig(os.path.join(IMGS_DIR, f"{EXPERIMENT_ID}_overlay_obs{i}.png"),
+            if ndraws > 1:
+                log(f"{vname} obs {i}: C2ST = {np.mean(c2sts):.3f} +/- "
+                    f"{np.std(c2sts):.3f} over {ndraws} draws "
+                    f"{np.array2string(np.asarray(c2sts), precision=3)}")
+            else:
+                log(f"{vname} obs {i}: C2ST(flow vs ref) = {c2sts[0]:.3f} "
+                    f"over {n_c2st} samples (0.5=indistinguishable, "
+                    f"1.0=separable)")
+
+            if i in (1, 2, 3):
+                fig = corner(ref, labels=labels, truths=list(theta_true),
+                             color="C0", hist_kwargs={"density": True},
+                             plot_contours=not QUICK, plot_density=not QUICK)
+                corner(first_flow, fig=fig, color="C1",
+                       hist_kwargs={"density": True},
+                       plot_contours=not QUICK, plot_density=not QUICK)
+                fig.suptitle(f"obs {i} [{vname}]: reference (blue) vs "
+                             f"flow (orange)")
+                fig.savefig(os.path.join(
+                    IMGS_DIR, f"{EXPERIMENT_ID}_{vname}_overlay_obs{i}.png"),
                     dpi=100, bbox_inches="tight")
-        plt.close(fig)
-
-        # Separate corners, in case the overlay hides one under the other.
-        plot_marginals(ref, true_param=theta_true, labels=labels, gridsize=30)
-        plt.savefig(os.path.join(IMGS_DIR, f"{EXPERIMENT_ID}_reference_obs{i}.png"),
-                    dpi=100, bbox_inches="tight")
-        plt.close("all")
-        plot_marginals(flow, true_param=theta_true, labels=labels, gridsize=30)
-        plt.savefig(os.path.join(IMGS_DIR, f"{EXPERIMENT_ID}_flow_obs{i}.png"),
-                    dpi=100, bbox_inches="tight")
-        plt.close("all")
-
-    if TARP_PAIRS:
-        tarp_diagnostic(pipeline, ds, log, key)
-    else:
-        log("TARP: skipped (evaluation.tarp_pairs = 0)")
+                plt.close(fig)
 
 
 def tarp_diagnostic(pipeline, ds, log, key):
@@ -498,7 +527,13 @@ def main():
     log(f"restored exp-7 EMA checkpoint from {CHECKPOINT_DIR} "
         f"(step {make_training_config()['experiment_id']}) in {time.time() - t0:.0f}s")
 
-    evaluate(pipeline, ds, log)
+    if IS_TARP:
+        if TARP_PAIRS:
+            tarp_diagnostic(pipeline, ds, log, jax.random.PRNGKey(SEED + 7))
+        else:
+            log("TARP: skipped (evaluation.tarp_pairs = 0)")
+    else:
+        evaluate_matrix(pipeline, ds, log)
     results_file.close()
 
 
