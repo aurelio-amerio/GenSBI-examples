@@ -1,0 +1,33 @@
+# exp-7 sampler diagnostic — ODE matrix job. Design:
+# docs/superpowers/specs/2026-08-13-spherical-grf-exp7-sampler-diagnostic-design.md
+#
+# Deep-merged over base_config at load time by eval-spherical-grf-diag.py:
+# only overrides and the diagnostic section live here. Restores the exp-7
+# EMA checkpoint read-only; never trains.
+base_config: config/config_healpix_7.yaml
+
+data:
+  augment: false            # eval-only; training-stream augmentation is irrelevant
+
+training:
+  train_model: false
+  restore_model: true
+
+evaluation:
+  observations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  tarp_pairs: 0             # TARP runs in the dedicated tarp_* jobs
+
+diagnostic:
+  mode: ode                 # output stem: spherical_grf_fm_healpix_7diag_ode
+  scatter_repeats: 3        # extra draws for baseline-flagged variants (obs below)
+  scatter_observations: [1, 2, 3]
+  variants:
+    - name: euler_p01       # exp-7's shipped sampler — must reproduce its C2STs
+      kind: euler
+      step_size: 0.01
+      baseline: true
+    - name: euler_p002      # 5x finer: step-size sensitivity
+      kind: euler
+      step_size: 0.002
+    - name: dopri5          # adaptive (library defaults atol=rtol=1e-5)
+      kind: dopri5
