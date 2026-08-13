@@ -1,0 +1,22 @@
+# exp-7 sampler diagnostic — TARP, ODE regime (the sampler exp-7 shipped).
+# Design: docs/superpowers/specs/2026-08-13-spherical-grf-exp7-sampler-diagnostic-design.md
+base_config: config/config_healpix_7.yaml
+
+data:
+  augment: false
+
+training:
+  train_model: false
+  restore_model: true
+
+evaluation:
+  observations: []          # matrix skipped in tarp modes
+  tarp_pairs: 200
+  tarp_posterior_samples: 1000
+
+diagnostic:
+  mode: tarp_ode            # output stem: spherical_grf_fm_healpix_7diag_tarp_ode
+  variants:
+    - name: euler_p01
+      kind: euler
+      step_size: 0.01

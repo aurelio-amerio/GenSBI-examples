@@ -1,0 +1,24 @@
+# exp-7 sampler diagnostic — TARP, SDE regime: does stochastic sampling
+# restore calibration where the ODE is over-confident?
+# Design: docs/superpowers/specs/2026-08-13-spherical-grf-exp7-sampler-diagnostic-design.md
+base_config: config/config_healpix_7.yaml
+
+data:
+  augment: false
+
+training:
+  train_model: false
+  restore_model: true
+
+evaluation:
+  observations: []
+  tarp_pairs: 200
+  tarp_posterior_samples: 1000
+
+diagnostic:
+  mode: tarp_sde            # output stem: spherical_grf_fm_healpix_7diag_tarp_sde
+  variants:
+    - name: nonsingular_a10
+      kind: nonsingular
+      alpha: 1.0
+      step_size: 0.01

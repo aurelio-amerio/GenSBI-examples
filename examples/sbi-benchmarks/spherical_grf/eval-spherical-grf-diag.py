@@ -468,6 +468,9 @@ def evaluate_matrix(pipeline, ds, log):
 
 def tarp_diagnostic(pipeline, ds, log, key):
     """TARP coverage on freshly simulated pairs (normalized theta space)."""
+    v = VARIANTS[0]
+    kw = sampler_kwargs(v)
+    log(f"TARP variant {v['name']}: {kw}")
     task = get_task("spherical_grf")
     kt, ks, kp = jax.random.split(key, 3)
     sim = task.get_simulator(jax.random.PRNGKey(SEED + 300))
@@ -476,7 +479,7 @@ def tarp_diagnostic(pipeline, ds, log, key):
     x = np.asarray(sim(ks, jnp.asarray(theta)))               # (P, NPIX) RING
     x_tok = prep_x(x, ds)
     post = pipeline.sample_batched(
-        kp, x_tok, TARP_POSTERIOR_SAMPLES, step_size=SAMPLE_STEP_SIZE, chunk_size=20
+        kp, x_tok, TARP_POSTERIOR_SAMPLES, chunk_size=20, **kw
     )
     post = np.asarray(post)[:, :, :, 0]                       # (S, P, 3)
     # ds theta stats are tokenized (1, 3, 1): tokenize, normalize, un-tokenize.
