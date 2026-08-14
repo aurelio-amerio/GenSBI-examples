@@ -151,6 +151,13 @@ _DTYPES = {"bfloat16": jnp.bfloat16, "float32": jnp.float32}
 ENC_DTYPE = _DTYPES[_ENC.get("dtype", "bfloat16")]
 ENC_PARAM_DTYPE = _DTYPES[_ENC.get("param_dtype", "float32")]
 
+# Raw-map power pass-through (exp-8b): 3-scale log local power of the input
+# map, projected into the bottleneck tokens. Off unless the YAML switch is
+# set, or the SMOKE-only env override is set (used by Step 1/3 of the v8
+# power-passthrough task to exercise the code path without a config edit).
+POWER_PASSTHROUGH = bool(CONFIG["encoder"].get("power_passthrough", False)
+                         or os.environ.get("POWER_PASSTHROUGH_SMOKE"))
+
 # Global bottleneck attention (v2): full-attention blocks over the bottleneck
 # tokens, appended after the last (face-windowed) HealSwin stage.
 GLOBAL_DEPTH = int(_ENC.get("global_depth", 0))
@@ -310,13 +317,39 @@ class SphericalGRFModel(nnx.Module):
                     dtype=ENC_DTYPE, param_dtype=ENC_PARAM_DTYPE, rngs=rngs)
                 for _ in range(GLOBAL_DEPTH)]
         self.global_blocks = nnx.List(blocks)
+
+        # Raw-map power pass-through (exp-8b): the GRF sufficient statistic
+        # is quadratic in the map; hand Flux1 local log-band-powers at three
+        # scales so amplitude (logA) has a linear channel past the LayerNorms.
+        # Zero-init => exactly the exp-7 function at init.
+        self.power_proj = nnx.data(None)
+        if POWER_PASSTHROUGH:
+            self.power_proj = nnx.Linear(
+                3, COND_FEATURES,
+                kernel_init=nnx.initializers.zeros_init(),
+                dtype=ENC_DTYPE, param_dtype=ENC_PARAM_DTYPE, rngs=rngs)
         self.flux = Flux1(make_flux_params(rngs))
+
+    def _power_tokens(self, cond):
+        """(B, NPIX, 1) NEST map -> (B, 192, 3) log local power at
+        nside 16/8/4, on the nside-4 (bottleneck-token) grid."""
+        x2 = jnp.square(cond[..., 0].astype(jnp.float32))    # (B, NPIX)
+        b = x2.shape[0]
+        feats = []
+        for s in (16, 8, 4):                 # children per nside-4 cell: 16,4,1
+            p = x2.reshape(b, 12 * s * s, -1).mean(-1)       # (B, 12 s^2)
+            f = jnp.log(p + 1e-12)
+            feats.append(f.reshape(b, 192, -1).mean(-1))     # (B, 192)
+        return jnp.stack(feats, axis=-1)                     # (B, 192, 3)
 
     def __call__(self, t, obs, obs_ids, cond, cond_ids,
                  conditioned=True, guidance=None, **kwargs):
         tokens, _skips = self.encoder(cond)  # (B, NPIX, 1) -> (B, COND_TOKENS, COND_FEATURES)
         for blk in self.global_blocks:
             tokens = blk(tokens)
+        if self.power_proj is not None:
+            tokens = tokens + self.power_proj(
+                self._power_tokens(cond).astype(ENC_DTYPE))
         return self.flux(t=t, obs=obs, obs_ids=obs_ids, cond=tokens,
                          cond_ids=cond_ids, conditioned=conditioned,
                          guidance=guidance)
@@ -555,6 +588,7 @@ if __name__ == "__main__" and os.environ.get("SMOKE") == "1":
     obs_ids, _ = init_ids_1d(DIM_THETA, 0)  # (1, 3, 2) — broadcast over batch
     print("cond tokens:", COND_TOKENS, "features:", COND_FEATURES,
           "global blocks:", GLOBAL_DEPTH)
+    print(f"power passthrough: {'ON' if POWER_PASSTHROUGH else 'off'}")
     if COND_ID_KIND == "healpix-rope":
         cond_ids, _ = COND_STRATEGY.build(COND_TOKENS)  # (1, COND_TOKENS, 3) float32
     else:
