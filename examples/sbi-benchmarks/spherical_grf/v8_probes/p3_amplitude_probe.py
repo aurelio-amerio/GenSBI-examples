@@ -18,12 +18,23 @@ import importlib.util
 
 QUICK = bool(os.environ.get("QUICK"))
 
+# eval-spherical-grf-diag.py's `if __name__ != "__main__": os.environ[
+# "JAX_PLATFORMS"] = "cpu"` guard (meant to keep grain worker subprocesses
+# that re-import the script off the GPU) fires unconditionally when we load
+# it here via importlib, since its __name__ is "diag", never "__main__" —
+# it would silently force this GPU probe onto CPU. JAX reads JAX_PLATFORMS
+# only at first backend initialization and caches the result, so lock the
+# backend here, before that module is loaded, and any later overwrite of
+# the env var is inert.
+os.environ.setdefault("JAX_PLATFORMS", "cpu" if QUICK else "cuda")
+import jax
+jax.devices()  # force backend init now, before the diag module's guard runs
+
 # Load the diag eval script as a module (it parses --config from sys.argv).
 spec = importlib.util.spec_from_file_location("diag", "eval-spherical-grf-diag.py")
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 
-import jax
 import numpy as np
 
 DELTAS = (0.0, 0.4) if QUICK else (-0.4, -0.2, -0.1, 0.0, 0.1, 0.2, 0.4)
