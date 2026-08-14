@@ -1,0 +1,5 @@
+quick=False batch=64 nsteps=300000 workers=8 nside=64 embed_dim=64 depths=(2, 2, 6, 2) window=16 patch=4 cond=192x512 global=2x8h enc_dtype=bfloat16/float32 flux_dtype=bfloat16/float32 flux=4d+8s heads=6 ids=('absolute', 'rope') cond_ids=healpix-rope
+data: HF aurelio-amerio/SBI-benchmarks-test/spherical_grf, Hub stats x_mean=-1.75098e-06 x_std=129.503 (7.0s)
+restored exp-7 checkpoint from /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples/examples/sbi-benchmarks/spherical_grf/checkpoints/spherical_grf_fm_healpix_7 (step 7) in 2s; sampling with RAW (non-EMA) weights
+TARP variant euler_p01: {'step_size': 0.01, 'method': 'Euler'}
+TARP: 200 pairs x 1000 samples in 4109s -> spherical_grf_fm_healpix_7diag_tarp_ode_raw_tarp.png
