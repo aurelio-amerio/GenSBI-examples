@@ -1,0 +1,21 @@
+# exp-8a post-run eval — TARP, ODE regime (dopri5 sampler), on the 8a
+# checkpoint. Design: docs/superpowers/specs/2026-08-14-spherical-grf-exp8-design.md
+base_config: config/config_healpix_8a.yaml
+
+data:
+  augment: false
+
+training:
+  train_model: false
+  restore_model: true
+
+evaluation:
+  observations: []          # matrix skipped in tarp mode
+  tarp_pairs: 200
+  tarp_posterior_samples: 1000
+
+diagnostic:
+  mode: tarp_ode            # output stem: spherical_grf_fm_healpix_8adiag_tarp_ode
+  variants:
+    - name: dopri5
+      kind: dopri5

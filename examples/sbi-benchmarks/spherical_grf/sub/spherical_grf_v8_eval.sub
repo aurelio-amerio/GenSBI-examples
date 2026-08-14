@@ -1,0 +1,38 @@
+# HTCondor submit file — exp-8 post-run eval (v8_eval): four eval-only jobs
+# on the frozen exp-8a/8b checkpoints. Design:
+# docs/superpowers/specs/2026-08-14-spherical-grf-exp8-design.md
+#
+#     condor_submit sub/spherical_grf_v8_eval.sub
+#
+# 8a ode / 8b ode: Euler 0.01 baseline + Dopri5, 10 obs, C2ST scatter
+# 8a tarp / 8b tarp: 200 pairs x 1000 samples, dopri5 sampler
+# All A100 (H100s reserved for higher-priority work). Eval memory ~3 GiB
+# (chunked sampling), far under the 40 GB card.
+repo_root   = /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples
+example_dir = $(repo_root)/examples/sbi-benchmarks/spherical_grf
+script      = eval-spherical-grf-diag.py
+
+universe   = vanilla
+initialdir = $(example_dir)/sub
+executable = $(example_dir)/sub/run_spherical_grf.sh
+arguments  = "$(example_dir) $(config) $(script)"
+getenv     = True
+
+request_cpus   = 8
+request_memory = 32 GB
+request_gpus   = 1
+
++UseNvidiaA100 = True
+
+log    = condor_logs/spherical_grf_$Fn(config)_a100.log
+output = condor_logs/spherical_grf_$Fn(config)_a100.out
+error  = condor_logs/spherical_grf_$Fn(config)_a100.err
+
+config = config_healpix_8a_diag_ode.yaml
+queue
+config = config_healpix_8a_diag_tarp.yaml
+queue
+config = config_healpix_8b_diag_ode.yaml
+queue
+config = config_healpix_8b_diag_tarp.yaml
+queue

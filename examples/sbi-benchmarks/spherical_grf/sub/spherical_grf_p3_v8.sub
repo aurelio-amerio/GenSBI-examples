@@ -1,0 +1,28 @@
+# HTCondor submit file — v8 probe P3: amplitude equivariance re-probe on the
+# frozen exp-8a/8b checkpoints + dopri5 sample dumps for P2's C2ST.
+# ~1 h per run on A100. Design:
+# docs/superpowers/specs/2026-08-14-spherical-grf-exp8-design.md
+repo_root   = /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples
+example_dir = $(repo_root)/examples/sbi-benchmarks/spherical_grf
+script      = v8_probes/p3_amplitude_probe.py
+
+universe   = vanilla
+initialdir = $(example_dir)/sub
+executable = $(example_dir)/sub/run_spherical_grf.sh
+arguments  = "$(example_dir) $(config) $(script)"
+getenv     = True
+
+request_cpus   = 8
+request_memory = 32 GB
+request_gpus   = 1
+
++UseNvidiaA100 = True
+
+log    = condor_logs/spherical_grf_$Fn(config)_a100.log
+output = condor_logs/spherical_grf_$Fn(config)_a100.out
+error  = condor_logs/spherical_grf_$Fn(config)_a100.err
+
+config = config_healpix_8a_diag_ode.yaml
+queue
+config = config_healpix_8b_diag_ode.yaml
+queue

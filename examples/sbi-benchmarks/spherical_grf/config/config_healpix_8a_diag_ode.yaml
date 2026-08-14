@@ -1,0 +1,31 @@
+# exp-8a post-run eval — 7diag ODE matrix on the 8a checkpoint (convergence
+# control: exp-7 architecture, 600k-step schedule).
+# Design: docs/superpowers/specs/2026-08-14-spherical-grf-exp8-design.md
+#
+# Deep-merged over base_config at load time by eval-spherical-grf-diag.py:
+# only overrides and the diagnostic section live here. Restores the 8a
+# checkpoint read-only; never trains.
+base_config: config/config_healpix_8a.yaml
+
+data:
+  augment: false            # eval-only; training-stream augmentation is irrelevant
+
+training:
+  train_model: false
+  restore_model: true
+
+evaluation:
+  observations: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  tarp_pairs: 0             # TARP runs in the dedicated tarp job
+
+diagnostic:
+  mode: ode                 # output stem: spherical_grf_fm_healpix_8adiag_ode
+  scatter_repeats: 3        # extra draws for baseline-flagged variants (obs below)
+  scatter_observations: [1, 2, 3]
+  variants:
+    - name: euler_p01       # exp-7's shipped sampler — comparison baseline
+      kind: euler
+      step_size: 0.01
+      baseline: true
+    - name: dopri5          # converged-ODE comparison point
+      kind: dopri5
