@@ -1,0 +1,32 @@
+# HTCondor submit file — exp-7 raw-vs-EMA diagnostic: two eval-only A100
+# jobs sampling the primary (non-EMA) weights of the frozen exp-7
+# checkpoint. Companion to sub/spherical_grf_7diag.sub (EMA baseline).
+#
+#     condor_submit sub/spherical_grf_7diag_raw.sub
+#
+# ode_raw  (~1.5 h): euler_p01 (scatter x3) + dopri5, obs 1-3 only
+# tarp_ode_raw (~1 h): 200 pairs x 1000 samples, euler_p01
+repo_root   = /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples
+example_dir = $(repo_root)/examples/sbi-benchmarks/spherical_grf
+script      = eval-spherical-grf-diag.py
+
+universe   = vanilla
+initialdir = $(example_dir)/sub
+executable = $(example_dir)/sub/run_spherical_grf.sh
+arguments  = "$(example_dir) $(config) $(script)"
+getenv     = True
+
+request_cpus   = 8
+request_memory = 32 GB
+request_gpus   = 1
+
++UseNvidiaA100 = True
+
+log    = condor_logs/spherical_grf_$Fn(config)_a100.log
+output = condor_logs/spherical_grf_$Fn(config)_a100.out
+error  = condor_logs/spherical_grf_$Fn(config)_a100.err
+
+config = config_healpix_7diag_ode_raw.yaml
+queue
+config = config_healpix_7diag_tarp_ode_raw.yaml
+queue
