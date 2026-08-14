@@ -1,0 +1,31 @@
+# exp-7 sampler diagnostic — raw (non-EMA) weights, ODE, obs 1-3 only.
+# Is the EMA washing out late low-LR gradient updates (as previously seen on
+# the GRF field-level inference problem)? Compare euler_p01/dopri5 C2ST on
+# obs 1-3 against the EMA run (7diag_ode: 0.855+/-0.002 / 0.841+/-0.002 /
+# 0.728+/-0.001; dopri5 0.822/0.814/0.700).
+# Design: docs/superpowers/specs/2026-08-13-spherical-grf-exp7-sampler-diagnostic-design.md
+base_config: config/config_healpix_7.yaml
+
+data:
+  augment: false
+
+training:
+  train_model: false
+  restore_model: true
+
+evaluation:
+  observations: [1, 2, 3]
+  tarp_pairs: 0
+
+diagnostic:
+  mode: ode_raw             # output stem: spherical_grf_fm_healpix_7diag_ode_raw
+  use_ema: false            # sample the primary (non-EMA) weights
+  scatter_repeats: 3
+  scatter_observations: [1, 2, 3]
+  variants:
+    - name: euler_p01       # baseline, scatter-priced like the EMA run
+      kind: euler
+      step_size: 0.01
+      baseline: true
+    - name: dopri5          # converged-ODE comparison point
+      kind: dopri5

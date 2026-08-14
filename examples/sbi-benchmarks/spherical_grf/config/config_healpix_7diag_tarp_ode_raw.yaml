@@ -1,0 +1,26 @@
+# exp-7 sampler diagnostic — TARP with raw (non-EMA) weights, ODE regime.
+# Companion to config_healpix_7diag_ode_raw.yaml: does calibration change
+# when the EMA is bypassed? Compare against 7diag_tarp_ode (well-calibrated:
+# 66.95/90.40/99.43% at nominal 68.27/95.45/99.73%).
+# Design: docs/superpowers/specs/2026-08-13-spherical-grf-exp7-sampler-diagnostic-design.md
+base_config: config/config_healpix_7.yaml
+
+data:
+  augment: false
+
+training:
+  train_model: false
+  restore_model: true
+
+evaluation:
+  observations: []
+  tarp_pairs: 200
+  tarp_posterior_samples: 1000
+
+diagnostic:
+  mode: tarp_ode_raw        # output stem: spherical_grf_fm_healpix_7diag_tarp_ode_raw
+  use_ema: false
+  variants:
+    - name: euler_p01
+      kind: euler
+      step_size: 0.01

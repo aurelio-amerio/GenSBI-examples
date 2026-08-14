@@ -212,6 +212,9 @@ IS_TARP = MODE.startswith("tarp")
 VARIANTS = tuple(_DIAG["variants"])        # dicts: name/kind[/step_size/alpha/baseline]
 SCATTER_REPEATS = 0 if QUICK else int(_DIAG.get("scatter_repeats", 0))
 SCATTER_OBS = tuple(_DIAG.get("scatter_observations", ()))
+# raw-vs-EMA diagnostic: false samples the primary (non-EMA) weights.
+# restore_model always restores both; this only selects which one samples.
+USE_EMA = bool(_DIAG.get("use_ema", True))
 
 # Outputs get the 7diag stem; the checkpoint dir is exp-7's own (read-only
 # restore) and must NOT get the _quick suffix, or QUICK finds no checkpoint.
@@ -424,7 +427,7 @@ def evaluate_matrix(pipeline, ds, log):
                 key, sk = jax.random.split(key)
                 samples = np.asarray(pipeline.sample(
                     sk, x_o, NUM_POSTERIOR_SAMPLES,
-                    chunk_size=SAMPLE_CHUNK, **kw))
+                    chunk_size=SAMPLE_CHUNK, use_ema=USE_EMA, **kw))
                 flow = np.asarray(ds.unnormalize_theta(samples))[:, :, 0]
                 n_c2st = int(min(flow.shape[0], ref.shape[0]))
                 _rng = np.random.default_rng(SEED + 1000 * rep + i)
@@ -479,7 +482,7 @@ def tarp_diagnostic(pipeline, ds, log, key):
     x = np.asarray(sim(ks, jnp.asarray(theta)))               # (P, NPIX) RING
     x_tok = prep_x(x, ds)
     post = pipeline.sample_batched(
-        kp, x_tok, TARP_POSTERIOR_SAMPLES, chunk_size=20, **kw
+        kp, x_tok, TARP_POSTERIOR_SAMPLES, chunk_size=20, use_ema=USE_EMA, **kw
     )
     post = np.asarray(post)[:, :, :, 0]                       # (S, P, 3)
     # ds theta stats are tokenized (1, 3, 1): tokenize, normalize, un-tokenize.
@@ -527,8 +530,9 @@ def main():
     t0 = time.time()
     pipeline.restore_model()
     pipeline._wrap_model()
-    log(f"restored exp-7 EMA checkpoint from {CHECKPOINT_DIR} "
-        f"(step {make_training_config()['experiment_id']}) in {time.time() - t0:.0f}s")
+    log(f"restored exp-7 checkpoint from {CHECKPOINT_DIR} "
+        f"(step {make_training_config()['experiment_id']}) in {time.time() - t0:.0f}s; "
+        f"sampling with {'EMA' if USE_EMA else 'RAW (non-EMA)'} weights")
 
     if IS_TARP:
         if TARP_PAIRS:
