@@ -11,6 +11,7 @@ ids:
   cond_kind: "healpix-rope"
 
 # exp-8b: 8a + capacity bump (embed_dim 96, depths [2,2,6,4], global_depth 4).
+# Schedule: 500k (48h wall-time limit; save_every intermediate ckpts).
 # Design: docs/superpowers/specs/2026-08-14-spherical-grf-exp8-design.md
 data:
   nside: 64
@@ -60,7 +61,8 @@ optimizer:
 training:
   batch_size: 64            # batch 128 OOM'd on 40 GB A100 (30.75 GiB alloc); ~15 GiB at 64
   val_batch_size: 64
-  nsteps: 600000
+  nsteps: 500000
+  save_every: 25000         # intermediate ckpt cadence; 48h wall-time protection
   ema_decay: 0.999
   multistep: 1
   early_stopping: true
