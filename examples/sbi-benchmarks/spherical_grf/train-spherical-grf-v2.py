@@ -400,6 +400,13 @@ def make_training_config():
     cfg = ConditionalPipeline.get_default_training_config()
     cfg.update(parse_training_config(CONFIG_PATH))
     cfg["checkpoint_dir"] = CHECKPOINT_DIR
+    # parse_training_config only forwards a fixed whitelist of keys; forward
+    # training.save_every (periodic intermediate checkpointing, see
+    # gensbi.recipes.pipeline.AbstractPipeline.train) explicitly. Absent
+    # from the YAML -> not set here -> pipeline default (off), unchanged
+    # behavior for every existing config.
+    if "save_every" in _TRAIN:
+        cfg["save_every"] = _TRAIN["save_every"]
     if QUICK:
         cfg["nsteps"] = NSTEPS
         cfg["warmup_steps"] = 2
