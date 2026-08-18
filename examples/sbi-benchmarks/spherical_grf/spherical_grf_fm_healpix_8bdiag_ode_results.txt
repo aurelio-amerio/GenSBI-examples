@@ -1,0 +1,45 @@
+quick=False batch=64 nsteps=500000 workers=8 nside=64 embed_dim=96 depths=(2, 2, 6, 4) window=16 patch=4 cond=192x768 global=4x8h enc_dtype=bfloat16/float32 flux_dtype=bfloat16/float32 flux=4d+8s heads=6 ids=('absolute', 'rope') cond_ids=healpix-rope
+data: HF aurelio-amerio/SBI-benchmarks-test/spherical_grf, Hub stats x_mean=-1.75098e-06 x_std=129.503 (7.0s)
+restored exp-7 checkpoint from /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples/examples/sbi-benchmarks/spherical_grf/checkpoints/spherical_grf_fm_healpix_8b (step 7) in 2s; sampling with EMA weights
+variant euler_p01: {'step_size': 0.01, 'method': 'Euler'}
+euler_p01 obs 1: 10000 samples in 166s | true [ 0.199 -2.85  -0.04 ] | flow mean [ 0.192 -2.841 -0.018] std [0.016 0.021 0.029] | ref mean [ 0.21  -2.887 -0.077] std [0.015 0.026 0.046]
+euler_p01 obs 1: C2ST = 0.880 +/- 0.000 over 4 draws [0.88 0.88 0.88 0.88]
+euler_p01 obs 2: 10000 samples in 162s | true [ 1.305 -0.878  0.375] | flow mean [ 1.304 -0.888  0.416] std [0.016 0.017 0.027] | ref mean [ 1.308 -0.905  0.374] std [0.015 0.026 0.044]
+euler_p01 obs 2: C2ST = 0.802 +/- 0.002 over 4 draws [0.803 0.805 0.801 0.801]
+euler_p01 obs 3: 10000 samples in 160s | true [-0.731 -2.525 -0.148] | flow mean [-0.72  -2.537 -0.157] std [0.016 0.017 0.031] | ref mean [-0.731 -2.516 -0.131] std [0.015 0.026 0.048]
+euler_p01 obs 3: C2ST = 0.746 +/- 0.001 over 4 draws [0.747 0.745 0.746 0.744]
+euler_p01 obs 4: 10000 samples in 161s | true [ 0.858 -0.727  0.079] | flow mean [ 0.893 -0.781  0.088] std [0.015 0.016 0.03 ] | ref mean [ 0.869 -0.764  0.102] std [0.015 0.026 0.046]
+euler_p01 obs 4: C2ST(flow vs ref) = 0.849 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+euler_p01 obs 5: 10000 samples in 159s | true [ 0.252 -0.375  0.045] | flow mean [ 0.259 -0.368  0.033] std [0.015 0.016 0.03 ] | ref mean [ 0.258 -0.352  0.06 ] std [0.015 0.025 0.045]
+euler_p01 obs 5: C2ST(flow vs ref) = 0.787 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+euler_p01 obs 6: 10000 samples in 162s | true [-0.708 -1.924 -0.46 ] | flow mean [-0.724 -1.874 -0.464] std [0.013 0.016 0.023] | ref mean [-0.719 -1.877 -0.465] std [0.013 0.023 0.027]
+euler_p01 obs 6: C2ST(flow vs ref) = 0.674 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+euler_p01 obs 7: 10000 samples in 158s | true [ 0.874 -1.831 -0.186] | flow mean [ 0.879 -1.842 -0.236] std [0.015 0.016 0.032] | ref mean [ 0.883 -1.874 -0.28 ] std [0.015 0.026 0.047]
+euler_p01 obs 7: C2ST(flow vs ref) = 0.888 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+euler_p01 obs 8: 10000 samples in 158s | true [-1.295 -1.508  0.436] | flow mean [-1.28  -1.514  0.439] std [0.016 0.016 0.028] | ref mean [-1.268 -1.576  0.387] std [0.015 0.025 0.046]
+euler_p01 obs 8: C2ST(flow vs ref) = 0.952 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+euler_p01 obs 9: 10000 samples in 158s | true [ 1.003 -2.66  -0.393] | flow mean [ 1.029 -2.688 -0.418] std [0.016 0.017 0.033] | ref mean [ 1.    -2.677 -0.36 ] std [0.015 0.026 0.049]
+euler_p01 obs 9: C2ST(flow vs ref) = 0.852 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+euler_p01 obs 10: 10000 samples in 160s | true [-1.525 -1.745  0.079] | flow mean [-1.522 -1.761  0.09 ] std [0.016 0.017 0.032] | ref mean [-1.535 -1.76   0.089] std [0.015 0.026 0.048]
+euler_p01 obs 10: C2ST(flow vs ref) = 0.766 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+variant dopri5: {'step_size': None, 'method': 'Dopri5'}
+dopri5 obs 1: 10000 samples in 334s | true [ 0.199 -2.85  -0.04 ] | flow mean [ 0.192 -2.841 -0.018] std [0.02  0.024 0.03 ] | ref mean [ 0.21  -2.887 -0.077] std [0.015 0.026 0.046]
+dopri5 obs 1: C2ST(flow vs ref) = 0.870 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 2: 10000 samples in 385s | true [ 1.305 -0.878  0.375] | flow mean [ 1.304 -0.888  0.416] std [0.019 0.02  0.028] | ref mean [ 1.308 -0.905  0.374] std [0.015 0.026 0.044]
+dopri5 obs 2: C2ST(flow vs ref) = 0.779 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 3: 10000 samples in 373s | true [-0.731 -2.525 -0.148] | flow mean [-0.719 -2.536 -0.157] std [0.019 0.02  0.033] | ref mean [-0.731 -2.516 -0.131] std [0.015 0.026 0.048]
+dopri5 obs 3: C2ST(flow vs ref) = 0.721 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 4: 10000 samples in 351s | true [ 0.858 -0.727  0.079] | flow mean [ 0.892 -0.782  0.088] std [0.019 0.019 0.031] | ref mean [ 0.869 -0.764  0.102] std [0.015 0.026 0.046]
+dopri5 obs 4: C2ST(flow vs ref) = 0.803 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 5: 10000 samples in 358s | true [ 0.252 -0.375  0.045] | flow mean [ 0.259 -0.368  0.033] std [0.018 0.019 0.031] | ref mean [ 0.258 -0.352  0.06 ] std [0.015 0.025 0.045]
+dopri5 obs 5: C2ST(flow vs ref) = 0.746 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 6: 10000 samples in 364s | true [-0.708 -1.924 -0.46 ] | flow mean [-0.723 -1.873 -0.464] std [0.017 0.019 0.023] | ref mean [-0.719 -1.877 -0.465] std [0.013 0.023 0.027]
+dopri5 obs 6: C2ST(flow vs ref) = 0.632 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 7: 10000 samples in 337s | true [ 0.874 -1.831 -0.186] | flow mean [ 0.879 -1.841 -0.236] std [0.018 0.018 0.033] | ref mean [ 0.883 -1.874 -0.28 ] std [0.015 0.026 0.047]
+dopri5 obs 7: C2ST(flow vs ref) = 0.860 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 8: 10000 samples in 380s | true [-1.295 -1.508  0.436] | flow mean [-1.28  -1.513  0.439] std [0.019 0.019 0.029] | ref mean [-1.268 -1.576  0.387] std [0.015 0.025 0.046]
+dopri5 obs 8: C2ST(flow vs ref) = 0.940 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 9: 10000 samples in 380s | true [ 1.003 -2.66  -0.393] | flow mean [ 1.029 -2.688 -0.419] std [0.02  0.021 0.034] | ref mean [ 1.    -2.677 -0.36 ] std [0.015 0.026 0.049]
+dopri5 obs 9: C2ST(flow vs ref) = 0.821 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+dopri5 obs 10: 10000 samples in 376s | true [-1.525 -1.745  0.079] | flow mean [-1.521 -1.761  0.09 ] std [0.02  0.02  0.033] | ref mean [-1.535 -1.76   0.089] std [0.015 0.026 0.048]
+dopri5 obs 10: C2ST(flow vs ref) = 0.740 over 10000 samples (0.5=indistinguishable, 1.0=separable)

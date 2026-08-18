@@ -1,0 +1,15 @@
+P2c (spherical_grf_fm_healpix_8adiag_ode): flow-vs-reference C2ST, shipped (l<=128) vs corrected (l<=191)
+H-INFO confirmed if corrected C2ST drops >=0.10 below shipped on >=2 of 3 obs
+
+obs 1: C2ST shipped 0.807 -> corrected 0.791
+  flow mean [ 0.1871 -2.8552 -0.0408] std [0.0192 0.0212 0.0311]
+  shipped   [ 0.2099 -2.8874 -0.0768] std [0.015  0.0256 0.0457] disp/sigma [-1.52  1.26  0.79]
+  corrected [ 0.2019 -2.8586 -0.036 ] std [0.0132 0.015  0.0302] disp/sigma [-1.12  0.23 -0.16]
+obs 2: C2ST shipped 0.758 -> corrected 0.740
+  flow mean [ 1.2965 -0.8778  0.3932] std [0.0181 0.0198 0.0275]
+  shipped   [ 1.3083 -0.9047  0.3737] std [0.0149 0.026  0.0437] disp/sigma [-0.8   1.03  0.45]
+  corrected [ 1.3008 -0.8824  0.4097] std [0.0134 0.0151 0.0293] disp/sigma [-0.32  0.3  -0.56]
+obs 3: C2ST shipped 0.723 -> corrected 0.700
+  flow mean [-0.7316 -2.5296 -0.1593] std [0.0181 0.0205 0.0339]
+  shipped   [-0.7315 -2.5156 -0.1312] std [0.015  0.0257 0.048 ] disp/sigma [-0.01 -0.55 -0.59]
+  corrected [-0.7287 -2.53   -0.1518] std [0.0136 0.015  0.0305] disp/sigma [-0.21  0.02 -0.25]
