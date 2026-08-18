@@ -51,7 +51,7 @@ model:
   id_embedding_strategy: ["absolute", "rope"]   # model-side: apply RoPE to cond ids
 
 # Schedule unchanged from exp-6 (max_lr 7e-5 = sqrt batch-size rule at 64);
-# decay_transition 0.6 now means the cosine tail covers the last 120k steps.
+# decay_transition 0.6 -> cosine tail covers the final 40% of steps.
 optimizer:
   warmup_steps: 500
   decay_transition: 0.6

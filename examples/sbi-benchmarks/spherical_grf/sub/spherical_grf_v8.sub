@@ -1,6 +1,7 @@
-# HTCondor submit file — exp-8: two 600k-step training runs on A100.
+# HTCondor submit file — exp-8: two 500k-step training runs on A100.
 # 8a = convergence control (exp-7 arch), 8b = 8a + v8b lever (see configs).
-# ~45 h each (exp-7: 300k in ~23 h). Design:
+# ~42-48 h each (exp-7: 300k in ~23 h); mind the IFIC condor 48h wall-time
+# limit. Design:
 # docs/superpowers/specs/2026-08-14-spherical-grf-exp8-design.md
 repo_root   = /lustre/ific.uv.es/ml/ific088/github/GenSBI-examples
 example_dir = $(repo_root)/examples/sbi-benchmarks/spherical_grf

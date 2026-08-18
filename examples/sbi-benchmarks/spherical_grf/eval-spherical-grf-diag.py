@@ -153,10 +153,15 @@ ENC_PARAM_DTYPE = _DTYPES[_ENC.get("param_dtype", "float32")]
 
 # Raw-map power pass-through (exp-8b): 3-scale log local power of the input
 # map, projected into the bottleneck tokens. Off unless the YAML switch is
-# set, or the SMOKE-only env override is set (used by Step 1/3 of the v8
-# power-passthrough task to exercise the code path without a config edit).
+# set, or the SMOKE-only env override is set AND we are actually in SMOKE
+# mode (used by Step 1/3 of the v8 power-passthrough task to exercise the
+# code path without a config edit). The SMOKE gate matters because
+# getenv=True condor submissions have twice shipped a shell with
+# POWER_PASSTHROUGH_SMOKE polluted into the environment; without the gate
+# that would silently flip a 45h run's architecture.
 POWER_PASSTHROUGH = bool(CONFIG["encoder"].get("power_passthrough", False)
-                         or os.environ.get("POWER_PASSTHROUGH_SMOKE"))
+                         or (os.environ.get("POWER_PASSTHROUGH_SMOKE")
+                             and os.environ.get("SMOKE") == "1"))
 
 # Global bottleneck attention (v2): full-attention blocks over the bottleneck
 # tokens, appended after the last (face-windowed) HealSwin stage.

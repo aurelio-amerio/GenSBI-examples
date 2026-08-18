@@ -1,0 +1,11 @@
+quick=False batch=64 nsteps=500000 workers=8 augment=True nside=64 embed_dim=64 depths=(2, 2, 6, 2) window=16 patch=4 cond=192x512 global=2x8h enc_dtype=bfloat16/float32 flux_dtype=bfloat16/float32 flux=4d+8s heads=6 ids=('absolute', 'rope') cond_ids=healpix-rope
+data: HF aurelio-amerio/SBI-benchmarks-test/spherical_grf, Hub stats x_mean=-1.75098e-06 x_std=129.503 (7.5s)
+training: 4999 steps in 150858s, final train loss 0.0729, final val loss 0.1356
+loss history: 4999 points -> spherical_grf_fm_healpix_8a_loss.png, spherical_grf_fm_healpix_8a_losses.npz
+obs 1: 10000 samples in 161s | true [ 0.199 -2.85  -0.04 ] | flow mean [ 0.187 -2.855 -0.041] std [0.016 0.018 0.03 ] | ref mean [ 0.21  -2.887 -0.077] std [0.015 0.026 0.046]
+obs 1: C2ST(flow vs ref) = 0.827 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+obs 2: 10000 samples in 151s | true [ 1.305 -0.878  0.375] | flow mean [ 1.297 -0.878  0.393] std [0.015 0.017 0.027] | ref mean [ 1.308 -0.905  0.374] std [0.015 0.026 0.044]
+obs 2: C2ST(flow vs ref) = 0.779 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+obs 3: 10000 samples in 151s | true [-0.731 -2.525 -0.148] | flow mean [-0.732 -2.529 -0.16 ] std [0.014 0.017 0.032] | ref mean [-0.731 -2.516 -0.131] std [0.015 0.026 0.048]
+obs 3: C2ST(flow vs ref) = 0.767 over 10000 samples (0.5=indistinguishable, 1.0=separable)
+TARP: skipped (evaluation.tarp_pairs = 0)
