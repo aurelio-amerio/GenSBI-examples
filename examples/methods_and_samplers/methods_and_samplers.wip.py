@@ -339,7 +339,11 @@ tt1, tt2, tt3 = jnp.meshgrid(theta1, theta2, theta3, indexing="ij")
 x_1 = jnp.stack([tt1.ravel(), tt2.ravel(), tt3.ravel()], axis=-1)[..., None]
 
 # %% Compute log-prob (Flow Matching)
-logp_fm = pipeline_fm.log_prob(x_1, x_o, use_ema=True)
+# evaluate the log_prob in chunks, to limit GPU memory usage
+chunk_size = 10_000
+logp_fm = jnp.concatenate(
+    [pipeline_fm.log_prob(x_1[i : i + chunk_size], x_o, use_ema=True) for i in range(0, x_1.shape[0], chunk_size)]
+)
 
 # %% Marginalize and plot log-prob contours (Flow Matching)
 prob_fm = jnp.exp(logp_fm).reshape((len(theta1_raw), len(theta2_raw), len(theta3_raw)))

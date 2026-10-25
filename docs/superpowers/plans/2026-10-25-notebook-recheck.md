@@ -10,6 +10,16 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-25-notebook-recheck-design.md`
 
+## Resume notes (paused 2026-10-25)
+
+Paused to move to another machine. **Read `docs/superpowers/plans/2026-10-25-notebook-recheck-handout.md` first.** In short:
+
+- Tasks 1–2 done (`55af9422`, `335edf7d`). Task 3 in progress: re-run from the start. Task 4 Step 1 done.
+- **P1 changed:** run working copies with `scripts/recheck/run.sh <stem.wip.py>` (executes in a Jupyter kernel), never `python <stem>.wip.py`. Running it as a plain script breaks the `if colab:` blocks and spawns runaway grain `mp_prefetch` workers. Fix the hard-coded paths in `run.sh` on a new machine. `SCRATCH` below is obsolete; logs go to `.superpowers/sdd/2026-10-25-notebook-recheck/logs/`.
+- There are **26** notebooks, not 25.
+- Known cross-task fixes: `pipeline.sample` with a batch of conditions now raises, so use `sample_batched(key, xs, nsamples=1)[0]` (affects `two_moons_template.md`, Task 6). Large log-prob grids OOM on 12 GB, so evaluate them in chunks.
+- Review Focus 3: grep for the exact placeholder keys, not `{[a-z_]*}` (false positive on `{notebook_path}`).
+
 ## Global Constraints
 
 - Work on branch `notebook-recheck` (already created; design doc committed as `fff7927d`).
