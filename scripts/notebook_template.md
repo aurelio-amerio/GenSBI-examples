@@ -28,7 +28,7 @@ This notebook demonstrates {kind} {matching_technique} on the {TASKNAME} task us
 | 2. [Task & Data Preparation](#task-data-preparation) | Define task, visualize data, create datasets |
 | 3. [Model Configuration & Definition](#model-configuration-definition) | Load config, set parameters, instantiate model |
 | 4. [Training](#training) | Train or restore model, manage checkpoints |
-| 5. [Evaluation & Visualization](#evaluation-visualization) | Visualize loss, sample posterior, compute log prob |
+| 5. [Evaluation & Visualization](#evaluation-visualization) | Sample the posterior and compare it with the reference samples |
 | 6. [Posterior Calibration Checks](#posterior-calibration-checks) | Marginal coverage, TARP, SBC, L-C2ST |
 
 ---
@@ -106,7 +106,7 @@ obs, reference_samples = task.get_reference(num_observation=8)
 ```
 
 ```{code-cell} ipython3
-# plot the 2D posterior 
+# plot the reference posterior
 plot_marginals(np.asarray(reference_samples, dtype=np.float32), gridsize=50, plot_levels=False, backend="seaborn")
 plt.show()
 ```
@@ -130,7 +130,7 @@ val_dataset_iter = iter(val_dataset)
 
 ## 3. Model Configuration & Definition
 ---
-In this section, we load the model and optimizer configuration, set all relevant parameters, and instantiate the {model_architecture} model. Edge masks and marginalization functions are used for flexible inference and posterior estimation.
+In this section, we load the model and optimizer configuration, set all relevant parameters, and instantiate the {model_architecture} model.
 
 ```{code-cell} ipython3
 from gensbi.recipes import {model_architecture}{technique}Pipeline
@@ -176,7 +176,7 @@ pipeline.restore_model()
 
 ## 5. Evaluation & Visualization
 ---
-In this section, we evaluate the trained Simformer model by sampling from the posterior, and comparing results to reference data.
+In this section, we evaluate the trained model by sampling from the posterior, and comparing results to reference data.
 
 +++
 
@@ -185,8 +185,8 @@ In this section, we evaluate the trained Simformer model by sampling from the po
 In this section, we sample from the posterior distribution using the trained model and visualize the results. Posterior samples are generated for a selected observation and compared to reference samples to assess model accuracy.
 
 ```{code-cell} ipython3
-# we want to do {kind} inference. We need an observation for which we want to ocmpute the posterior
-def get_samples(idx, nsamples=10_000, use_ema=False, key=None):
+# we want to do {kind} inference. We need an observation for which we want to compute the posterior
+def get_samples(idx, nsamples=10_000, use_ema={use_ema_default}, key=None):
     observation, reference_samples = task.get_reference(idx)
     true_param = jnp.array(task.get_true_parameters(idx))
 
@@ -205,17 +205,17 @@ samples, true_param, reference_samples =  get_samples(8)
 
 ### Section 5.2: Visualize Posterior Samples
 ---
-In this section, we plot the posterior samples as a 2D histogram to visualize the learned distribution and compare it to the ground truth.
+In this section, we plot the posterior samples as 1D and 2D marginal histograms to visualize the learned distribution and compare it to the ground truth.
 
 ```{code-cell} ipython3
 from gensbi.utils.plotting import plot_marginals, plot_2d_dist_contour
 ```
 
 ```{code-cell} ipython3
-plot_marginals(samples[-1,...,0], backend="seaborn", gridsize=50)
+plot_marginals(samples[-1,...,0], backend="seaborn", gridsize=50{plot_marginals_extra})
 plt.show()
 
-# alternatively use "corner" to plot containment levels too
+# alternatively use "corner" to plot containment levels too
 # plot_marginals(samples[-1,...,0], backend="corner", gridsize=20)
 # plt.show()
 ```
@@ -228,7 +228,7 @@ plt.show()
 
 +++
 
-We report here the results of the posterior calibration tests. As an excercise, you can implement the tests as in the Two Moons example and compare the results. 
+We report here the results of the posterior calibration tests. As an exercise, you can implement the tests as in the Two Moons example and compare the results. 
 
 +++
 

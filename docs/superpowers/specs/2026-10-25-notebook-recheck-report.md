@@ -20,6 +20,21 @@ All notebooks run with `/home/aure/github/GenSBI/.venv` (GenSBI 0.5.1), `MPLBACK
 | sbi-benchmarks/slcp/flow_flux1joint | fixed (text only) | Ran clean unshrunk on CPU (14.5 min, exit=0, restore + one 10k-sample posterior). Text fixes only (see Task 4 report). The notebook does not compute C2ST; the stored text value (0.5490 ± 0.0187) matches the example README. |
 | sbi-benchmarks/slcp/flow_simformer | fixed (text only) | Ran clean unshrunk on CPU (2.2 min, exit=0, restore + one 10k-sample posterior). Text fixes only (see Task 4 report). The notebook does not compute C2ST; the stored text value (0.5515 ± 0.0254) matches the example README. |
 
+## Template fixes (generic)
+
+Applied identically to `scripts/notebook_template.md` and the 9 wips (all tasks). Regenerated notebooks match the wips (`verify_regen.py`: 9 x OK).
+
+1. TOC row 5: "Visualize loss, sample posterior, compute log prob" -> "Sample the posterior and compare it with the reference samples".
+2. Reference plot comment: "# plot the 2D posterior" -> "# plot the reference posterior".
+3. Section 3 intro: removed the Simformer-only sentence "Edge masks and marginalization functions ...".
+4. Section 5 intro: "trained Simformer model" -> "trained model".
+5. Typo: "ocmpute" -> "compute".
+6. Typo: "excercise" -> "exercise".
+7. Section 5.2 intro: "as a 2D histogram" -> "as 1D and 2D marginal histograms" (the cell calls `plot_marginals`).
+8. Whitespace: non-breaking space in the "# alternatively use corner" comment replaced by a plain space.
+
+New placeholders `{use_ema_default}` (gaussian_mixture/flow_flux1joint: True, others False) and `{plot_marginals_extra}` (gaussian_mixture/flow_flux1joint: `, true_param=..., range=...`, others empty).
+
 ## Flagged results
 
 ## Skipped

@@ -12,6 +12,8 @@ replacements_bernoulli_glm_flow_flux = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "conditional",
+    "{use_ema_default}": "False",
+    "{plot_marginals_extra}": "",
 }
 replacements_bernoulli_glm_flow_flux1joint = {
     "{TASKNAME}": "Bernoulli GLM",
@@ -21,6 +23,8 @@ replacements_bernoulli_glm_flow_flux1joint = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "joint",
+    "{use_ema_default}": "False",
+    "{plot_marginals_extra}": "",
 }
 
 # Gaussian Linear
@@ -32,6 +36,8 @@ replacements_gaussian_linear_flow_flux = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "conditional",
+    "{use_ema_default}": "False",
+    "{plot_marginals_extra}": "",
 }
 replacements_gaussian_linear_flow_flux1joint = {
     "{TASKNAME}": "Gaussian Linear",
@@ -41,6 +47,8 @@ replacements_gaussian_linear_flow_flux1joint = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "joint",
+    "{use_ema_default}": "False",
+    "{plot_marginals_extra}": "",
 }
 
 # Gaussian Mixture
@@ -52,6 +60,8 @@ replacements_gaussian_mixture_flow_flux = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "conditional",
+    "{use_ema_default}": "False",
+    "{plot_marginals_extra}": "",
 }
 replacements_gaussian_mixture_flow_flux1joint = {
     "{TASKNAME}": "Gaussian Mixture",
@@ -61,6 +71,8 @@ replacements_gaussian_mixture_flow_flux1joint = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "joint",
+    "{use_ema_default}": "True",
+    "{plot_marginals_extra}": ", true_param=true_param.reshape(-1), range=((-9,-7), (4,6))",
 }
 
 # SLCP
@@ -72,6 +84,8 @@ replacements_slcp_flow_flux = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "conditional",
+    "{use_ema_default}": "False",
+    "{plot_marginals_extra}": "",
 }
 replacements_slcp_flow_flux1joint = {
     "{TASKNAME}": "SLCP",
@@ -81,6 +95,8 @@ replacements_slcp_flow_flux1joint = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "joint",
+    "{use_ema_default}": "False",
+    "{plot_marginals_extra}": "",
 }
 replacements_slcp_flow_simformer = {
     "{TASKNAME}": "SLCP",
@@ -90,6 +106,8 @@ replacements_slcp_flow_simformer = {
     "{technique}": "Flow",
     "{matching_technique}": "Flow Matching",
     "{kind}": "joint",
+    "{use_ema_default}": "False",
+    "{plot_marginals_extra}": "",
 }
 
 replacements = [

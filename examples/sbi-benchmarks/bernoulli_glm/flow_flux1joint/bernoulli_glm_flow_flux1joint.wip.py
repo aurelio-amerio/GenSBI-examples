@@ -190,7 +190,7 @@ samples, true_param, reference_samples =  get_samples(8)
 # %% [markdown]
 # ### Section 5.2: Visualize Posterior Samples
 # ---
-# In this section, we plot the posterior samples as a 2D histogram to visualize the learned distribution and compare it to the ground truth.
+# In this section, we plot the posterior samples as 1D and 2D marginal histograms to visualize the learned distribution and compare it to the ground truth.
 
 # %%
 from gensbi.utils.plotting import plot_marginals, plot_2d_dist_contour
@@ -199,7 +199,7 @@ from gensbi.utils.plotting import plot_marginals, plot_2d_dist_contour
 plot_marginals(samples[-1,...,0], backend="seaborn", gridsize=50)
 plt.show()
 
-# alternatively use "corner" to plot containment levels too
+# alternatively use "corner" to plot containment levels too
 # plot_marginals(samples[-1,...,0], backend="corner", gridsize=20)
 # plt.show()
 
