@@ -39,7 +39,7 @@ Next, it is convenient to download the GenSBI-examples package, which contains s
 
 ```{code-cell} ipython3
 # step 3: cd into the examples folder
-# %cd GenSBI-examples/examples/getting_started/GenSBI-examples
+# %cd GenSBI-examples/examples/getting_started
 ```
 
 ```{code-cell} ipython3
@@ -90,7 +90,7 @@ import matplotlib.pyplot as plt
 
 +++
 
-The first step in SBI is defining a **simulator**. The simulator takes input parameters $	heta$ and produces synthetic observations $x$. For this tutorial, we use a simple simulator where the observation $x$ is drawn from a Gaussian distribution centered at $	heta$.
+The first step in SBI is defining a **simulator**. The simulator takes input parameters $\theta$ and produces synthetic observations $x$. For this tutorial, we use a simple simulator where the observation $x$ is drawn from a Gaussian distribution centered at $\theta$.
 
 +++
 
@@ -116,7 +116,7 @@ def _simulator(key, thetas):
     return data
 ```
 
-Next, we define a **prior distribution** $p(	heta)$, which represents our knowledge about the parameters before observing any data. Here, we use a Uniform prior.
+Next, we define a **prior distribution** $p(\theta)$, which represents our knowledge about the parameters before observing any data. Here, we use a Uniform prior.
 
 ```{code-cell} ipython3
 theta_prior = dist.Uniform(
@@ -354,7 +354,7 @@ plt.show()
 +++
 
 GenSBI can also be used to compute the exact value of the (approximate) posterior log_prob at a given point.
-This method requires an ODE fomulation, and is currently only implemented for Flow Matching.
+This method requires an ODE formulation, and is currently only implemented for Flow Matching.
 
 GenSBI - and diffusion/flow models in general - is optimized for sampling, and evaluating the log_prob exactly is computationally expensive, as it involves solving a coupled ODE involving the divergence of the vector field. 
 
@@ -394,7 +394,11 @@ x_1 = jnp.stack([tt1_flat, tt2_flat, tt3_flat], axis=-1)[...,None]
 ```
 
 ```{code-cell} ipython3
-logp = pipeline.log_prob(x_1, x_o, use_ema=True)
+# evaluate the log_prob in chunks, to limit GPU memory usage
+chunk_size = 10_000
+logp = jnp.concatenate(
+    [pipeline.log_prob(x_1[i : i + chunk_size], x_o, use_ema=True) for i in range(0, x_1.shape[0], chunk_size)]
+)
 ```
 
 ```{code-cell} ipython3
@@ -447,7 +451,7 @@ fig.subplots_adjust(
 for ax in axes.ravel():
     ax.set_aspect("equal", adjustable="box")
 
-plt.savefig("flux1_flow_pipeline_log_prob.png", dpi=300, bbox_inches="tight") # uncomment to save the figure
+# plt.savefig("flux1_flow_pipeline_log_prob.png", dpi=300, bbox_inches="tight") # uncomment to save the figure
 plt.show()
 ```
 
@@ -471,7 +475,7 @@ As a next step, you might want to explore how to validate the performance of you
 
 +++
 
-In this section, we perform posterior calibration tests using Simulation-Based Calibration (SBC), Targeted At Random Parameters (TARP) and L-C2ST methods to evaluate the quality of our trained model's posterior estimates.
+In this section, we perform posterior calibration tests using Simulation-Based Calibration (SBC), Tests of Accuracy with Random Points (TARP) and L-C2ST methods to evaluate the quality of our trained model's posterior estimates.
 
 +++
 
@@ -482,6 +486,7 @@ For a full overview of posterior calibration tests, refer to the [sbi documentat
 from gensbi.diagnostics import check_tarp, run_tarp, plot_tarp
 from gensbi.diagnostics import check_sbc, run_sbc, sbc_rank_plot
 from gensbi.diagnostics import LC2ST, plot_lc2st
+from gensbi.diagnostics.marginal_coverage import compute_marginal_coverage, plot_marginal_coverage
 ```
 
 We sample 200 new observations from the simulator to perform the calibration tests.
@@ -490,7 +495,7 @@ It is crucial that we use a seed different from the one used during training to 
 ```{code-cell} ipython3
 key = jax.random.PRNGKey(1234)
 # sample the dataset
-test_data_ = simulator(jax.random.PRNGKey(1), 200)
+test_data = simulator(jax.random.PRNGKey(1), 200)
 
 
 # split in thetas and xs
@@ -528,7 +533,7 @@ print(check_stats)
 
 ```{code-cell} ipython3
 f, ax = sbc_rank_plot(ranks, 1_000, plot_type="hist", num_bins=20)
-plt.savefig("flux1_flow_pipeline_sbc.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+# plt.savefig("flux1_flow_pipeline_sbc.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
 plt.show()
 ```
 
@@ -558,9 +563,7 @@ alpha_marginal = compute_marginal_coverage(
 
 ```{code-cell} ipython3
 plot_marginal_coverage(alpha_marginal)
-plt.savefig(
-    "flux1_flow_pipeline_marginal_coverage.png", dpi=100, bbox_inches="tight"
-)  # uncomment to save the figure
+# plt.savefig("flux1_flow_pipeline_marginal_coverage.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
 plt.show()
 ```
 
@@ -594,7 +597,7 @@ print(ks_pval, "Should be larger than 0.05")
 
 ```{code-cell} ipython3
 plot_tarp(tarp_results)
-plt.savefig("flux1_flow_pipeline_tarp.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+# plt.savefig("flux1_flow_pipeline_tarp.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
 plt.show()
 ```
 
@@ -632,7 +635,7 @@ xs_ = test_data[:, dim_obs:, :] # (10_000, 3, 1)
 
 ```{code-cell} ipython3
 # Generate one posterior sample for every prior predictive.
-posterior_samples_ = pipeline.sample(key, x_o=xs_, nsamples=xs_.shape[0])
+posterior_samples_ = pipeline.sample_batched(key, xs_, nsamples=1)[0]  # (10_000, 3, 1)
 ```
 
 ```{code-cell} ipython3
@@ -676,7 +679,7 @@ post_samples_star_ = pipeline.sample(key, x_o_, nsamples=10_000)
 
 ```{code-cell} ipython3
 # theta_true = theta_true_.reshape(-1)  # (3,)
-x_o = x_o_.reshape(1,-1)  # (3,)
+x_o = x_o_.reshape(1,-1)  # (1, 3)
 post_samples_star = np.array(post_samples_star_.reshape(post_samples_star_.shape[0], -1))  # (10_000, 3)
 ```
 
@@ -690,7 +693,7 @@ fig,ax = plot_lc2st(
     post_samples_star,
     x_o,
 )
-plt.savefig("flux1_flow_pipeline_lc2st.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
+# plt.savefig("flux1_flow_pipeline_lc2st.png", dpi=100, bbox_inches="tight") # uncomment to save the figure
 plt.show()
 ```
 
@@ -708,4 +711,4 @@ For the specific chosen observation, the model seems to be properly calibrated.
 
 +++
 
-Based on SBC, Marginal coverage,TARP, and L-C2ST, all calibration tests are consistent with a mostly well-calibrated posterior. We cannot reject the hypothesis that the model is properly calibrated.
+Based on SBC, marginal coverage, TARP, and L-C2ST, all calibration tests are consistent with a mostly well-calibrated posterior. We cannot reject the hypothesis that the model is properly calibrated.
