@@ -34,7 +34,7 @@ This notebook trains and evaluates a {model_architecture} {matching_technique} m
 | 2. [Task & Data Preparation](#task-data-preparation) | Define task, visualize data, create datasets |
 | 3. [Model Configuration & Definition](#model-configuration-definition) | Load config, set parameters, instantiate model |
 | 4. [Training](#training) | Train or restore model, manage checkpoints |
-| 5. [Evaluation & Visualization](#evaluation-visualization) | Visualize loss, sample posterior, compute log prob |
+| 5. [Evaluation & Visualization](#evaluation-visualization) | Sample the posterior and compare it with the reference samples |
 | 6. [Posterior Calibration Checks](#posterior-calibration-checks) | Marginal coverage, TARP, SBC, L-C2ST |
 
 ---
@@ -136,7 +136,7 @@ val_dataset_iter = iter(val_dataset)
 
 ## 3. Model Configuration & Definition 
 ---
-In this section, we load the model and optimizer configuration, set all relevant parameters, and instantiate the {model_architecture} model. Edge masks and marginalization functions are used for flexible inference and posterior estimation.
+In this section, we load the model and optimizer configuration, set all relevant parameters, and instantiate the {model_architecture} model.
 
 ```{code-cell} ipython3
 from gensbi.recipes import {model_architecture}{technique}Pipeline
@@ -182,7 +182,7 @@ pipeline.restore_model()
 
 ## 5. Evaluation & Visualization 
 ---
-In this section, we evaluate the trained Simformer model by sampling from the posterior, and comparing results to reference data. We also compute and visualize the unnormalized log probability over a grid to assess model calibration and density estimation. These analyses provide insight into model performance and reliability.
+In this section, we evaluate the trained model by sampling from the posterior, and comparing results to reference data.
 
 +++
 
@@ -191,7 +191,7 @@ In this section, we evaluate the trained Simformer model by sampling from the po
 In this section, we sample from the posterior distribution using the trained model and visualize the results. Posterior samples are generated for a selected observation and compared to reference samples to assess model accuracy.
 
 ```{code-cell} ipython3
-# we want to do conditional inference. We need an observation for which we want to ocmpute the posterior
+# we want to do conditional inference. We need an observation for which we want to compute the posterior
 def get_samples(idx, nsamples=10_000, use_ema=False, key=None):
     observation, reference_samples = task.get_reference(idx)
     true_param = jnp.array(task.get_true_parameters(idx))
@@ -199,9 +199,7 @@ def get_samples(idx, nsamples=10_000, use_ema=False, key=None):
     if key is None:
         key = jax.random.PRNGKey(42)
 
-    time_grid = jnp.linspace(0,1,100)
-
-    samples = pipeline.sample(key, observation, nsamples, use_ema=use_ema, time_grid=time_grid)
+    samples = pipeline.sample(key, observation, nsamples, use_ema=use_ema, {intermediates_kwargs})
     return samples, true_param, reference_samples
 ```
 
@@ -210,12 +208,12 @@ samples, true_param, reference_samples =  get_samples(8)
 ```
 
 ```{code-cell} ipython3
-samples.shape # (100, 10000, 2)
+samples.shape # (100, 10000, 2, 1)
 ```
 
 ### Section 5.2: Visualize Posterior Samples
 ---
-In this section, we plot the posterior samples as a 2D histogram to visualize the learned distribution and compare it to the ground truth.
+In this section, we plot the posterior samples as 1D and 2D marginal histograms to visualize the learned distribution and compare it to the ground truth.
 
 ```{code-cell} ipython3
 from gensbi.utils.plotting import plot_marginals, plot_2d_dist_contour
@@ -312,8 +310,8 @@ import jax
 ```
 
 ```{code-cell} ipython3
-num_calibration_samples = 200 #excercise: try 500, what changes?
-num_posterior_samples = 1000 #excercise: try 10_000, what changes?
+num_calibration_samples = 200 #exercise: try 500, what changes?
+num_posterior_samples = 1000 #exercise: try 10_000, what changes?
 
 # Get test data
 data = task.dataset["test"].with_format("jax")[:num_calibration_samples]
@@ -399,9 +397,9 @@ xs_lc2st = jnp.asarray(data_lc2st["xs"], dtype=jnp.bfloat16)
 thetas_lc2st = jnp.asarray(data_lc2st["thetas"], dtype=jnp.bfloat16)
 
 # Sample 1 posterior sample per observation
-posterior_samples_lc2st = pipeline.sample(
-    jax.random.PRNGKey(43), xs_lc2st, num_lc2st_data, use_ema=True
-)
+posterior_samples_lc2st = pipeline.sample_batched(
+    jax.random.PRNGKey(43), xs_lc2st, nsamples=1, use_ema=True
+)[0]  # (num_lc2st_data, dim_obs, 1)
 
 # Reshape
 thetas_lc2st_flat = thetas_lc2st.reshape(thetas_lc2st.shape[0], -1)

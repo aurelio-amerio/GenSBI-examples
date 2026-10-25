@@ -1,0 +1,22 @@
+[
+ [
+  "num_calibration_samples = 200 ",
+  "num_calibration_samples = 100 "
+ ],
+ [
+  "num_posterior_samples = 1000 ",
+  "num_posterior_samples = 300 "
+ ],
+ [
+  "num_lc2st_data = 10000",
+  "num_lc2st_data = 2000"
+ ],
+ [
+  "x_o_star[0], 10_000,",
+  "x_o_star[0], 2_000,"
+ ],
+ [
+  "nsamples=10_000, use_ema",
+  "nsamples=2_000, use_ema"
+ ]
+]

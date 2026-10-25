@@ -19,6 +19,12 @@ All notebooks run with `/home/aure/github/GenSBI/.venv` (GenSBI 0.5.1), `MPLBACK
 | sbi-benchmarks/slcp/flow_flux | fixed (text only) | Ran clean unshrunk on CPU (9.4 min, exit=0, restore + one 10k-sample posterior). Text fixes only (see Task 4 report). The notebook does not compute C2ST; the stored text value (0.6886 ± 0.0472) matches the example README. |
 | sbi-benchmarks/slcp/flow_flux1joint | fixed (text only) | Ran clean unshrunk on CPU (14.5 min, exit=0, restore + one 10k-sample posterior). Text fixes only (see Task 4 report). The notebook does not compute C2ST; the stored text value (0.5490 ± 0.0187) matches the example README. |
 | sbi-benchmarks/slcp/flow_simformer | fixed (text only) | Ran clean unshrunk on CPU (2.2 min, exit=0, restore + one 10k-sample posterior). Text fixes only (see Task 4 report). The notebook does not compute C2ST; the stored text value (0.5515 ± 0.0254) matches the example README. |
+| sbi-benchmarks/two_moons/flow_flux | fixed | Ran clean on CPU (15.8 min, exit=0). L-C2ST cell `pipeline.sample` on batch -> `sample_batched(...,nsamples=1)[0]`; text fixes; stale shape comment (100, 10000, 2) -> (100, 10000, 2, 1). Shrunk CPU run (100 conditions x 300 posterior samples, L-C2ST 2000, 2000-sample draws); notebook prints no C2ST/p-values (plots only), README C2ST 0.507 not recomputed; all diagnostics cells ran to completion, no gross failure visible. |
+| sbi-benchmarks/two_moons/flow_flux1joint | fixed | Ran clean on CPU (~15 min, exit=0). Same fixes. Library UserWarning `x_o has batch dimension 2 > 1` from Flux1Joint `sample()` (false positive: x_o is (dim_cond=2, ch)); results unaffected. Shrunk CPU run (100 conditions x 300 posterior samples, L-C2ST 2000, 2000-sample draws); notebook prints no C2ST/p-values (plots only), README C2ST 0.504 not recomputed; all diagnostics cells ran to completion, no gross failure visible. |
+| sbi-benchmarks/two_moons/flow_simformer | fixed | Ran clean on CPU (~7 min, exit=0). Same fixes; same x_o warning from Simformer `sample()`. Notebook writes untracked `animated_plot_samples.gif` while tracked gifs are named `*_simformer.gif` (pre-existing naming quirk, deleted in P2). Shrunk CPU run (100 conditions x 300 posterior samples, L-C2ST 2000, 2000-sample draws); notebook prints no C2ST/p-values (plots only), README C2ST 0.510 not recomputed; all diagnostics cells ran to completion, no gross failure visible. |
+| sbi-benchmarks/two_moons/diffusion_flux | fixed | Ran clean on CPU (9.5 min, exit=0). Same fixes plus: `time_grid=` is ignored by score-matching samplers and the run crashed (slice TypeError in the 5.1 sample cell); now `nsteps=100, return_intermediates=True` via new placeholder `{intermediates_kwargs}`. Shrunk CPU run (100 conditions x 300 posterior samples, L-C2ST 2000, 2000-sample draws); notebook prints no C2ST/p-values (plots only), README C2ST 0.544 not recomputed; all diagnostics cells ran to completion, no gross failure visible. |
+| sbi-benchmarks/two_moons/diffusion_flux1joint | fixed | Ran clean on CPU (10 min, exit=0). Same fixes incl. intermediates fix; x_o warning as above. Shrunk CPU run (100 conditions x 300 posterior samples, L-C2ST 2000, 2000-sample draws); notebook prints no C2ST/p-values (plots only), README C2ST 0.571 not recomputed; all diagnostics cells ran to completion, no gross failure visible. |
+| sbi-benchmarks/two_moons/diffusion_simformer | fixed | Ran clean on CPU (4 min, exit=0). Same fixes incl. intermediates fix; x_o warning as above. Shrunk CPU run (100 conditions x 300 posterior samples, L-C2ST 2000, 2000-sample draws); notebook prints no C2ST/p-values (plots only), README C2ST 0.617 not recomputed; all diagnostics cells ran to completion, no gross failure visible. |
 
 ## Template fixes (generic)
 
@@ -34,6 +40,10 @@ Applied identically to `scripts/notebook_template.md` and the 9 wips (all tasks)
 8. Whitespace: non-breaking space in the "# alternatively use corner" comment replaced by a plain space.
 
 New placeholders `{use_ema_default}` (gaussian_mixture/flow_flux1joint: True, others False) and `{plot_marginals_extra}` (gaussian_mixture/flow_flux1joint: `, true_param=..., range=...`, others empty).
+
+## Template fixes (two_moons)
+
+Applied to `scripts/two_moons_template.md` and the 6 wips; regenerated notebooks match the wips (6 x OK). Same text fixes 1, 3-7 as the generic template (TOC row 5, Section 3 intro, Section 5 intro, `ocmpute`, `excercise`, 5.2 intro). Plus: L-C2ST `pipeline.sample_batched(..., nsamples=1)[0]`; stale `samples.shape` comment; new placeholder `{intermediates_kwargs}` (flow: `time_grid=jnp.linspace(0,1,100)`, diffusion: `nsteps=100, return_intermediates=True`).
 
 ## Flagged results
 

@@ -5,6 +5,7 @@ import jupytext
 
 # Bernoulli GLM
 replacements_flow_flux = {
+    "{intermediates_kwargs}": "time_grid=jnp.linspace(0,1,100)",
     "{model_name}": "flow_flux",
     "{model_architecture}": "Flux1",
     "{technique}": "Flow",
@@ -13,6 +14,7 @@ replacements_flow_flux = {
 }
 
 replacements_flow_flux1joint = {
+    "{intermediates_kwargs}": "time_grid=jnp.linspace(0,1,100)",
     "{model_name}": "flow_flux1joint",
     "{model_architecture}": "Flux1Joint",
     "{technique}": "Flow",
@@ -21,6 +23,7 @@ replacements_flow_flux1joint = {
 }
 
 replacements_flow_simformer = {
+    "{intermediates_kwargs}": "time_grid=jnp.linspace(0,1,100)",
     "{model_name}": "flow_simformer",
     "{model_architecture}": "Simformer",
     "{technique}": "Flow",
@@ -29,6 +32,7 @@ replacements_flow_simformer = {
 }
 
 replacements_diffusion_flux = {
+    "{intermediates_kwargs}": "nsteps=100, return_intermediates=True",
     "{model_name}": "diffusion_flux",
     "{model_architecture}": "Flux1",
     "{technique}": "Diffusion",
@@ -37,6 +41,7 @@ replacements_diffusion_flux = {
 }
 
 replacements_diffusion_flux1joint = {
+    "{intermediates_kwargs}": "nsteps=100, return_intermediates=True",
     "{model_name}": "diffusion_flux1joint",
     "{model_architecture}": "Flux1Joint",
     "{technique}": "Diffusion",
@@ -45,6 +50,7 @@ replacements_diffusion_flux1joint = {
 }
 
 replacements_diffusion_simformer = {
+    "{intermediates_kwargs}": "nsteps=100, return_intermediates=True",
     "{model_name}": "diffusion_simformer",
     "{model_architecture}": "Simformer",
     "{technique}": "Diffusion",
