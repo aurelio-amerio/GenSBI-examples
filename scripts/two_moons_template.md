@@ -57,7 +57,7 @@ except ImportError:
 
 if colab:
     # Install required packages and clone the repository
-    !uv pip install --quiet "gensbi[cuda12,examples]" "sbibm-jax[loader]"
+    !uv pip install --quiet "gensbi[cuda13,examples]" "sbibm-jax[loader]"
     !git clone --depth 1 https://github.com/aurelio-amerio/GenSBI-examples
     %cd GenSBI-examples/examples/sbi-benchmarks/two_moons/{model_name}
 ```

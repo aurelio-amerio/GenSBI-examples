@@ -27,9 +27,9 @@ uv pip install gensbi[examples]
 For GPU support (CUDA 12):
 
 ```bash
-uv add gensbi[cuda12,examples]
+uv add gensbi[cuda13,examples]
 # or
-uv pip install gensbi[cuda12,examples]
+uv pip install gensbi[cuda13,examples]
 ```
 
 ### Using pip
@@ -37,7 +37,7 @@ uv pip install gensbi[cuda12,examples]
 ```bash
 pip install gensbi[examples]
 # with GPU support (CUDA 12):
-pip install gensbi[cuda12,examples]
+pip install gensbi[cuda13,examples]
 ```
 
 For more installation options, including how to install `uv`, see the [Installation Guide](https://aurelio-amerio.github.io/GenSBI/getting_started/installation.html).
