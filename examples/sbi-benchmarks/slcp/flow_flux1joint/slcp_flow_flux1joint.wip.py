@@ -29,7 +29,7 @@
 # | 2. [Task & Data Preparation](#task-data-preparation) | Define task, visualize data, create datasets |
 # | 3. [Model Configuration & Definition](#model-configuration-definition) | Load config, set parameters, instantiate model |
 # | 4. [Training](#training) | Train or restore model, manage checkpoints |
-# | 5. [Evaluation & Visualization](#evaluation-visualization) | Visualize loss, sample posterior, compute log prob |
+# | 5. [Evaluation & Visualization](#evaluation-visualization) | Sample the posterior and compare it with the reference samples |
 # | 6. [Posterior Calibration Checks](#posterior-calibration-checks) | Marginal coverage, TARP, SBC, L-C2ST |
 #
 # ---
@@ -97,7 +97,7 @@ task = TaskDataset("slcp", kind="joint", use_prefetching=False)
 obs, reference_samples = task.get_reference(num_observation=8)
 
 # %%
-# plot the 2D posterior 
+# plot the reference posterior
 plot_marginals(np.asarray(reference_samples, dtype=np.float32), gridsize=50, plot_levels=False, backend="seaborn")
 plt.show()
 
@@ -119,7 +119,7 @@ val_dataset_iter = iter(val_dataset)
 # %% [markdown]
 # ## 3. Model Configuration & Definition
 # ---
-# In this section, we load the model and optimizer configuration, set all relevant parameters, and instantiate the Flux1Joint model. Edge masks and marginalization functions are used for flexible inference and posterior estimation.
+# In this section, we load the model and optimizer configuration, set all relevant parameters, and instantiate the Flux1Joint model.
 
 # %%
 from gensbi.recipes import Flux1JointFlowPipeline
@@ -162,7 +162,7 @@ pipeline.restore_model()
 # %% [markdown]
 # ## 5. Evaluation & Visualization
 # ---
-# In this section, we evaluate the trained Simformer model by sampling from the posterior, and comparing results to reference data.
+# In this section, we evaluate the trained model by sampling from the posterior, and comparing results to reference data.
 
 # %% [markdown]
 # ### Section 5.1: Posterior Sampling
@@ -170,7 +170,7 @@ pipeline.restore_model()
 # In this section, we sample from the posterior distribution using the trained model and visualize the results. Posterior samples are generated for a selected observation and compared to reference samples to assess model accuracy.
 
 # %%
-# we want to do joint inference. We need an observation for which we want to ocmpute the posterior
+# we want to do joint inference. We need an observation for which we want to compute the posterior
 def get_samples(idx, nsamples=10_000, use_ema=False, key=None):
     observation, reference_samples = task.get_reference(idx)
     true_param = jnp.array(task.get_true_parameters(idx))
@@ -210,7 +210,7 @@ plt.show()
 # ## 6. Posterior Calibration Checks
 
 # %% [markdown]
-# We report here the results of the posterior calibration tests. As an excercise, you can implement the tests as in the Two Moons example and compare the results.
+# We report here the results of the posterior calibration tests. As an exercise, you can implement the tests as in the Two Moons example and compare the results.
 
 # %% [markdown]
 # **Average C2ST**: 0.5490 ± 0.0187
