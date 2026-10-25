@@ -40,8 +40,8 @@ if colab: # you may have to restart the runtime after installing the packages
 # %% id="iQKjU1CQ-wLF"
 # Set training and model restoration flags
 overwrite_model = False
-restore_model = False  # Use pretrained model if available
-train_model = True  # Set to True to train from scratch
+restore_model = True  # Use pretrained model if available
+train_model = False  # Set to True to train from scratch
 
 # %% [markdown] id="3bCU0VbE-wLF"
 # ### Library Imports and JAX Backend Selection
@@ -181,7 +181,7 @@ plt.show()
 # %% [markdown] id="Wzw6YPzT-wLH"
 # ## 3. Model and Loss Definition
 #
-# We define the velocity field model (an MLP), the loss function, and the optimizer for training the flow-matching model.
+# We define the velocity field model (a Flux1Joint transformer), the loss function, and the optimizer for training the flow-matching model.
 
 # %% id="opragETv-wLH"
 # Import flow matching components and utilities

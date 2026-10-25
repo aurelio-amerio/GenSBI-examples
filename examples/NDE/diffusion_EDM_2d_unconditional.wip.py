@@ -215,6 +215,9 @@ plt.tight_layout()
 plt.savefig("diffusion_EDM_unconditional_forward.png", dpi=300, bbox_inches="tight")
 plt.show()
 
+# %% [markdown]
+# <img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/NDE/diffusion_EDM_unconditional_forward.png" width=600>
+
 # %% [markdown] id="Wzw6YPzT-wLH"
 # ## 3. Model and Loss Definition
 #
@@ -358,6 +361,9 @@ plt.tight_layout()
 plt.savefig("diffusion_EDM_unconditional.png", dpi=300, bbox_inches="tight")
 plt.show()
 
+# %% [markdown]
+# <img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/NDE/diffusion_EDM_unconditional.png" width=600>
+
 # %% [markdown] id="qyFSQLb1-wLJ"
 # ## 6. Marginal and Trajectory Visualization
 #
@@ -396,5 +402,8 @@ plt.ylim(-5,5)
 plt.title("Diffusion - EDM", fontsize=20)
 plt.savefig("diffusion_EDM_unconditional_trajectories.png", dpi=300, bbox_inches="tight")
 plt.show()
+
+# %% [markdown]
+# <img src="https://raw.githubusercontent.com/aurelio-amerio/GenSBI-examples/refs/heads/main/examples/NDE/diffusion_EDM_unconditional_trajectories.png" width=600>
 
 # %%

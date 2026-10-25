@@ -189,8 +189,8 @@ plt.show()
 
 # %% id="opragETv-wLH"
 # Import flow matching components and utilities
-from gensbi.recipes import UnconditionalFlowPipeline
-from gensbi.models import Flux1Joint, Flux1JointParams
+from gensbi.recipes import UnconditionalPipeline
+from gensbi.core import FlowMatchingMethod
 
 
 # %% id="j7Af9XBo-wLH"
@@ -239,17 +239,19 @@ hidden_dim = 512
 model = MLP(input_dim=2, hidden_dim=hidden_dim, rngs=nnx.Rngs(0), n_layers=12)
 
 # %% id="N2WekuU6-wLH"
-training_config = UnconditionalFlowPipeline.get_default_training_config()
+training_config = UnconditionalPipeline.get_default_training_config()
 training_config["checkpoint_dir"] = checkpoint_dir
 training_config["nsteps"] = 500_000
 training_config["max_lr"] = 1e-4 * factor
 training_config["min_lr"] = 1e-6 * factor
 
 
-pipeline = UnconditionalFlowPipeline(model,
+method = FlowMatchingMethod()
+pipeline = UnconditionalPipeline(model,
     train_dataset_batched,
     val_dataset_batched,
     2,
+    method=method,
     training_config=training_config)
 
 # %% id="4jnodGVs-wLH"
