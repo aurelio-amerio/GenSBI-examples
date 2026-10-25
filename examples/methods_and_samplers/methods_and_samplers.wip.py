@@ -452,7 +452,7 @@ rngs = nnx.Rngs(42)
 pipeline_edm.restore_model()
 
 # %% Sample with the default EDMSolver
-# The EDMSolver implements the stochastic denoising sampler from Karras et al., 2022. Defaults to algorithm 1 (deterministic)
+# The EDMSolver implements the stochastic denoising sampler from Karras et al., 2022. Defaults to algorithm 1 (deterministic).
 # It progressively denoises samples following a noise schedule from high to low sigma.
 samples_edm = pipeline_edm.sample(rngs.sample(), x_o, nsamples=100_000)
 samples_edm = unnormalize(samples_edm, means[:dim_obs], stds[:dim_obs])
