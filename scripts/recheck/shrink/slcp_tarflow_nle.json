@@ -1,0 +1,4 @@
+[
+ ["int(sampler_cfg.get(\"num_particles\", 20000))", "500"],
+ ["int(sampler_cfg.get(\"num_mcmc_steps\", 10))", "8"]
+]

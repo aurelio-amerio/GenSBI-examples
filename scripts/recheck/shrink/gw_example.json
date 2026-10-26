@@ -1,0 +1,5 @@
+[
+ ["    100_000,\n    chunk_size=10_000,", "    2_000,\n    chunk_size=2_000,"],
+ ["[:200]", "[:20]"],
+ ["num_posterior_samples = 1000", "num_posterior_samples = 60"]
+]

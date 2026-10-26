@@ -104,6 +104,8 @@ from gensbi.experimental.models.autoencoders import (
 from gensbi.experimental.recipes.vae_pipeline import parse_autoencoder_params
 from gensbi.recipes.flux1 import parse_flux1_params, parse_training_config
 from gensbi.utils.plotting import plot_marginals
+from gensbi.diagnostics import run_sbc, sbc_rank_plot
+from gensbi.diagnostics import run_tarp, plot_tarp
 from gensbi.models import Flux1Params, Flux1
 from gensbi.recipes import ConditionalPipeline
 from gensbi.core import FlowMatchingMethod
@@ -111,7 +113,7 @@ from gensbi.core import FlowMatchingMethod
 from sbibm_jax.data import TaskDataset
 
 # Point to the config file
-config_path = "./config/gw_config_6c_1.yaml"
+config_path = "./config/gw_config_6c.yaml"
 
 
 # %% [markdown]
@@ -152,6 +154,10 @@ class GWModel(nnx.Module):
     ):
         # 1. Encode the high-dimensional conditioning data `cond` (GW time series)
         # The VAE encoder reduces it to a latent feature map `cond_latent`
+        if encoder_key is None:
+            # The sampler does not forward extra kwargs to the model, and the VAE cannot
+            # draw from its own RNG state inside a jitted sampler: use a fixed key.
+            encoder_key = jax.random.PRNGKey(1234)
         cond_latent = self.vae.encode(cond, encoder_key)
 
         # 2. Pass the parameters `obs` (theta) and the encoded condition to the Flow model
@@ -344,7 +350,6 @@ samples = pipeline_latent.sample_batched(
     x_o,
     100_000,
     chunk_size=10_000,
-    encoder_key=jax.random.PRNGKey(1234),
 )
 
 # Reshape samples: (num_samples, 1, 2, 1) -> (num_samples, 2)
@@ -393,7 +398,6 @@ posterior_samples_ = pipeline_latent.sample_batched(
     xs_,
     num_posterior_samples,
     chunk_size=20,
-    encoder_key=jax.random.PRNGKey(1234),
 )
 
 thetas = thetas_.reshape(thetas_.shape[0], -1)
@@ -408,13 +412,13 @@ posterior_samples = posterior_samples_.reshape(
 # ### Tarp
 
 # %%
-ecp, alpha = run_tarp(
+tarp_results = run_tarp(
     thetas,
     posterior_samples,
     references=None,  # will be calculated automatically.
 )
 
-plot_tarp(ecp, alpha)
+plot_tarp(tarp_results)
 # plt.savefig(
 #     f"imgs/gw_tarp_v6c_conf{experiment}.png", dpi=100, bbox_inches="tight"
 # )  # uncomment to save the figure
@@ -440,4 +444,4 @@ plt.show()
 
 # %% [markdown]
 # > **Note:** <br>
-# > The model is note perfectly calibrated, and it is overconfident in some regions, while underconfident in others. <br> The model in this example has been trained in a "fast" configuration, as an example, and can be further refined by optimizing the model parameters and training configuration.
+# > The model is not perfectly calibrated, and it is overconfident in some regions, while underconfident in others. <br> The model in this example has been trained in a "fast" configuration, as an example, and can be further refined by optimizing the model parameters and training configuration.

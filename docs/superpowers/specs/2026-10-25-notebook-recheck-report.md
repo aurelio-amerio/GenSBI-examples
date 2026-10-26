@@ -30,6 +30,10 @@ All notebooks run with `/home/aure/github/GenSBI/.venv` (GenSBI 0.5.1), `MPLBACK
 | examples/NDE/diffusion_SM_2d_unconditional | ran clean | Shrunk sampling nsamples 500k->20k (nsteps 251/500 kept); 3 PNG links added. |
 | examples/NDE/flow_matching_2d_unconditional | ran clean | Shrunk sampling nsamples 500k->20k; 3 PNG links added. |
 | examples/NDE/gensbi_text | fixed | Stale API: `UnconditionalFlowPipeline` no longer exists -> `UnconditionalPipeline` + `FlowMatchingMethod()` (method=...); dropped unused Flux1Joint import. Shrunk nsamples 500k->20k; gensbi_animation.gif reverted. |
+| examples/sbi-benchmarks/two_moons/maf_NLE | ran clean | Unshrunk CPU run, 6.6 min (SMC 20000 particles, NS num_live 2000). SMC log_evidence -0.685 (text says ~-0.70), NS -0.573 +- 0.048 (text: -0.57 +- 0.05), unique 10000/10000. No text issues. |
+| examples/sbi-benchmarks/slcp/tarflow_NLE | ran clean (shrunk) | Unshrunk SMC (20000 particles, 20 MCMC steps) did not finish in >30 min on 6 cores; shrunk CPU run (num_particles 20000->500, num_mcmc_steps 20->8, literal override), 7.6 min. Typos fixed: Excercise/excercise, 'is in generally slower'. Markdown C2ST 0.518 not recomputed. |
+| examples/sbi-benchmarks/lensing | fixed | savefig `img/` -> `imgs/`; stale API: pipeline sampler no longer forwards `encoder_key` kwarg to the model (TraceContextError) -> LensingModel falls back to fixed PRNGKey(1234) when encoder_key is None, kwarg dropped from sample_batched call. Typos: excercise, 'the the', drawan, `$\\theta$`. Shrunk 100k->5k samples; 4.3 min. lensing.png reverted. |
+| examples/sbi-benchmarks/gravitational_waves | fixed | Config path `gw_config_6c_1.yaml` -> `gw_config_6c.yaml`; same encoder_key fix as lensing (GWModel); missing imports run_sbc/sbc_rank_plot/run_tarp/plot_tarp added; run_tarp now returns TARPResult (`tarp_results = run_tarp(...)`, `plot_tarp(tarp_results)`); typo 'is note'. Shrunk 100k->2k samples, diagnostics 200 conds x 1000 samples -> 20 x 60 (diagnostic sampling is very slow on CPU); 18 min. Diagnostics from a shrunk CPU run are not meaningful. gw_example.png reverted. |
 
 ## Template fixes (generic)
 

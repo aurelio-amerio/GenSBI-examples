@@ -34,7 +34,7 @@
 # We use the configuration from `config_1a.yaml`.
 #
 # ### Data Dimensions
-# - **Observation ($\\theta$)**: The target of inference. It has **2 features** (parameters) and **1 channel**.
+# - **Observation ($\theta$)**: The target of inference. It has **2 features** (parameters) and **1 channel**.
 # - **Conditioning ($x$)**: Lensing images. **32x32 pixels** with **1 channel**.
 #
 # ### Processing Pipeline
@@ -158,6 +158,10 @@ class LensingModel(nnx.Module):
     ):
 
         # first we encode the conditioning data
+        if encoder_key is None:
+            # The sampler does not forward extra kwargs to the model, and the VAE cannot
+            # draw from its own RNG state inside a jitted sampler: use a fixed key.
+            encoder_key = jax.random.PRNGKey(1234)
         cond_latent = self.vae.encode(cond, encoder_key)
         # patchify the cond_latent for the transformer
         cond_latent = patchify_2d(cond_latent)
@@ -205,7 +209,7 @@ theta_true = df_test["thetas"][0]  # already unnormalized
 # %%
 plt.imshow(x_o[0], cmap="gray")
 plt.axis("off")
-plt.savefig("img/lensing.png", bbox_inches="tight", dpi=300)
+plt.savefig("imgs/lensing.png", bbox_inches="tight", dpi=300)
 plt.show()
 
 # %% [markdown]
@@ -352,7 +356,6 @@ samples = pipeline_latent.sample_batched(
     x_o,
     100_000,
     chunk_size=10_000,
-    encoder_key=jax.random.PRNGKey(1234),
 )
 
 res = samples[:, 0, :, 0]  # shape (num_samples, 1, 2, 1) -> (num_samples, 2)
@@ -371,7 +374,7 @@ plt.show()
 # ## 7. Diagnostics
 #
 # You should run several diagnostics to validate the quality of the posterior estimation.
-# We leave as an excercise the implementation of these diagnostics (or take a look at the training script: [`train-lensing.py`](https://github.com/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/lensing/train-lensing.py)).
+# We leave as an exercise the implementation of these diagnostics (or take a look at the training script: [`train-lensing.py`](https://github.com/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/lensing/train-lensing.py)).
 #
 # Below are the results of the diagnostics for the lensing example.
 #
@@ -394,8 +397,8 @@ plt.show()
 # %% [markdown]
 # ### Conclusions
 # The SBC test tells us that the posterior for the first dimension is reasonable, while the second dimension is slightly skewed. <br>
-# The marginal coverage test tells us that the the posterior for the first dimension is slightly underconfident while the second dimension is slightly overconfident. <br>
+# The marginal coverage test tells us that the posterior for the first dimension is slightly underconfident while the second dimension is slightly overconfident. <br>
 # The TARP test tells us that the posterior is overall well-calibrated, but the model is slightly overconfident in the region around the peak of the distribution ($\alpha$<0.6). <br>
-# The L-C2ST test tells us that a local classifier cannot distinguish samples drawan from the true joint distributions, and samples drawn from the model, meaning that we can't reject the hypothesis that the model is well calibrated. <br>
+# The L-C2ST test tells us that a local classifier cannot distinguish samples drawn from the true joint distributions, and samples drawn from the model, meaning that we can't reject the hypothesis that the model is well calibrated. <br>
 #
 # Final remark: The model in this example has been trained in a "fast" configuration, as an example, and can be further refined by optimizing the model parameters and training configuration.

@@ -279,13 +279,13 @@ plt.show()
 # Average C2ST accuracy (SMC): 0.5180 +- 0.0130
 
 # %% [markdown]
-# ### Excercise: Try a different sampler
+# ### Exercise: Try a different sampler
 
 # %% [markdown]
-# As an excercise, you can also check how to sample from the posterior using a different sampler. 
+# As an exercise, you can also check how to sample from the posterior using a different sampler. 
 # In this example, we used a tempered SMC sampler, since the posterior is expected to be multimodal. What changes if we use an HMC sampler instead? 
 # Furthermore, you can try implementing a nested sampler, which is an entirely different technique particularly suited for multimodal distributions.
-# Check [this script](https://github.com/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/slcp/tarflow_NLE/train_tarflow_nle.py) for an example on how to use nested sampling for this task. Sampling with NS is in generally slower, but it can be more robust than HMC for multimodal distributions.
+# Check [this script](https://github.com/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/slcp/tarflow_NLE/train_tarflow_nle.py) for an example on how to use nested sampling for this task. Sampling with NS is generally slower, but it can be more robust than HMC for multimodal distributions.
 # In this case, we achieve a similar c2st:
 #
 # Average C2ST accuracy (NS) : 0.5192 +- 0.0140
