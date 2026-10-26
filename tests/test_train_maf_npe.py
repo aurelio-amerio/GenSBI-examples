@@ -9,8 +9,8 @@ import pytest
 
 # --- load the example script as a module (it lives outside the package) ---
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
-_SCRIPT = _REPO_ROOT / "examples/sbi-benchmarks/two_moons/maf/train_maf_npe.py"
-_CONFIG = _REPO_ROOT / "examples/sbi-benchmarks/two_moons/maf/config/config_maf_npe.yaml"
+_SCRIPT = _REPO_ROOT / "examples/sbi-benchmarks/two_moons/maf_NPE/train_maf_npe.py"
+_CONFIG = _REPO_ROOT / "examples/sbi-benchmarks/two_moons/maf_NPE/config/config_maf_npe.yaml"
 
 
 def _load_script_module():
