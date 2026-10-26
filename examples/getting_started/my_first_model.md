@@ -354,7 +354,7 @@ plt.show()
 +++
 
 GenSBI can also be used to compute the exact value of the (approximate) posterior log_prob at a given point.
-This method requires an ODE formulation, and is currently only implemented for Flow Matching.
+This method requires an ODE formulation, and is currently implemented for Flow Matching models according to the standard ODE implementation, and for Score Matching models using the probability flow ODE formulation.
 
 GenSBI - and diffusion/flow models in general - is optimized for sampling, and evaluating the log_prob exactly is computationally expensive, as it involves solving a coupled ODE involving the divergence of the vector field. 
 

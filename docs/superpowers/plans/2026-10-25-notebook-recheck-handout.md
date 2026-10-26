@@ -1,5 +1,7 @@
 # Notebook re-check: handout (paused 2026-10-25)
 
+**Superseded (2026-10-26):** the re-check is complete; see `docs/superpowers/specs/2026-10-25-notebook-recheck-report.md`.
+
 Plan: `docs/superpowers/plans/2026-10-25-notebook-recheck.md`
 Spec: `docs/superpowers/specs/2026-10-25-notebook-recheck-design.md`
 Report (per-notebook results so far): `docs/superpowers/specs/2026-10-25-notebook-recheck-report.md`

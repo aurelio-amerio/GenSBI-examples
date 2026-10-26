@@ -12,6 +12,8 @@
 
 ## Resume notes (paused 2026-10-25)
 
+**Superseded (2026-10-26):** the re-check is complete; see `docs/superpowers/specs/2026-10-25-notebook-recheck-report.md`.
+
 Paused to move to another machine. **Read `docs/superpowers/plans/2026-10-25-notebook-recheck-handout.md` first.** In short:
 
 - Tasks 1–2 done (`55af9422`, `335edf7d`). Task 3 in progress: re-run from the start. Task 4 Step 1 done.
