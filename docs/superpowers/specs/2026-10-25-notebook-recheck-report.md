@@ -57,3 +57,16 @@ Applied to `scripts/two_moons_template.md` and the 6 wips; regenerated notebooks
 ## Flagged results
 
 ## Skipped
+
+## Spot checks
+
+Four regenerated notebooks (the real `.ipynb`, not the wip) were executed via the kernel runner `scripts/recheck/run.sh <nb>.ipynb` on CPU (6 cores) with the per-notebook shrink json applied, not via `nbconvert --execute` on GPU (this node has no GPU). Model/training config and checkpoints were not shrunk. Executed copies went to the logs dir (`<stem>.spot.executed.ipynb`); nothing was left in the repo (P2 done: overwritten images/GIFs reverted, committed `.ipynb` unchanged).
+
+| Notebook | Result | Run time | Shrink |
+|---|---|---|---|
+| sbi-benchmarks/gaussian_linear/flow_flux/gaussian_linear_flow_flux.ipynb | exit=0, all cells ran | 4m53 | none |
+| sbi-benchmarks/two_moons/flow_flux/two_moons_flow_flux.ipynb | exit=0, all cells ran | 15m30 | `two_moons_flow_flux.json` (calibration/posterior/L-C2ST sizes) |
+| getting_started/my_first_model.ipynb | exit=0, all cells ran | 35m21 | new `my_first_model.json` (100k->5k samples, 50x51x52 grid -> 20x21x22, 200->100 SBC/TARP conditions with 1000->300 samples, 10k->2k L-C2ST data/samples) |
+| NDE/flow_matching_2d_unconditional.ipynb | exit=0, all cells ran | 40 s | `nsamples=500_000` -> 20_000 |
+
+The `KeyboardInterrupt` in the my_first_model log tail is grain worker shutdown at kernel teardown, not a cell error.

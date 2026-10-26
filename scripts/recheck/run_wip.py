@@ -26,7 +26,7 @@ wip = Path(sys.argv[1]).resolve()
 out = Path(sys.argv[2])
 nb = jupytext.read(wip)
 
-stem = wip.name.removesuffix(".wip.py")
+stem = wip.name.removesuffix(".wip.py").removesuffix(".ipynb")
 shrink_file = Path(__file__).parent / "shrink" / f"{stem}.json"
 pairs = json.loads(shrink_file.read_text()) if shrink_file.exists() else []
 hits = [0] * len(pairs)
