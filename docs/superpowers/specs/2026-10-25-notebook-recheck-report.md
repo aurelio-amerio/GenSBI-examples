@@ -2,7 +2,14 @@
 
 Date: 2026-10-25. Design: `2026-10-25-notebook-recheck-design.md`.
 
-All notebooks run with `/home/aure/github/GenSBI/.venv` (GenSBI 0.5.1), `MPLBACKEND=Agg`, from the notebook's own directory, via jupytext py:percent working copies.
+All 26 tracked notebooks were re-checked (GenSBI 0.5.1, `MPLBACKEND=Agg`, from the notebook's own directory, via jupytext py:percent working copies).
+
+Runs were done on two machines:
+
+- Tasks 2-3 (partly) on a GPU box with `/home/aure/github/GenSBI/.venv`.
+- Everything else on a CPU-only node: JAX forced to CPU, 6 pinned cores, with run-time "shrink" overrides of sample / grid / diagnostic sizes applied to an in-memory copy (the working copies kept the real sizes, and so do the committed notebooks).
+
+Diagnostics from shrunk CPU runs are not comparable to the README numbers. Full-size behaviour (e.g. GPU memory) was not exercised after the move to the CPU node. The working copies, the shrink files and the runner scripts were deleted at the end of the branch (`scripts/recheck/`, all `*.wip.py`).
 
 ## Per notebook
 
@@ -56,7 +63,46 @@ Applied to `scripts/two_moons_template.md` and the 6 wips; regenerated notebooks
 
 ## Flagged results
 
+None. Every notebook ran to completion (all rows are "ran clean" or "fixed"). Caveats: the gw diagnostics come from a heavily shrunk run and are not meaningful (20 conditions x 60 samples); `slcp/tarflow_NLE` was run with a much smaller SMC (500 particles, 8 MCMC steps) because the real setting did not finish in >30 min on 6 cores; the two_moons notebooks print no C2ST, so README numbers were not recomputed.
+
 ## Skipped
+
+None. No notebook was skipped.
+
+## Library findings (GenSBI, not changed here)
+
+1. `JointPipeline.sample` (`recipes/joint_pipeline.py:446-454`) warns "x_o has batch dimension N > 1" for a 1-D `(dim_cond,)` `x_o`. This is a false positive (the shape is expanded to `(1, dim_cond, 1)` afterwards); results are unaffected.
+2. `sample_batched` replaces the caller's `model_extras` per condition (`recipes/pipeline.py:1390-1403`) and `build_sampler_fn` silently accepts unknown kwargs (`flow_matching.py:219`), so `encoder_key` is dropped and the model raises a TraceContextError. The gw and lensing notebooks now default `encoder_key=PRNGKey(1234)` in their model wrappers (the same key as the training scripts).
+
+## Not done / for the maintainer
+
+- 7 notebooks have no Colab badge: `methods_and_samplers` and the 6 `two_moons` notebooks (also absent on `main`).
+- The top-level README notebook listing omits some notebooks (e.g. `NDE/gensbi_text`).
+- The EDM and SM notebooks call the model a "velocity field model" (flow-matching wording).
+- The `gensbi_text` title and intro are copied from the flow-matching notebook.
+- `two_moons/flow_simformer` writes `animated_plot_samples.gif`, while the tracked files are named `*_simformer.gif` (pre-existing).
+- Diffusion `two_moons` notebooks now sample with `nsteps=100` (library default 18), forced by the ignored `time_grid=` crash.
+- The gw/lensing wrappers now differ from the training-script model classes (fixed encoder noise if copied into training).
+
+## Source-of-truth files changed on this branch
+
+Non-docs files, from `git diff --stat main...HEAD`:
+
+- `README.md`
+- `scripts/make_notebook.py`, `scripts/make_notebook_two_moons.py`, `scripts/notebook_template.md`, `scripts/two_moons_template.md`
+- `examples/getting_started/my_first_model.md`, `examples/methods_and_samplers/methods_and_samplers.md`
+- the 26 regenerated `.ipynb` files (outputs stripped, no checkpoints touched)
+- removed: `examples/methods_and_samplers/methods_and_samplers.py` (stale copy)
+
+## Final tree checks
+
+```
+$ ls scripts/recheck            -> No such file or directory
+$ git ls-files '*.wip.py' | wc -l -> 0
+$ git diff main --stat -- '**/checkpoints/**'  -> (empty)
+$ outputs/execution_count over all 26 tracked .ipynb -> (no output)
+$ git ls-files -o --exclude-standard -> (empty)
+```
 
 ## Spot checks
 
@@ -64,9 +110,9 @@ Four regenerated notebooks (the real `.ipynb`, not the wip) were executed via th
 
 | Notebook | Result | Run time | Shrink |
 |---|---|---|---|
-| sbi-benchmarks/gaussian_linear/flow_flux/gaussian_linear_flow_flux.ipynb | exit=0, all cells ran | 4m53 | none |
-| sbi-benchmarks/two_moons/flow_flux/two_moons_flow_flux.ipynb | exit=0, all cells ran | 15m30 | `two_moons_flow_flux.json` (calibration/posterior/L-C2ST sizes) |
-| getting_started/my_first_model.ipynb | exit=0, all cells ran | 35m21 | new `my_first_model.json` (100k->5k samples, 50x51x52 grid -> 20x21x22, 200->100 SBC/TARP conditions with 1000->300 samples, 10k->2k L-C2ST data/samples) |
-| NDE/flow_matching_2d_unconditional.ipynb | exit=0, all cells ran | 40 s | `nsamples=500_000` -> 20_000 |
+| examples/sbi-benchmarks/gaussian_linear/flow_flux/gaussian_linear_flow_flux.ipynb | exit=0, all cells ran | 4m53 | none |
+| examples/sbi-benchmarks/two_moons/flow_flux/two_moons_flow_flux.ipynb | exit=0, all cells ran | 15m30 | `two_moons_flow_flux.json` (calibration/posterior/L-C2ST sizes) |
+| examples/getting_started/my_first_model.ipynb | exit=0, all cells ran | 35m21 (shrunk; well over the ~20 min target) | new `my_first_model.json` (100k->5k samples, 50x51x52 grid -> 20x21x22, 200->100 SBC/TARP conditions with 1000->300 samples, 10k->2k L-C2ST data/samples) |
+| examples/NDE/flow_matching_2d_unconditional.ipynb | exit=0, all cells ran | 40 s | `nsamples=500_000` -> 20_000 |
 
 The `KeyboardInterrupt` in the my_first_model log tail is grain worker shutdown at kernel teardown, not a cell error.
