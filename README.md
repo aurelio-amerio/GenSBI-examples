@@ -24,7 +24,7 @@ uv add gensbi[examples]
 uv pip install gensbi[examples]
 ```
 
-For GPU support (CUDA 12):
+For GPU support (CUDA 13):
 
 ```bash
 uv add gensbi[cuda13,examples]
@@ -36,7 +36,7 @@ uv pip install gensbi[cuda13,examples]
 
 ```bash
 pip install gensbi[examples]
-# with GPU support (CUDA 12):
+# with GPU support (CUDA 13):
 pip install gensbi[cuda13,examples]
 ```
 
