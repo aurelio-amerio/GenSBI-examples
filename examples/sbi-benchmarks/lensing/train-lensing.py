@@ -72,6 +72,9 @@ class LensingModel(nnx.Module):
     def __init__(self, vae, sbi_model):
         self.vae = vae
         self.sbi_model = sbi_model
+        # seed for the VAE encoder noise at inference: the pipeline samplers do not forward
+        # an encoder_key to the model, so it is set on the model after training/restoring
+        self.inference_encoder_seed = None
 
     def __call__(
         self,
@@ -84,6 +87,9 @@ class LensingModel(nnx.Module):
         guidance: Array | None = None,
         encoder_key=None,
     ):
+
+        if encoder_key is None and self.inference_encoder_seed is not None:
+            encoder_key = jax.random.PRNGKey(self.inference_encoder_seed)
 
         # first we encode the conditioning data
         cond_latent = self.vae.encode(cond, encoder_key)
@@ -236,6 +242,10 @@ def main():
     if restore_model:
         pipeline_latent.restore_model()
 
+    # fixed encoder noise for all the evaluations below
+    pipeline_latent.model.inference_encoder_seed = 1234
+    pipeline_latent.ema_model.inference_encoder_seed = 1234
+
     # plot the results
 
     x_o = df_test["xs"][0][None, ...]
@@ -249,7 +259,6 @@ def main():
         x_o,
         100_000,
         chunk_size=10_000,
-        encoder_key=jax.random.PRNGKey(1234),
     )
     # print("Samples shape:", samples.shape)
     res = samples[:, 0, :, 0]  # shape (num_samples, 1, 2, 1) -> (num_samples, 2)
@@ -278,7 +287,6 @@ def main():
         xs_,
         num_posterior_samples,
         chunk_size=20,
-        encoder_key=jax.random.PRNGKey(1234),
     )
 
     thetas = thetas_.reshape(thetas_.shape[0], -1)
@@ -332,12 +340,9 @@ def main():
 
     num_posterior_samples = 1
 
-    posterior_samples_ = pipeline_latent.sample(
-        jax.random.PRNGKey(42),
-        x_o=xs_,
-        nsamples=xs_.shape[0],
-        encoder_key=jax.random.PRNGKey(1234),
-    )
+    posterior_samples_ = pipeline_latent.sample_batched(
+        jax.random.PRNGKey(42), xs_, nsamples=1
+    )[0]
 
     thetas = thetas_.reshape(thetas_.shape[0], -1)
     xs = xs_.reshape(xs_.shape[0], -1)
@@ -362,7 +367,6 @@ def main():
         jax.random.PRNGKey(42),
         x_o,
         nsamples=10_000,
-        encoder_key=jax.random.PRNGKey(1234),
     )
 
     x_o = x_o.reshape(1, -1)

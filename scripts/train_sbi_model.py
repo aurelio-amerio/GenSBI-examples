@@ -331,9 +331,9 @@ def main():
 
     num_posterior_samples = 1
 
-    posterior_samples_ = pipeline.sample(
-        jax.random.PRNGKey(42), x_o=xs_, nsamples=xs_.shape[0]
-    )
+    posterior_samples_ = pipeline.sample_batched(
+        jax.random.PRNGKey(42), xs_, nsamples=1
+    )[0]
 
     thetas = thetas_.reshape(thetas_.shape[0], -1)
     xs = xs_.reshape(xs_.shape[0], -1)

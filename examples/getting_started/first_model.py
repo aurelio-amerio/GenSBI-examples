@@ -246,7 +246,7 @@ def main():
     xs_ = test_data[:, dim_obs:, :]  # (10_000, 3, 1)
 
     # Generate one posterior sample for every prior predictive.
-    posterior_samples_ = pipeline.sample(key, x_o=xs_, nsamples=xs_.shape[0])
+    posterior_samples_ = pipeline.sample_batched(key, xs_, nsamples=1)[0]
 
     # flatten the dataset. sbi expects 2D arrays of shape (num_samples, features), while our data is 3D of shape (num_samples, dim, channels).
     # we reshape a sample of size (dim, channels) into a vector of size (dim * channels)

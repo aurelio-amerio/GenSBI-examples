@@ -57,6 +57,7 @@ git clone https://github.com/aurelio-amerio/GenSBI-examples.git
 ## Getting Started
 
 - **My First Model**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/getting_started/my_first_model.ipynb)
+- **Methods and Samplers**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/methods_and_samplers/methods_and_samplers.ipynb)
 
 ## Training Models
 
@@ -92,6 +93,7 @@ These examples demonstrate the usage of Neural Density Estimators for unconditio
 - **Diffusion SM 2D Unconditional**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/diffusion_SM_2d_unconditional.ipynb)
 - **Flow Matching 2D Unconditional**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/flow_matching_2d_unconditional.ipynb)
 - **Flow Matching 2D Unconditional (Flux1Joint)**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/flow_matching_2d_unconditional_flux1joint.ipynb)
+- **Flow Matching on the GenSBI Text**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/NDE/gensbi_text.ipynb)
 
 ## SBI Benchmark Examples
 
@@ -105,6 +107,7 @@ This repository includes a comprehensive suite of Simulation-Based Inference (SB
 - **Flow Flux**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/two_moons/flow_flux/two_moons_flow_flux.ipynb)
 - **Flow Flux1Joint**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/two_moons/flow_flux1joint/two_moons_flow_flux1joint.ipynb)
 - **Flow SimFormer**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/two_moons/flow_simformer/two_moons_flow_simformer.ipynb)
+- **MAF NLE**: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/two_moons/maf_NLE/two_moons_maf_nle.ipynb)
 
 ### Bernoulli GLM
 

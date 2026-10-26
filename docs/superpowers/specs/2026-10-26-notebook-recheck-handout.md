@@ -1,6 +1,6 @@
 # Notebook re-check: handout (2026-10-26)
 
-Branch `notebook-recheck` (HEAD `ef962142`, 12 commits ahead of `origin/notebook-recheck`, **not pushed, not merged**).
+Branch `notebook-recheck` (ahead of `origin/notebook-recheck`, **not pushed, not merged**).
 Full per-notebook detail: `docs/superpowers/specs/2026-10-25-notebook-recheck-report.md`.
 The earlier pause handout (`docs/superpowers/plans/2026-10-25-notebook-recheck-handout.md`) is superseded.
 
@@ -47,19 +47,17 @@ All 26 tracked notebooks run end to end against GenSBI 0.5.1. Fixes are in each 
 
 No C2ST was recomputed. The generic-template notebooks only show stored values, and the two_moons notebooks only plot.
 
-**Left out on purpose (new content, outside this branch's scope)**
+`scripts/train_sbi_model.py` and `examples/getting_started/first_model.py` got the same L-C2ST `sample_batched` fix as the notebooks but were not run here (the identical call ran in the notebooks).
 
-- 7 notebooks have no Colab badge: `methods_and_samplers` and the 6 `two_moons` (also missing on `main`).
-- The top-level `README.md` notebook list omits some notebooks (e.g. `NDE/gensbi_text`).
+**Done after the first version of this handout** (follow-up commit)
 
-**Small leftovers**
-
-- `gw_example.ipynb` code comment (cell around source line 393) still says "the ConditionalFlowPipeline supports an arbitrary model".
-- EDM and SM NDE notebooks call the model a "velocity field model" (flow-matching wording).
-- `gensbi_text` title and intro are copied from the flow-matching notebook.
-- `two_moons/flow_simformer` writes `animated_plot_samples.gif`, but the tracked files are `*_simformer.gif`.
-- `lensing_example` now really writes `imgs/lensing.png` on every run, overwriting the tracked image (as the NDE notebooks do).
-- `train-gw.py` / `train-lensing.py` still pass `encoder_key=` to `sample_batched` (see GenSBI issue 2); their evaluation sections will fail.
+- Colab badges added to the 7 notebooks that had none: `methods_and_samplers` (in the `.md`) and the 6 `two_moons` (in `scripts/two_moons_template.md`, then regenerated).
+- `README.md` now lists `methods_and_samplers`, `NDE/gensbi_text` and `two_moons/maf_NLE`.
+- Leftovers fixed: the gw code comment now says `ConditionalPipeline`; the EDM/SM NDE notebooks say "network" instead of "velocity field model" and have distinct titles; `gensbi_text` has its own title, intro and Section 2 text; the lensing `savefig("imgs/lensing.png")` is commented out ("uncomment to save the figure"), so runs no longer overwrite the tracked image.
+- Training scripts patched to match the notebooks:
+  - `train-gw.py`, `train-lensing.py`: the model wrapper has an `inference_encoder_seed` attribute, set to 1234 after training/restoring and used only when no `encoder_key` is passed (training noise is unchanged); the swallowed `encoder_key=` kwargs are removed; the L-C2ST draw uses `sample_batched(..., nsamples=1)[0]`. Both scripts ran end to end on CPU with shrunk sizes (checkpoint restore, posterior draw, TARP, coverage, SBC, L-C2ST): no errors.
+  - `scripts/train_sbi_model.py`, `examples/getting_started/first_model.py`: L-C2ST `pipeline.sample` on 10 000 conditions → `sample_batched(..., nsamples=1)[0]`.
+- Not changed, on purpose: `two_moons/flow_simformer` writes `animated_plot_samples.gif` while the tracked GIFs are `*_simformer.gif`. Those are hand-made assets linked from GenSBI's README, not run output.
 
 **Branch**
 

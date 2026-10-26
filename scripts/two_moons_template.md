@@ -12,6 +12,7 @@ kernelspec:
 ---
 
 # Two Moons {model_architecture} {matching_technique} Example
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/sbi-benchmarks/two_moons/{model_name}/two_moons_{model_name}.ipynb)
 
 +++
 

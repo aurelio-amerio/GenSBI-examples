@@ -13,6 +13,8 @@ kernelspec:
 
 # Methods and Samplers in GenSBI
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/aurelio-amerio/GenSBI-examples/blob/main/examples/methods_and_samplers/methods_and_samplers.ipynb)
+
 GenSBI supports three generative methods for simulation-based inference:
 
 1. **Flow Matching** — learns a velocity field and integrates an ODE from noise to data.

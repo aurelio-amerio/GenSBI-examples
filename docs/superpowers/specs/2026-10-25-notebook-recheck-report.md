@@ -72,14 +72,11 @@ None. No notebook was skipped.
 ## Library findings (GenSBI, not changed here)
 
 1. `JointPipeline.sample` (`recipes/joint_pipeline.py:446-454`) warns "x_o has batch dimension N > 1" for a 1-D `(dim_cond,)` `x_o`. This is a false positive (the shape is expanded to `(1, dim_cond, 1)` afterwards); results are unaffected.
-2. `sample_batched` replaces the caller's `model_extras` per condition (`recipes/pipeline.py:1390-1403`) and `build_sampler_fn` silently accepts unknown kwargs (`flow_matching.py:219`), so `encoder_key` is dropped and the model raises a TraceContextError. The gw and lensing notebooks now default `encoder_key=PRNGKey(1234)` in their model wrappers (the same key as the training scripts). `examples/sbi-benchmarks/gravitational_waves/train-gw.py` (lines 251, 283, 338, 366) and `examples/sbi-benchmarks/lensing/train-lensing.py` (lines 252, 281, 339, 365) still pass `encoder_key=jax.random.PRNGKey(1234)` to `sample_batched`, so their evaluation sections will hit the same TraceContextError; left untouched on purpose (scripts are out of scope for this branch).
+2. `sample_batched` replaces the caller's `model_extras` per condition (`recipes/pipeline.py:1390-1403`) and `build_sampler_fn` silently accepts unknown kwargs (`flow_matching.py:219`), so `encoder_key` is dropped and the model raises a TraceContextError. The gw and lensing notebooks now default `encoder_key=PRNGKey(1234)` in their model wrappers (the same key as the training scripts). `train-gw.py` and `train-lensing.py` passed `encoder_key=jax.random.PRNGKey(1234)` to `sample`/`sample_batched` and hit the same error; in a follow-up their model wrappers got an `inference_encoder_seed` set after training/restoring (see `2026-10-26-notebook-recheck-handout.md`).
 
 ## Not done / for the maintainer
 
-- 7 notebooks have no Colab badge: `methods_and_samplers` and the 6 `two_moons` notebooks (also absent on `main`).
-- The top-level README notebook listing omits some notebooks (e.g. `NDE/gensbi_text`).
-- The EDM and SM notebooks call the model a "velocity field model" (flow-matching wording).
-- The `gensbi_text` title and intro are copied from the flow-matching notebook.
+- Fixed in a follow-up (see `2026-10-26-notebook-recheck-handout.md`): Colab badges for `methods_and_samplers` and the 6 `two_moons` notebooks; 3 notebooks added to the README; EDM/SM "velocity field model" wording; `gensbi_text` title/intro; gw `ConditionalFlowPipeline` comment; lensing `savefig` commented out; `train-gw.py`/`train-lensing.py`/`train_sbi_model.py`/`first_model.py` patched like the notebooks.
 - `two_moons/flow_simformer` writes `animated_plot_samples.gif`, while the tracked files are named `*_simformer.gif` (pre-existing).
 - Diffusion `two_moons` notebooks now sample with `nsteps=100` (library default 18), forced by the ignored `time_grid=` crash.
 - The gw/lensing wrappers now differ from the training-script model classes (fixed encoder noise if copied into training).
